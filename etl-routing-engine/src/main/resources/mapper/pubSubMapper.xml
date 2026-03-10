@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.apache.sfdc.pubsub.repository.PubSubRepository">
+
+    <select id="setTable" parameterType="String">
+        ${DDL}
+    </select>
+
+
+    <!-- #은 Object를 받을 때. 문자열은 $로 처리-->
+    <insert id="insertObject">
+        ${upperQuery}
+        <foreach item="record" collection="listUnderQuery" separator=",">
+            ${record}
+        </foreach>
+    </insert>
+
+    <update id="updateObject">
+        ${strUpdate}
+    </update>
+
+    <delete id="deleteObject">
+        DELETE FROM ${selectedObject}
+        WHERE sfid IN
+        <foreach item="id" collection="listDeleteIds" open="(" separator="," close=")">
+            ${id}
+        </foreach>
+    </delete>
+
+</mapper>
+

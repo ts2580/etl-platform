@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connection 생성</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" th:href="@{/css/modern-ui.css}" href="/css/modern-ui.css">
+</head>
+<body>
+<div class="page">
+    <main class="card narrow">
+        <form th:action="@{/cometd/hand-shake}" method="post" id="login-form" class="stack">
+            <div th:if="!${topicNm}">
+                <h2 class="title">HandShake 생성</h2>
+                <p class="subtitle">구독할 Topic 명을 입력해 연결을 생성하세요.</p>
+                <input class="input" placeholder="Topic 명" type="text" name="TopicNm"/>
+                <button class="btn btn-primary" type="submit" id="submit">생성</button>
+            </div>
+
+            <div th:if="${topicNm}">
+                <h2 class="title">HandShake 완료</h2>
+                <p class="status">현재 Topic: <strong>[[${topicNm}]]</strong></p>
+            </div>
+        </form>
+    </main>
+</div>
+</body>
+</html>

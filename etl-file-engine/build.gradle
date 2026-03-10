@@ -1,0 +1,35 @@
+springBoot {
+    mainClass = 'com.sfdcupload.SfdcuploadApplication'
+}
+
+bootJar {
+    archiveFileName = 'etl-file-engine.jar'
+}
+
+dependencies {
+    implementation project(':etl-common')
+    implementation project(':etl-domain')
+    implementation project(':etl-api-contract')
+    implementation project(':etl-infra')
+
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.14'
+
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:3.3.3'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // NOTE: old project used javax.servlet-api; Boot 3 uses jakarta.servlet.
+    // If legacy javax imports exist, we may need a small refactor.
+}

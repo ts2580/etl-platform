@@ -1,0 +1,4 @@
+dependencies {
+    api project(':etl-common')
+    // entity + domain logic (no infra)
+}

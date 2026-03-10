@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>오브젝트 선택</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" th:href="@{/css/modern-ui.css}" href="/css/modern-ui.css">
+</head>
+<body>
+<div class="page">
+    <main class="card">
+        <h2 class="title">오브젝트 선택</h2>
+        <p class="subtitle">동기화할 오브젝트를 선택한 뒤 Submit 해주세요.</p>
+
+        <form th:action="@{/etl/ddl}" method="post">
+            <div class="actions" style="justify-content:flex-end; margin-top:0; margin-bottom: 12px;">
+                <button class="btn btn-primary" type="submit">Submit</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width: 10%">선택</th>
+                        <th style="width: 45%">라벨명</th>
+                        <th style="width: 45%">API명</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="object : ${objectDefinitions}">
+                        <td class="center" data-label="선택">
+                            <input type="checkbox" th:name="selectedObject" th:value="${object.name}" />
+                        </td>
+                        <td data-label="라벨명" th:text="${object.label}"></td>
+                        <td data-label="API명" th:text="${object.name}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="actions" style="justify-content:flex-end; margin-bottom: 0;">
+                <button class="btn btn-primary" type="submit">Submit</button>
+            </div>
+        </form>
+    </main>
+</div>
+</body>
+</html>

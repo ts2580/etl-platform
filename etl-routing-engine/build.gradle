@@ -1,0 +1,36 @@
+springBoot {
+    mainClass = 'com.apache.sfdc.SfdcApplication'
+}
+
+bootJar {
+    archiveFileName = 'etl-routing-engine.jar'
+}
+
+dependencies {
+    implementation project(':etl-common')
+    implementation project(':etl-domain')
+    implementation project(':etl-api-contract')
+    implementation project(':etl-infra')
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
+
+    // Apache Camel
+    implementation 'org.apache.camel:camel-core:4.6.0'
+    implementation 'org.apache.camel:camel-salesforce:4.6.0'
+    implementation 'org.apache.camel.springboot:camel-salesforce-starter:4.6.0'
+
+    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.14'
+
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}

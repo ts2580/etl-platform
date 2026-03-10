@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ETL 로그인</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" th:href="@{/css/modern-ui.css}" href="/css/modern-ui.css">
+</head>
+<body>
+<div class="page">
+    <main class="card narrow">
+        <h2 class="title">로그인</h2>
+        <p class="subtitle">계정으로 로그인하고 ETL 작업을 시작하세요.</p>
+
+        <div th:if="${param.error}" class="alert">
+            <div th:if="${param.error.contains('login')}">사용자ID 또는 비밀번호를 확인해 주세요.</div>
+            <div th:if="${param.error.contains('session')}">중복 로그인이 감지되어 세션이 만료되었습니다.</div>
+        </div>
+
+        <form method="post" id="login-form" th:action="@{/user/login}" class="stack">
+            <input class="input" type="text" name="username" id="username" placeholder="아이디" autocomplete="username">
+            <input class="input" type="password" name="password" id="password" placeholder="비밀번호" autocomplete="current-password">
+            <button class="btn btn-primary" type="submit">로그인</button>
+        </form>
+
+        <p class="info" style="margin-top: 14px;">계정이 없으신가요? <a class="link" href="/user/signup">회원가입</a></p>
+    </main>
+</div>
+</body>
+</html>

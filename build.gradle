@@ -1,0 +1,71 @@
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management' version "${springDependencyManagementVersion}" apply false
+    id 'org.springframework.boot' version "${springBootVersion}" apply false
+}
+
+allprojects {
+    group = project.findProperty('group')
+    version = project.findProperty('version')
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(Integer.parseInt(project.findProperty('javaVersion') as String))
+        }
+    }
+
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    // Ensure all modules that use dependency-management get Spring Boot BOM versions
+    plugins.withId('io.spring.dependency-management') {
+        dependencyManagement {
+            imports {
+                mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+            }
+        }
+    }
+}
+
+// --- library modules ---
+configure([
+        project(':etl-common'),
+        project(':etl-domain'),
+        project(':etl-api-contract'),
+        project(':etl-infra'),
+]) {
+    apply plugin: 'java-library'
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+    }
+}
+
+// --- app modules (deployable) ---
+configure([
+        project(':etl-main-app'),
+        project(':etl-routing-engine'),
+        project(':etl-file-engine'),
+]) {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencies {
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+
+    // For app modules: jar disabled, bootJar enabled (default in Boot)
+    tasks.named('jar') {
+        enabled = false
+    }
+}

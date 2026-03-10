@@ -1,0 +1,7 @@
+dependencies {
+    api project(':etl-common')
+    api project(':etl-domain')
+    api project(':etl-api-contract')
+
+    // TODO: add clients (salesforce/db/storage)
+}

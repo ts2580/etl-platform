@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ETL 서버</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" th:href="@{/css/modern-ui.css}" href="/css/modern-ui.css">
+</head>
+<body>
+<div class="page">
+    <main class="card">
+        <h2 class="title">세일즈포스 RDBMS ETL 서버</h2>
+        <p class="subtitle">데이터 동기화 작업을 빠르고 안정적으로 진행하세요.</p>
+
+        <div sec:authorize="isAnonymous()">
+            <p class="info">계정이 있으신가요? <a class="link" th:href="@{/user/login}">로그인</a></p>
+            <p class="info">계정이 없으신가요? <a class="link" th:href="@{/user/signup}">회원가입</a></p>
+        </div>
+
+        <div sec:authorize="isAuthenticated()">
+            <p class="status"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님 인증되었습니다.</p>
+            <p class="role" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
+            <p class="role" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
+
+            <div class="actions">
+                <a class="btn btn-ghost" th:href="@{/user/logout}">로그아웃</a>
+                <a class="btn btn-primary" th:href="@{/login}">세일즈포스 로그인</a>
+                <a class="btn btn-primary" th:href="@{/etl/objects}">테이블 선택</a>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

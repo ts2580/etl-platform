@@ -1,0 +1,11 @@
+rootProject.name = 'etl-platform'
+
+include(
+  'etl-common',
+  'etl-domain',
+  'etl-api-contract',
+  'etl-infra',
+  'etl-main-app',
+  'etl-routing-engine',
+  'etl-file-engine'
+)
