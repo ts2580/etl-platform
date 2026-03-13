@@ -4,23 +4,23 @@ server:
 camel:
     component:
         salesforce:
-            client-id: ${SALESFORCE_CLIENT_ID}
-            client-secret: ${SALESFORCE_CLIENT_SECRET}
-            login-url: ${SALESFORCE_LOGIN_URL}
-            api-version: ${SALESFORCE_API_VERSION}
-            instance-url: ${SALESFORCE_INSTANCE_URL}
+            client-id: ${SALESFORCE_CLIENT_ID:dummy-client-id}
+            client-secret: ${SALESFORCE_CLIENT_SECRET:dummy-client-secret}
+            login-url: ${SALESFORCE_LOGIN_URL:https://login.salesforce.com}
+            api-version: ${SALESFORCE_API_VERSION:60.0}
+            instance-url: ${SALESFORCE_INSTANCE_URL:https://example.my.salesforce.com}
 
 spring:
     datasource:
         driver-class-name: org.mariadb.jdbc.Driver
-        url: ${DB_URL}
-        username: ${DB_USERNAME}
-        password: ${DB_PASSWORD}
+        url: ${DB_URL:jdbc:mariadb://localhost:3306/test}
+        username: ${DB_USERNAME:test}
+        password: ${DB_PASSWORD:test}
     data:
         redis:
-            host: ${REDIS_URL}
-            port: ${REDIS_PORT}
-            password: ${REDIS_PASSWORD}
+            host: ${REDIS_URL:localhost}
+            port: ${REDIS_PORT:6379}
+            password: ${REDIS_PASSWORD:}
 
 mybatis:
     mapper-locations: classpath:mapper/**/*.xml

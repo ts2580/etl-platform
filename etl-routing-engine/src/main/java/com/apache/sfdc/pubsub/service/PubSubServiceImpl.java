@@ -242,7 +242,7 @@ public class PubSubServiceImpl implements PubSubService{
     }
 
     @Override
-    public void subscribeCDC(Map<String, String> mapProperty) throws Exception {
+    public void subscribeCDC(Map<String, String> mapProperty, Map<String, Object> mapType) throws Exception {
 
         String selectedObject = mapProperty.get("selectedObject");
 
@@ -255,7 +255,7 @@ public class PubSubServiceImpl implements PubSubService{
         sfEcology.setPassword(mapProperty.get("password"));
         sfEcology.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(selectedObject, pubSubRepository);
+        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(selectedObject, mapType, pubSubRepository);
 
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);

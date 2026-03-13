@@ -12,4 +12,8 @@ public interface PubSubRepository {
 
     int insertObject(@Param("upperQuery") String upperQuery, @Param("listUnderQuery") List<String> listUnderQuery);
 
+    int updateObject(@Param("strUpdate") StringBuilder strUpdate);
+
+    int deleteObject(@Param("selectedObject") String selectedObject, @Param("listDeleteIds") List<String> listDeleteIds);
+
 }

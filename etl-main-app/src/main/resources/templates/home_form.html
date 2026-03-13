@@ -7,28 +7,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ETL 서버</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" th:href="@{/css/modern-ui.css}" href="/css/modern-ui.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<div class="page">
-    <main class="card">
-        <h2 class="title">세일즈포스 RDBMS ETL 서버</h2>
-        <p class="subtitle">데이터 동기화 작업을 빠르고 안정적으로 진행하세요.</p>
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 text-slate-800">
+<div class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-8 sm:px-6 lg:px-8">
+    <main class="w-full rounded-2xl border border-indigo-100 bg-white/95 p-6 shadow-xl shadow-indigo-100 sm:p-8">
+        <h2 class="text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">세일즈포스 RDBMS ETL 서버</h2>
+        <p class="mt-2 text-sm text-slate-500 sm:text-base">데이터 동기화 작업을 빠르고 안정적으로 진행하세요.</p>
 
-        <div sec:authorize="isAnonymous()">
-            <p class="info">계정이 있으신가요? <a class="link" th:href="@{/user/login}">로그인</a></p>
-            <p class="info">계정이 없으신가요? <a class="link" th:href="@{/user/signup}">회원가입</a></p>
+        <div sec:authorize="isAnonymous()" class="mt-6 space-y-2 text-sm sm:text-base">
+            <p>계정이 있으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/login}">로그인</a></p>
+            <p>계정이 없으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/signup}">회원가입</a></p>
         </div>
 
-        <div sec:authorize="isAuthenticated()">
-            <p class="status"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님 인증되었습니다.</p>
-            <p class="role" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
-            <p class="role" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
+        <div sec:authorize="isAuthenticated()" class="mt-6">
+            <p class="text-sm leading-6 sm:text-base"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님 인증되었습니다.</p>
+            <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
+            <p class="mt-1 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
 
-            <div class="actions">
-                <a class="btn btn-ghost" th:href="@{/user/logout}">로그아웃</a>
-                <a class="btn btn-primary" th:href="@{/login}">세일즈포스 로그인</a>
-                <a class="btn btn-primary" th:href="@{/etl/objects}">테이블 선택</a>
+            <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100" th:href="@{/user/logout}">로그아웃</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" th:href="@{/login}">세일즈포스 로그인</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" th:href="@{/etl/objects}">테이블 선택</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" href="https://localhost:443/file">파일 엔진</a>
             </div>
         </div>
     </main>

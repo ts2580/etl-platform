@@ -36,7 +36,7 @@ public class PubSubController {
         Map<String, Object> mapReturn = pubSubService.setTable(mapProperty, token);
 
         // CDC 이벤트는 Point & Click으로 가능. 설정에서 미리 세팅 했다고 가이드 라인 줄것.
-        pubSubService.subscribeCDC(mapProperty);
+        pubSubService.subscribeCDC(mapProperty, (Map<String, Object>) mapReturn.get("mapType"));
 
 
         return null;
