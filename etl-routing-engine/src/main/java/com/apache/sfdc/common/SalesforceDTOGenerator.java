@@ -2,45 +2,69 @@ package com.apache.sfdc.common;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootApplication
+@RequiredArgsConstructor
+@Slf4j
 public class SalesforceDTOGenerator {
 
     private static final String INSTANCE_URL = "https://posco--scrum4.sandbox.my.salesforce.com/";
 
-    public static void main(String[] args) throws Exception {
+    private final SalesforceOAuth salesforceOAuth;
 
-        // 단순 요청 보내기엔 OkHttp가 제일 좋은것 같음.
-        // 아직 Non-Block I/O가 필요한건 아니기에 Spring WebClient는 잠시 봉인
+    public void run() throws Exception {
+
         OkHttpClient client = new OkHttpClient();
 
         String sObjectName = "AllFieldType__c"; // SObject 이름
+        String accessToken = salesforceOAuth.getAccessToken(createTokenMap());
+
         Request request = new Request.Builder()
                 .url(INSTANCE_URL + "/services/data/v60.0/sobjects/" + sObjectName + "/describe")
-                .addHeader("Authorization", "Bearer " + SalesforceOAuth.getAccessToken())
+                .addHeader("Authorization", "Bearer " + accessToken)
                 .build();
 
-        Response response = client.newCall(request).execute();
+        try (Response response = client.newCall(request).execute()) {
 
-        if (response.isSuccessful()) {
-            String responseBody = response.body().string();
+            if (response.isSuccessful()) {
+                String responseBody = response.body().string();
 
-            // 잭슨으로 역직렬화
-            ObjectMapper objectMapper = new ObjectMapper();
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode rootNode = objectMapper.readTree(responseBody);
+                generateDTOClass(rootNode, sObjectName);
+            } else {
+                log.error("Failed to retrieve metadata: {}", response.message());
+            }
+        }
+    }
 
-            // 세일즈 포스로 따지면 JSON.deserializeUntyped();
-            JsonNode rootNode = objectMapper.readTree(responseBody);
-            generateDTOClass(rootNode, sObjectName);
-        } else {
-            System.err.println("Failed to retrieve metadata: " + response.message());
+    private Map<String, String> createTokenMap() {
+        Map<String, String> mapProperty = new HashMap<>();
+        mapProperty.put("loginUrl", INSTANCE_URL);
+        mapProperty.put("client_id", System.getenv().getOrDefault("SALESFORCE_CLIENT_ID", ""));
+        mapProperty.put("client_secret", System.getenv().getOrDefault("SALESFORCE_CLIENT_SECRET", ""));
+        mapProperty.put("username", System.getenv().getOrDefault("SALESFORCE_USERNAME", ""));
+        mapProperty.put("password", System.getenv().getOrDefault("SALESFORCE_PASSWORD", ""));
+        return mapProperty;
+    }
+
+    public static void main(String[] args) throws Exception {
+        try (ConfigurableApplicationContext context = SpringApplication.run(SalesforceDTOGenerator.class, args)) {
+            context.getBean(SalesforceDTOGenerator.class).run();
         }
     }
 
@@ -73,23 +97,20 @@ public class SalesforceDTOGenerator {
 
         classBuilder.append("}\n");
 
-        // 출력 디렉토리 생성
         File dir = new File("src/main/java/com/apache/sfdc/router/dto");
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
-        // 파일 생성
         File file = new File(dir, sObjectName + ".java");
         try (PrintWriter out = new PrintWriter(file)) {
             out.print(classBuilder);
-            System.out.println("DTO class 경로: " + file.getAbsolutePath());
+            log.info("DTO class 경로: {}", file.getAbsolutePath());
         }
     }
 
     private static String mapToJavaType(String fieldType) {
 
-        // 세일즈포스 타입을 자바 타입으로 쪼개기. 날짜 관련 필드는 나중에 무결성 확인 요
         return switch (fieldType) {
             case "boolean" -> "Boolean";
             case "date" -> "LocalDate";

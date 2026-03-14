@@ -1,12 +1,15 @@
 package com.apache.sfdc.pubsub.service;
 
+import com.etlplatform.common.error.AppException;
 import com.apache.sfdc.common.SalesforceRouterBuilderCDC;
+import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.pubsub.repository.PubSubRepository;
 import com.apache.sfdc.streaming.dto.FieldDefinition;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -14,6 +17,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.salesforce.SalesforceComponent;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -25,24 +29,27 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class PubSubServiceImpl implements PubSubService{
+@Slf4j
+@ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
+public class PubSubServiceImpl implements PubSubService {
 
     private final PubSubRepository pubSubRepository;
 
     @Override
     public Map<String, Object> setTable(Map<String, String> mapProperty, String token) {
-        String selectedObject = mapProperty.get("selectedObject"); // 체크박스로 선택한 Object
+        String selectedObject = mapProperty.get("selectedObject");
         String instanceUrl = mapProperty.get("instanceUrl");
 
-        Map<String, Object> returnMap = new HashMap<>(); // 리턴에 담을거 => Type, Query
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
 
-        List<FieldDefinition> listDef = new ArrayList<>();
+        SqlSanitizer.validateTableName(selectedObject);
+
+        Map<String, Object> returnMap = new HashMap<>();
 
         OkHttpClient client = new OkHttpClient();
-
-        // 잭슨으로 역직렬화
         ObjectMapper objectMapper = new ObjectMapper();
-
         JsonNode rootNode;
 
         Request request = new Request.Builder()
@@ -51,13 +58,8 @@ public class PubSubServiceImpl implements PubSubService{
                 .addHeader("Content-Type", "application/json")
                 .build();
 
-        // DDL 테이블 생성용
         StringBuilder ddl = new StringBuilder();
-
-        // 순차적 values 구문 구성용
         List<String> listFields = new ArrayList<>();
-
-        // soql로 받아온 값 변환용 맵
         Map<String, String> mapType = new HashMap<>();
 
         String label;
@@ -65,26 +67,23 @@ public class PubSubServiceImpl implements PubSubService{
         try (Response response = client.newCall(request).execute()) {
             String responseBody = Objects.requireNonNull(response.body()).string();
 
-            // 세일즈 포스로 따지면 JSON.deserializeUntyped();
             rootNode = objectMapper.readTree(responseBody);
+            JsonNode fields = rootNode.get("fields");
 
-            JsonNode fields = rootNode.get("fields"); // FieldDefinition 의 List
+            if (fields == null || !fields.isArray()) {
+                throw new AppException("Invalid Salesforce describe response");
+            }
 
-            listDef = objectMapper.convertValue(fields, new TypeReference<List<FieldDefinition>>() {});
+            List<FieldDefinition> listDef = objectMapper.convertValue(fields, new TypeReference<List<FieldDefinition>>() {});
 
             ddl.append("CREATE OR REPLACE table config.").append(selectedObject).append("(");
 
             for (FieldDefinition obj : listDef) {
                 mapType.put(obj.name, obj.type);
+                label = obj.label.replace("'", "`");
 
-                // 작은 따옴표는 백틱으로 이스케이프
-                label = obj.label.replace("'","`");
-
-                // salesforce에서 만드는 모든 type들은 하단의 case로 모인다. 특정 Object Type (Address 나 FirstName 생략)
                 switch (obj.type) {
-                    case "id" -> {
-                        ddl.append("sfid VARCHAR(18) primary key not null comment '").append(label).append("',");
-                    }
+                    case "id" -> ddl.append("sfid VARCHAR(18) primary key not null comment '").append(label).append("',");
                     case "textarea" -> {
                         if (obj.length > 4000) {
                             ddl.append(obj.name).append(" TEXT comment '").append(label).append("',");
@@ -125,6 +124,10 @@ public class PubSubServiceImpl implements PubSubService{
                         ddl.append(obj.name).append(" int comment '").append(label).append("',");
                         listFields.add(obj.name);
                     }
+                    default -> {
+                        ddl.append(obj.name).append(" VARCHAR(255) comment '").append(label).append("',");
+                        listFields.add(obj.name);
+                    }
                 }
             }
 
@@ -132,29 +135,29 @@ public class PubSubServiceImpl implements PubSubService{
             ddl.append(");");
 
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new AppException("Failed to describe Salesforce object", e);
         }
 
         returnMap.put("mapType", mapType);
-
-        // 테이블 생성
         pubSubRepository.setTable(ddl.toString());
 
-        // 생성 후 바로 데이터 부어주기
         StringBuilder soql = new StringBuilder();
-        // longtextarea의 경우 pushtopic 으로 사용 못함
         StringBuilder soqlForPushTopic = new StringBuilder();
 
         for (String field : listFields) {
+            SqlSanitizer.validateIdentifier(field);
             soql.append(field).append(",");
-            if (!mapType.get(field).equals("textarea")) {
+            if (!"textarea".equals(mapType.get(field))) {
                 soqlForPushTopic.append(field).append(",");
             }
         }
 
+        if (soql.isEmpty()) {
+            throw new AppException("No supported fields for object: " + selectedObject);
+        }
+
         soql.deleteCharAt(soql.length() - 1);
         soqlForPushTopic.deleteCharAt(soqlForPushTopic.length() - 1);
-
         returnMap.put("soqlForPushTopic", soqlForPushTopic);
 
         String query = "SELECT Id, " + soql + " FROM " + selectedObject;
@@ -165,77 +168,42 @@ public class PubSubServiceImpl implements PubSubService{
                 .addHeader("Content-Type", "application/json")
                 .build();
 
-        try (Response response = client.newCall(request).execute()){
-            // 받아온 response를 JSON으로
+        try (Response response = client.newCall(request).execute()) {
             rootNode = objectMapper.readTree(Objects.requireNonNull(response.body()).string());
-            // 레코드의 Array
             JsonNode records = rootNode.get("records");
 
-            if(!records.isEmpty()){
-                String upperQuery = "Insert Into config." + selectedObject + "(sfid, " + soql + ") " + "values";
-
+            if (records != null && !records.isEmpty()) {
+                String upperQuery = "Insert Into config." + selectedObject + "(sfid, " + soql + ") values";
                 List<String> listUnderQuery = new ArrayList<>();
-                StringBuilder underQuery;
-                // JSONNode가 List인게 확실하면 for문 사용가능
+
                 for (JsonNode record : records) {
-                    underQuery = new StringBuilder();
-                    underQuery.append("( ").append(record.get("Id")).append(",");
+                    StringBuilder underQuery = new StringBuilder();
+                    underQuery.append("('").append(record.get("Id").asText()).append("',");
 
                     for (String field : listFields) {
-                        if(mapType.get(field).equals("datetime")){
-                            //  if (record.get(field) != null && record.get(field).asText() != null) {
-                            //      System.out.println("======================================");
-                            //      System.out.println(record.get(field));
-                            //      // DateTimeFormatter를 사용하여 원본 문자열을 ZonedDateTime 객체로 변환
-                            //      DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-                            //      ZonedDateTime zonedDateTime = ZonedDateTime.parse(record.get(field).asText(), formatter);
-                            //
-                            //      // MariaDB 형식의 문자열로 변환
-                            //      DateTimeFormatter mariadbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                            //      String mariadbDatetimeStr = zonedDateTime.withZoneSameInstant(ZoneOffset.UTC).format(mariadbFormatter);
-                            //
-                            //      underQuery.append(mariadbDatetimeStr).append(",");
-                            //  }
-
-                            if(mapType.get(field).equals("datetime")){
-                                underQuery.append(record.get(field).toString().replace(".000+0000","").replace("T"," ")).append(",");
-                            }else if(mapType.get(field).equals("time")){
-                                underQuery.append(record.get(field).toString().replace("Z","")).append(",");
-                            }else{
-                                underQuery.append(record.get(field)).append(",");
-                            }
-                        }else if(mapType.get(field).equals("time")){
-                            // todo Time 필드 바꾸기
-                            underQuery.append(record.get(field).toString().replace("Z","")).append(",");
-                        }else{
-                            underQuery.append(record.get(field)).append(",");
-                        }
+                        String sfType = mapType.get(field);
+                        JsonNode fieldValue = record.get(field);
+                        underQuery.append(SqlSanitizer.sanitizeValue(fieldValue, sfType)).append(",");
                     }
 
                     underQuery.deleteCharAt(underQuery.length() - 1);
                     underQuery.append(")");
-                    listUnderQuery.add(String.valueOf(underQuery));
+                    listUnderQuery.add(underQuery.toString());
                 }
 
-                // 시간 체크
                 Instant start = Instant.now();
-
                 int insertedData = pubSubRepository.insertObject(upperQuery, listUnderQuery);
-
                 Instant end = Instant.now();
                 Duration interval = Duration.between(start, end);
 
-                long hours = interval.toHours();
-                long minutes = interval.toMinutesPart();
-                long seconds = interval.toSecondsPart();
-
-                System.out.println("테이블 : " + selectedObject + ". 삽입된 데이터 수 : " + insertedData + ". 소요시간 : " + hours + "시간 " + minutes + "분 " + seconds + "초");
-            }else{
-                System.out.println("테이블에 데이터 없음");
+                log.info("테이블 : {}. 삽입된 데이터 수 : {}. 소요시간 : {}시간 {}분 {}초",
+                        selectedObject, insertedData, interval.toHours(), interval.toMinutesPart(), interval.toSecondsPart());
+            } else {
+                log.warn("테이블에 데이터 없음");
             }
 
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new AppException("Failed to query Salesforce object records", e);
         }
 
         return returnMap;
@@ -243,10 +211,12 @@ public class PubSubServiceImpl implements PubSubService{
 
     @Override
     public void subscribeCDC(Map<String, String> mapProperty, Map<String, Object> mapType) throws Exception {
-
         String selectedObject = mapProperty.get("selectedObject");
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
+        SqlSanitizer.validateTableName(selectedObject);
 
-        // access token 을 직접 넣을수가 없군
         SalesforceComponent sfEcology = new SalesforceComponent();
         sfEcology.setLoginUrl(mapProperty.get("loginUrl"));
         sfEcology.setClientId(mapProperty.get("client_id"));
@@ -261,11 +231,12 @@ public class PubSubServiceImpl implements PubSubService{
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfEcology);
 
-        try{
+        try {
             myCamelContext.start();
-        }catch (Exception e){
-            System.out.println(e.getMessage());
+        } catch (Exception e) {
+            log.error("subscribeCDC 실패", e);
             myCamelContext.close();
+            throw e;
         }
     }
 }

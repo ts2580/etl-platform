@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -13,6 +14,7 @@ import java.time.Duration;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/redis")
+@Slf4j
 public class RedisController {
 
     private final RedisService redisService;
@@ -28,8 +30,8 @@ public class RedisController {
 
         String result = redisService.getValue(key);
 
-        System.out.println(key);
-        System.out.println(result);
+        log.debug("redis get key={}", key);
+        log.debug("redis get result={}", result);
 
         return result;
     }

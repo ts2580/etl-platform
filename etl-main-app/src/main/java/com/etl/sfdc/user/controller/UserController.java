@@ -1,15 +1,16 @@
 package com.etl.sfdc.user.controller;
 
+import com.etlplatform.common.error.FeatureDisabledException;
 import com.etl.sfdc.user.model.dto.UserCreateForm;
 import com.etl.sfdc.user.model.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
 
 @Controller
 @RequiredArgsConstructor
@@ -18,38 +19,33 @@ public class UserController {
 
     private final UserService userService;
 
+    @Value("${app.db.enabled:false}")
+    private boolean dbEnabled;
+
     @GetMapping("/login")
-    public String loginPage() {
+    public String loginPage(Model model) {
+        model.addAttribute("dbEnabled", dbEnabled);
         return "login_form";
     }
 
     @GetMapping("/signup")
     public String signup(Model model) {
-
-        // 폼에 바인딩할 빈 객체를 모델에 추가
+        model.addAttribute("dbEnabled", dbEnabled);
         model.addAttribute("UserCreateForm", new UserCreateForm());
-
         return "signup_form";
     }
 
     @PostMapping("/signup")
-    public String signup(@Valid UserCreateForm userCreateForm, BindingResult bindingResult) throws JsonProcessingException {
+    public String signup(@Valid UserCreateForm userCreateForm, BindingResult bindingResult, Model model) throws JsonProcessingException {
+        model.addAttribute("dbEnabled", dbEnabled);
 
-        // signup_form에 객체 바인딩 하기
-
-        /*if (bindingResult.hasErrors()) {
-            return "signup_form";
+        if (!dbEnabled) {
+            throw new FeatureDisabledException("DB 비활성 모드에서는 회원가입을 사용할 수 없습니다.");
         }
-
-        if (!userCreateForm.getPassword1().equals(userCreateForm.getPassword2())) {
-            bindingResult.rejectValue("password2", "passwordInCorrect", "2개의 패스워드가 일치하지 않습니다.");
-            return "signup_form";
-        }*/
 
         userService.create(userCreateForm.getUsername(),
                 userCreateForm.getEmail(), userCreateForm.getPassword1(), userCreateForm.getDescription());
 
         return "redirect:/";
     }
-
 }

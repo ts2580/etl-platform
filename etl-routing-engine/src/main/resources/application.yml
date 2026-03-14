@@ -1,9 +1,17 @@
+app:
+  # DB optional mode.
+  # false: health/basic endpoint만 확인 가능, streaming/pubsub/redis 적재 기능은 비활성화
+  # true : DB/MyBatis/Redis 기반 적재 기능 활성화
+  db:
+    enabled: ${APP_DB_ENABLED:false}
+
 server:
     port: 3931
 
 camel:
     component:
         salesforce:
+            # routing-engine Salesforce 연결 설정
             client-id: ${SALESFORCE_CLIENT_ID:dummy-client-id}
             client-secret: ${SALESFORCE_CLIENT_SECRET:dummy-client-secret}
             login-url: ${SALESFORCE_LOGIN_URL:https://login.salesforce.com}
@@ -12,6 +20,7 @@ camel:
 
 spring:
     datasource:
+        # APP_DB_ENABLED=true 일 때만 실제 값 필요
         driver-class-name: org.mariadb.jdbc.Driver
         url: ${DB_URL:jdbc:mariadb://localhost:3306/test}
         username: ${DB_USERNAME:test}

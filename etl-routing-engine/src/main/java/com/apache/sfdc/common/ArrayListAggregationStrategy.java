@@ -1,10 +1,12 @@
 package com.apache.sfdc.common;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.AggregationStrategy;
 import org.apache.camel.Exchange;
 
 import java.util.*;
 
+@Slf4j
 public class ArrayListAggregationStrategy implements AggregationStrategy {
     @Override
     public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
@@ -20,14 +22,14 @@ public class ArrayListAggregationStrategy implements AggregationStrategy {
 
         Object newBody = newExchange.getIn().getBody();
 
-        System.out.println("집계 시작!!");
+        log.debug("집계 시작!!");
 
         // 반환할 타입
         Map<String, List<Object>> mapReturn;
         if (oldExchange == null) {
 
-            System.out.println("첫 집계==================");
-            System.out.println(type);
+            log.debug("첫 집계==================");
+            log.debug("type ====> {}", type);
 
             // 밖에서 선언하고 안에서 초기화 하는것은 최종 반환할 타입 뿐
             List<Object> list = new ArrayList<>();
@@ -42,8 +44,8 @@ public class ArrayListAggregationStrategy implements AggregationStrategy {
             return newExchange;
         } else {
 
-            System.out.println("계속 들어옴=============");
-            System.out.println("type ====> " + type);
+            log.debug("계속 들어옴=============");
+            log.debug("type ====> {}", type);
 
             // oldExchange.setBody 할 필요없이 자동으로 oldExchange의 Body는 업데이트 된다.
             mapReturn = oldExchange.getIn().getBody(Map.class);

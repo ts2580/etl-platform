@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sfdcupload.file.dto.ExcelFile;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import okio.ByteString;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SalesforceFileUpload {
 
     @Value("${salesforce.myDomain}")
@@ -80,7 +82,7 @@ public class SalesforceFileUpload {
             String responseBody = Objects.requireNonNull(response.body()).string(); // response.getEntity()가 Input Stream을 반환
 
             if (statusCode != 201 && statusCode != 200) {
-                System.out.println("업로드 에러 :: " + responseBody);
+                log.error("업로드 에러 :: {}", responseBody);
 
                 throw new Exception("파일 업로드 실패 ! ==> " + responseBody);
             }
@@ -96,7 +98,6 @@ public class SalesforceFileUpload {
         // 50MB 까지. 근데 base64로 인코딩 해야함
         // 인코딩 시 용량이 33% 늘어남. 대략 원본 용량 35MB 까지 가능
         // 제한사항도 동일
-        // batch로 보낼 수 있...나?
         String contentVersionUrl = myDomain + "/services/data/v65.0/sobjects/ContentVersion";
 
         // ContentVersion 업로드
@@ -122,7 +123,7 @@ public class SalesforceFileUpload {
             String responseBody = Objects.requireNonNull(response.body()).string();
 
             if (statusCode != 201 && statusCode != 200) {
-                System.out.println("ContentVersion 업로드 실패: " + responseBody);
+                log.error("ContentVersion 업로드 실패: {}", responseBody);
 
                 throw new Exception("ContentVersion 업로드 실패 ! ==> " + responseBody);
             }
@@ -175,7 +176,7 @@ public class SalesforceFileUpload {
             String responseBody =  Objects.requireNonNull(batchResponse.body()).string();
             int batchStatus = batchResponse.code();
             if (batchStatus != 201 && batchStatus != 200) {
-                System.out.println("batch 업로드 실패: " + responseBody);
+                log.error("batch 업로드 실패: {}", responseBody);
                 throw new RuntimeException("batch 업로드 실패: " + responseBody);
             }
 

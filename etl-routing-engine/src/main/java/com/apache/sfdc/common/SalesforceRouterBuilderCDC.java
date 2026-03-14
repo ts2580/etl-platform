@@ -3,12 +3,14 @@ package com.apache.sfdc.common;
 import com.apache.sfdc.pubsub.repository.PubSubRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.builder.RouteBuilder;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
+@Slf4j
 public class SalesforceRouterBuilderCDC extends RouteBuilder {
     private final String selectedObject;
     private final Map<String, Object> mapType;
@@ -23,7 +25,8 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
     @Override
     public void configure() throws Exception {
 
-        // std obj는 뒤에 곧바로 ChangeEvent 붙이고, custom은 __c를 __ChangeEvent로 교체.
+        SqlSanitizer.validateTableName(selectedObject);
+
         String eventName = selectedObject.contains("__c")
                 ? selectedObject.replace("__c", "__ChangeEvent")
                 : selectedObject + "ChangeEvent";
@@ -75,8 +78,6 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                             continue;
                         }
 
-                        // CDC는 payload가 부분 필드만 올 수 있음.
-                        // changedFields + nulledFields를 우선 사용하고, 없으면 payload 필드로 대체.
                         Set<String> targetFields = resolveTargetFields(payload, header);
 
                         StringBuilder strUpdate = new StringBuilder();
@@ -85,7 +86,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                         int assignmentCount = appendAssignments(strUpdate, payload, header, targetFields);
                         if (assignmentCount > 0) {
                             strUpdate.deleteCharAt(strUpdate.length() - 1);
-                            strUpdate.append(" WHERE sfid = '").append(sfid).append("';");
+                            strUpdate.append(" WHERE sfid = ").append(SqlSanitizer.quoteString(sfid)).append(";");
 
                             int updated = pubSubRepository.updateObject(strUpdate);
 
@@ -96,7 +97,6 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                                 updatedCount += updated;
                             }
                         } else if ("CREATE".equalsIgnoreCase(changeType) || "UNDELETE".equalsIgnoreCase(changeType)) {
-                            // 필드가 거의 없는 CREATE/UNDELETE의 최소 보장: sfid만으로 row 생성 시도
                             int inserted = insertMinimal(sfid);
                             insertedCount += inserted;
                         }
@@ -107,10 +107,10 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                         int deleted = pubSubRepository.deleteObject("config." + selectedObject, listDeleteIds);
                         Instant deleteEnd = Instant.now();
                         Duration deleteInterval = Duration.between(deleteStart, deleteEnd);
-                        System.out.println("[CDC] deleted=" + deleted + ", took=" + deleteInterval.toMillis() + "ms");
+                        log.info("[CDC] deleted={}, took={}ms", deleted, deleteInterval.toMillis());
                     }
 
-                    System.out.println("[CDC] updated=" + updatedCount + ", inserted=" + insertedCount + ", received=" + payloads.size());
+                    log.info("[CDC] updated={}, inserted={}, received={}", updatedCount, insertedCount, payloads.size());
                 });
     }
 
@@ -134,18 +134,16 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
             return;
         }
         for (JsonNode idNode : recordIdsNode) {
-            listDeleteIds.add("'" + idNode.asText() + "'");
+            listDeleteIds.add(SqlSanitizer.quoteSfid(idNode.asText()));
         }
     }
 
     private Set<String> resolveTargetFields(JsonNode payload, JsonNode header) {
         Set<String> targetFields = new LinkedHashSet<>();
 
-        // changedFields / nulledFields 우선
         addFieldArray(header.get("changedFields"), targetFields);
         addFieldArray(header.get("nulledFields"), targetFields);
 
-        // fallback: payload 안의 실제 필드
         if (targetFields.isEmpty()) {
             Iterator<Map.Entry<String, JsonNode>> fields = payload.fields();
             while (fields.hasNext()) {
@@ -156,7 +154,6 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
             }
         }
 
-        // 테이블 컬럼에 있는 필드만 허용
         targetFields.removeIf(field -> !mapType.containsKey(field));
 
         return targetFields;
@@ -173,7 +170,6 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                 continue;
             }
 
-            // CDC changedFields는 Parent.Field 같은 경로가 올 수 있어 1-depth 필드만 반영
             if (raw.contains(".")) {
                 continue;
             }
@@ -210,7 +206,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                 continue;
             }
 
-            strUpdate.append(toSqlValue(fieldName, fieldValue)).append(",");
+            strUpdate.append(SqlSanitizer.sanitizeValue(fieldValue, String.valueOf(mapType.get(fieldName)))).append(",");
             assignmentCount++;
         }
 
@@ -219,7 +215,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
 
     private int insertFallback(JsonNode payload, JsonNode header, String sfid, Set<String> targetFields) {
         StringBuilder fieldsBuilder = new StringBuilder("sfid");
-        StringBuilder valuesBuilder = new StringBuilder("'").append(sfid).append("'");
+        StringBuilder valuesBuilder = new StringBuilder(SqlSanitizer.quoteString(sfid));
 
         Set<String> nulledFields = new HashSet<>();
         JsonNode nulledArray = header.get("nulledFields");
@@ -236,7 +232,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
             if (nulledFields.contains(fieldName) || fieldValue == null || fieldValue.isNull()) {
                 valuesBuilder.append(",null");
             } else {
-                valuesBuilder.append(",").append(toSqlValue(fieldName, fieldValue));
+                valuesBuilder.append(",").append(SqlSanitizer.sanitizeValue(fieldValue, String.valueOf(mapType.get(fieldName))));
             }
         }
 
@@ -247,27 +243,13 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
         Instant insertEnd = Instant.now();
 
         Duration insertInterval = Duration.between(insertStart, insertEnd);
-        System.out.println("[CDC] insert fallback inserted=" + inserted + ", took=" + insertInterval.toMillis() + "ms");
+        log.info("[CDC] insert fallback inserted={}, took={}ms", inserted, insertInterval.toMillis());
 
         return inserted;
     }
 
     private int insertMinimal(String sfid) {
         String upperQuery = "Insert Into config." + selectedObject + "(sfid) values";
-        return pubSubRepository.insertObject(upperQuery, List.of("('" + sfid + "')"));
-    }
-
-    private String toSqlValue(String fieldName, JsonNode fieldValue) {
-        String type = String.valueOf(mapType.get(fieldName));
-
-        if ("datetime".equals(type)) {
-            return fieldValue.toString().replace(".000Z", "").replace("T", " ");
-        }
-
-        if ("time".equals(type)) {
-            return fieldValue.toString().replace("Z", "");
-        }
-
-        return fieldValue.toString();
+        return pubSubRepository.insertObject(upperQuery, List.of("(" + SqlSanitizer.quoteSfid(sfid) + ")"));
     }
 }

@@ -15,9 +15,20 @@
         <h2 class="text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">세일즈포스 RDBMS ETL 서버</h2>
         <p class="mt-2 text-sm text-slate-500 sm:text-base">데이터 동기화 작업을 빠르고 안정적으로 진행하세요.</p>
 
-        <div sec:authorize="isAnonymous()" class="mt-6 space-y-2 text-sm sm:text-base">
-            <p>계정이 있으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/login}">로그인</a></p>
-            <p>계정이 없으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/signup}">회원가입</a></p>
+        <div th:if="${!dbEnabled}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+            <p class="font-semibold">DB 비활성 모드</p>
+            <p class="mt-1">지금은 CSS/화면 확인용으로 앱이 기동 중입니다. 로그인, 회원가입, DB 적재 기능은 비활성화되고 기본 화면/정적 리소스만 확인할 수 있어요.</p>
+        </div>
+
+        <div sec:authorize="isAnonymous()" class="mt-6 space-y-3 text-sm sm:text-base">
+            <div th:if="${dbEnabled}" class="space-y-2">
+                <p>계정이 있으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/login}">로그인</a></p>
+                <p>계정이 없으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/signup}">회원가입</a></p>
+            </div>
+            <div th:if="${!dbEnabled}" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500 cursor-not-allowed">로그인 비활성</a>
+                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500 cursor-not-allowed">회원가입 비활성</a>
+            </div>
         </div>
 
         <div sec:authorize="isAuthenticated()" class="mt-6">

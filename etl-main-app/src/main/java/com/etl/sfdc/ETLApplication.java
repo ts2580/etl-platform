@@ -1,18 +1,21 @@
 package com.etl.sfdc;
 
+import org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+        DataSourceAutoConfiguration.class,
+        DataSourceTransactionManagerAutoConfiguration.class,
+        MybatisAutoConfiguration.class
+})
 public class ETLApplication {
 
     public static void main(String[] args) {
-
-        // Heroku가 자동으로 주입하는 Heroku PG의 DATABASE_URL이 자꾸 DB로 들어와서 에러냄.
-        // 이를 덮어쓰기 위해서 DATABASE_URL을 DB_URL로 강제 override.
 
         String dbUrl = System.getenv("DB_URL");
         String dbUsername = System.getenv("DB_USERNAME");
@@ -30,5 +33,4 @@ public class ETLApplication {
 
         SpringApplication.run(ETLApplication.class, args);
     }
-
 }

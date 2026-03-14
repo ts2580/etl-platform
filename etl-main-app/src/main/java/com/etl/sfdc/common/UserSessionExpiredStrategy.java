@@ -1,6 +1,7 @@
 package com.etl.sfdc.common;
 
 import jakarta.servlet.ServletException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.web.session.SessionInformationExpiredEvent;
 import org.springframework.security.web.session.SessionInformationExpiredStrategy;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component
+@Slf4j
 public class UserSessionExpiredStrategy implements SessionInformationExpiredStrategy {
 
     @Override
@@ -19,7 +21,7 @@ public class UserSessionExpiredStrategy implements SessionInformationExpiredStra
         // UserDetails의 구현체(dto에 있는 UserAccount)에 equals와 hashCode 메소드를 오버라이드해야 함
         // 이 메소드들은 사용자의 고유 식별자를 기반으로 해야 하며, 이는 UserDetails 객체 간의 동등성 비교를 위해 사용됨.
 
-        System.out.println("세션만료");
+        log.info("세션 만료");
 
         // 세션 만료 시 리다이렉트할 URL
         String redirectUrl = "/user/login?error=session";
