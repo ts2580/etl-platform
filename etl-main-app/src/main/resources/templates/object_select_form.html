@@ -7,43 +7,236 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 text-slate-800">
-<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-8 sm:px-6 lg:px-8">
-    <main class="w-full rounded-2xl border border-indigo-100 bg-white/95 p-5 shadow-xl shadow-indigo-100 sm:p-8">
-        <h2 class="text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">오브젝트 선택</h2>
-        <p class="mt-2 text-sm text-slate-500 sm:text-base">동기화할 오브젝트를 선택한 뒤 Submit 해주세요.</p>
+<body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
+<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
+        <div class="flex items-start gap-3">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🧩</span>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">오브젝트 선택</h2>
+                <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">동기화할 오브젝트를 고른 뒤, 적재 방식은 Streaming 또는 CDC 중 하나만 선택해주세요.</p>
+            </div>
+        </div>
 
-        <form th:action="@{/etl/ddl}" method="post" class="mt-5">
-            <div class="mb-3 flex justify-end">
-                <button class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" type="submit">Submit</button>
+        <div th:if="${submitError}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">입력 내용을 다시 확인해주세요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700" th:text="${submitError}">처리 중 오류가 발생했어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <form th:action="@{/etl/ddl}" method="post" class="mt-5 space-y-5 sm:mt-6 sm:space-y-6" id="objectSelectForm">
+            <section class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 적재 방식 선택</p>
+                            <h3 class="mt-2 text-base font-bold text-[#312e81] sm:text-lg">라우팅 모드</h3>
+                            <p class="mt-1 text-sm leading-6 text-slate-500">둘 중 하나만 선택할 수 있어요. UI에서는 라디오 버튼으로 고정해 실수 가능성을 줄였어요.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 sm:gap-3">
+                            <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
+                                <input type="radio" name="ingestionMode" value="STREAMING" class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:checked="${selectedIngestionMode == null or selectedIngestionMode == 'STREAMING'}" required>
+                                <span>Streaming</span>
+                            </label>
+                            <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
+                                <input type="radio" name="ingestionMode" value="CDC" class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:checked="${selectedIngestionMode == 'CDC'}" required>
+                                <span>CDC</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="cdcWarningBox"
+                         th:attr="data-used=${cdcSlotSummary.used},data-limit=${cdcSlotSummary.limit},data-available=${cdcSlotSummary.available}"
+                         class="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700 transition shadow-sm">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-x-4 sm:gap-y-1">
+                            <span id="cdcWarningTitle" class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold text-amber-700 sm:text-[11px]">⚠️ CDC 슬롯 안내</span>
+                            <span class="text-xs font-medium text-slate-600 sm:text-sm">현재 사용: <strong th:text="${cdcSlotSummary.used}">0</strong> / <strong th:text="${cdcSlotSummary.limit}">5</strong></span>
+                            <span class="text-xs font-medium text-slate-600 sm:text-sm">남은 슬롯: <strong id="cdcAvailableCount" th:text="${cdcSlotSummary.available}">5</strong></span>
+                        </div>
+                        <p id="cdcRecommendationText" class="m-0 text-sm leading-6 text-slate-600">CDC는 중요한 스키마 중심으로 운영하고, 일반 대상은 Streaming 사용을 권장해요.</p>
+                        <p id="cdcSlotMessage" class="m-0 text-xs leading-5 text-slate-500" th:text="${cdcSlotSummary.message}">CDC는 최대 5개까지 운영할 수 있어요.</p>
+                        <p id="cdcBlockMessage" class="hidden m-0 text-sm font-semibold leading-6 text-rose-700">남은 CDC 슬롯이 없어서 지금은 CDC 등록이 불가능해요. Streaming을 사용하거나 기존 CDC 슬롯을 먼저 정리해주세요.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="flex justify-end">
+                <button id="submitTopButton" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" type="submit">설정 실행</button>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-indigo-100">
-                <table class="min-w-full divide-y divide-indigo-100 text-sm">
-                    <thead class="bg-indigo-50 text-slate-700">
-                    <tr>
-                        <th class="px-3 py-3 text-left font-semibold">선택</th>
-                        <th class="px-3 py-3 text-left font-semibold">라벨명</th>
-                        <th class="px-3 py-3 text-left font-semibold">API명</th>
-                    </tr>
-                    </thead>
-                    <tbody class="divide-y divide-indigo-50 bg-white">
-                    <tr th:each="object : ${objectDefinitions}" class="hover:bg-indigo-50/40">
-                        <td class="px-3 py-3" data-label="선택">
-                            <input type="checkbox" class="h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:name="selectedObject" th:value="${object.name}" />
-                        </td>
-                        <td class="px-3 py-3" data-label="라벨명" th:text="${object.label}"></td>
-                        <td class="px-3 py-3" data-label="API명" th:text="${object.name}"></td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+            <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 대상 오브젝트 목록</p>
+                    <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">동기화 대상 선택</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">라벨과 API 이름을 함께 보고 하나의 오브젝트를 선택할 수 있어요.</p>
+                </div>
 
-            <div class="mt-4 flex justify-end">
-                <button class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" type="submit">Submit</button>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100 text-sm">
+                        <thead class="bg-slate-50 text-slate-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">선택</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">라벨명</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">API명</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-[#f8faff]">
+                        <tr th:each="object : ${objectDefinitions}" class="transition hover:bg-indigo-50/40">
+                            <td class="px-4 py-3 sm:px-5" data-label="선택">
+                                <input type="radio"
+                                       class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                       name="selectedObject"
+                                       th:value="${object.name}"
+                                       th:checked="${selectedObject == object.name}"
+                                       required />
+                            </td>
+                            <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" data-label="라벨명" th:text="${object.label}"></td>
+                            <td class="px-4 py-3 text-slate-500 sm:px-5" data-label="API명" th:text="${object.name}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button id="submitBottomButton" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" type="submit">설정 실행</button>
             </div>
         </form>
     </main>
 </div>
+
+<div id="cdcConfirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 px-4">
+    <div class="w-full max-w-md rounded-[24px] border border-rose-100 bg-[#f8faff] p-5 shadow-2xl sm:p-6">
+        <div class="flex items-start gap-3">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+            <div>
+                <h3 class="text-base font-bold text-slate-800 sm:text-lg">CDC로 계속 진행할까요?</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">CDC는 수량 제한이 있는 리소스예요. 정말 중요한 대상인지 한 번 더 확인한 뒤 진행해주세요.</p>
+                <p class="mt-2 text-sm font-medium text-slate-700">남은 슬롯: <strong id="modalAvailableCount">0</strong></p>
+            </div>
+        </div>
+        <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button type="button" id="cancelCdcSubmit" class="rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">취소</button>
+            <button type="button" id="confirmCdcSubmit" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">계속 진행</button>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const form = document.getElementById('objectSelectForm');
+    const cdcWarningBox = document.getElementById('cdcWarningBox');
+    const cdcWarningTitle = document.getElementById('cdcWarningTitle');
+    const cdcRecommendationText = document.getElementById('cdcRecommendationText');
+    const cdcSlotMessage = document.getElementById('cdcSlotMessage');
+    const cdcBlockMessage = document.getElementById('cdcBlockMessage');
+    const submitButtons = [document.getElementById('submitTopButton'), document.getElementById('submitBottomButton')];
+    const cdcConfirmModal = document.getElementById('cdcConfirmModal');
+    const confirmCdcSubmit = document.getElementById('confirmCdcSubmit');
+    const cancelCdcSubmit = document.getElementById('cancelCdcSubmit');
+    const modalAvailableCount = document.getElementById('modalAvailableCount');
+
+    const available = Number(cdcWarningBox.dataset.available || '0');
+    let confirmedCdc = false;
+
+    function getSelectedMode() {
+        return document.querySelector('input[name="ingestionMode"]:checked')?.value || 'STREAMING';
+    }
+
+    function setButtonsDisabled(disabled) {
+        submitButtons.forEach((button) => {
+            button.disabled = disabled;
+            button.classList.toggle('opacity-50', disabled);
+            button.classList.toggle('cursor-not-allowed', disabled);
+        });
+    }
+
+    function updateCdcUi() {
+        const isCdc = getSelectedMode() === 'CDC';
+        const noSlots = available <= 0;
+
+        cdcWarningBox.classList.remove('border-amber-200', 'bg-amber-50', 'border-rose-300', 'bg-rose-50');
+        cdcWarningTitle.classList.remove('bg-amber-100', 'text-amber-700', 'bg-rose-100', 'text-rose-700');
+        cdcRecommendationText.classList.remove('text-slate-600', 'text-rose-700');
+        cdcSlotMessage.classList.remove('text-slate-500', 'text-rose-600');
+        cdcBlockMessage.classList.add('hidden');
+
+        if (isCdc) {
+            cdcWarningBox.classList.add('border-rose-300', 'bg-rose-50');
+            cdcWarningTitle.classList.add('bg-rose-100', 'text-rose-700');
+            cdcRecommendationText.classList.add('text-rose-700');
+            cdcSlotMessage.classList.add('text-rose-600');
+        } else {
+            cdcWarningBox.classList.add('border-amber-200', 'bg-amber-50');
+            cdcWarningTitle.classList.add('bg-amber-100', 'text-amber-700');
+            cdcRecommendationText.classList.add('text-slate-600');
+            cdcSlotMessage.classList.add('text-slate-500');
+        }
+
+        if (isCdc && noSlots) {
+            cdcBlockMessage.classList.remove('hidden');
+            setButtonsDisabled(true);
+        } else {
+            setButtonsDisabled(false);
+        }
+    }
+
+    function openModal() {
+        modalAvailableCount.textContent = String(available);
+        cdcConfirmModal.classList.remove('hidden');
+        cdcConfirmModal.classList.add('flex');
+    }
+
+    function closeModal() {
+        cdcConfirmModal.classList.add('hidden');
+        cdcConfirmModal.classList.remove('flex');
+    }
+
+    document.querySelectorAll('input[name="ingestionMode"]').forEach((radio) => {
+        radio.addEventListener('change', () => {
+            confirmedCdc = false;
+            updateCdcUi();
+        });
+    });
+
+    form.addEventListener('submit', (event) => {
+        const isCdc = getSelectedMode() === 'CDC';
+        const noSlots = available <= 0;
+
+        if (isCdc && noSlots) {
+            event.preventDefault();
+            updateCdcUi();
+            alert('남은 CDC 슬롯이 없어서 제출할 수 없어요. Streaming을 선택하거나 기존 CDC 슬롯을 정리해주세요.');
+            return;
+        }
+
+        if (isCdc && !confirmedCdc) {
+            event.preventDefault();
+            openModal();
+        }
+    });
+
+    confirmCdcSubmit.addEventListener('click', () => {
+        confirmedCdc = true;
+        closeModal();
+        form.requestSubmit();
+    });
+
+    cancelCdcSubmit.addEventListener('click', () => {
+        confirmedCdc = false;
+        closeModal();
+    });
+
+    cdcConfirmModal.addEventListener('click', (event) => {
+        if (event.target === cdcConfirmModal) {
+            closeModal();
+        }
+    });
+
+    updateCdcUi();
+</script>
 </body>
 </html>

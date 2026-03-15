@@ -10,11 +10,11 @@ import java.util.List;
 public interface StreamingRepository {
     void setFieldDef(String ddl);
 
-    int insertObject(@Param("upperQuery") String upperQuery, @Param("listUnderQuery") List<String> listUnderQuery);
+    int insertObject(@Param("upperQuery") String upperQuery, @Param("listUnderQuery") List<String> listUnderQuery, @Param("tailQuery") String tailQuery);
 
     void setTable(String string);
 
-    int deleteObject(@Param("selectedObject")String selectedObject, @Param("listDeleteIds") List<String> listDeleteIds);
+    int deleteObject(@Param("strDelete") StringBuilder strDelete);
 
     int updateObject(@Param("strUpdate")StringBuilder strUpdate);
 }

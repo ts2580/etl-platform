@@ -9,38 +9,65 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 text-slate-800">
-<div class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-8 sm:px-6 lg:px-8">
-    <main class="w-full rounded-2xl border border-indigo-100 bg-white/95 p-6 shadow-xl shadow-indigo-100 sm:p-8">
-        <h2 class="text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">세일즈포스 RDBMS ETL 서버</h2>
-        <p class="mt-2 text-sm text-slate-500 sm:text-base">데이터 동기화 작업을 빠르고 안정적으로 진행하세요.</p>
-
-        <div th:if="${!dbEnabled}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-            <p class="font-semibold">DB 비활성 모드</p>
-            <p class="mt-1">지금은 CSS/화면 확인용으로 앱이 기동 중입니다. 로그인, 회원가입, DB 적재 기능은 비활성화되고 기본 화면/정적 리소스만 확인할 수 있어요.</p>
-        </div>
-
-        <div sec:authorize="isAnonymous()" class="mt-6 space-y-3 text-sm sm:text-base">
-            <div th:if="${dbEnabled}" class="space-y-2">
-                <p>계정이 있으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/login}">로그인</a></p>
-                <p>계정이 없으신가요? <a class="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline" th:href="@{/user/signup}">회원가입</a></p>
-            </div>
-            <div th:if="${!dbEnabled}" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500 cursor-not-allowed">로그인 비활성</a>
-                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-500 cursor-not-allowed">회원가입 비활성</a>
+<body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
+<div class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
+        <div class="flex items-start gap-3">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🌿</span>
+            <div>
+                <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">세일즈포스 ETL 워크스페이스</h2>
+                <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">연결, 오브젝트 선택, 적재 실행까지 한 흐름으로 진행할 수 있어요.</p>
             </div>
         </div>
 
-        <div sec:authorize="isAuthenticated()" class="mt-6">
-            <p class="text-sm leading-6 sm:text-base"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님 인증되었습니다.</p>
-            <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
-            <p class="mt-1 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
+        <div th:if="${!dbEnabled}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6 sm:p-5">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-amber-800 sm:text-lg">DB 비활성 모드</h3>
+                    <p class="mt-2 text-sm leading-6 text-amber-900">지금은 화면과 정적 리소스를 확인하는 용도로 앱이 기동 중이에요. 로그인, 회원가입, DB 적재 기능은 비활성화돼요.</p>
+                </div>
+            </div>
+        </div>
 
-            <div class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100" th:href="@{/user/logout}">로그아웃</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" th:href="@{/login}">세일즈포스 로그인</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" th:href="@{/etl/objects}">테이블 선택</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" href="https://localhost:443/file">파일 엔진</a>
+        <div sec:authorize="isAnonymous()" class="mt-5 space-y-3 text-sm sm:mt-6 sm:text-base">
+            <div th:if="${dbEnabled}" class="grid gap-3 sm:grid-cols-2">
+                <a class="rounded-2xl border border-[#d9ddfb] bg-indigo-50/60 p-4 shadow-sm transition hover:bg-indigo-100/70" th:href="@{/user/login}">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 인증</p>
+                    <p class="mt-2 text-base font-bold text-[#312e81]">로그인</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">기존 계정으로 접속해 ETL 작업을 이어갈 수 있어요.</p>
+                </a>
+                <a class="rounded-2xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm transition hover:bg-violet-100/70" th:href="@{/user/signup}">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-violet-500 sm:text-xs">ℹ️ 시작하기</p>
+                    <p class="mt-2 text-base font-bold text-[#4f46e5]">회원가입</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">새 계정을 만들어 작업 환경을 준비할 수 있어요.</p>
+                </a>
+            </div>
+            <div th:if="${!dbEnabled}" class="grid gap-3 sm:grid-cols-2">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-500 shadow-sm">
+                    <p class="text-base font-bold">로그인 비활성</p>
+                    <p class="mt-1 text-sm leading-6">DB가 비활성화되어 있어 지금은 사용할 수 없어요.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-500 shadow-sm">
+                    <p class="text-base font-bold">회원가입 비활성</p>
+                    <p class="mt-1 text-sm leading-6">DB가 비활성화되어 있어 지금은 사용할 수 없어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div sec:authorize="isAuthenticated()" class="mt-5 sm:mt-6">
+            <div class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 현재 사용자</p>
+                <p class="mt-2 text-base font-bold text-slate-800 sm:text-lg"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님, 인증이 완료됐어요.</p>
+                <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
+                <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
+            </div>
+
+            <div class="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 lg:grid-cols-4">
+                <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100" th:href="@{/user/logout}">로그아웃</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/login}">세일즈포스 로그인</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects}">오브젝트 선택</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" href="http://192.168.0.62:9443/file">파일 엔진</a>
             </div>
         </div>
     </main>

@@ -3,7 +3,7 @@
 
 <mapper namespace="com.etl.sfdc.user.model.repository.UserRepository">
 
-    <insert id="create" parameterType="Member">
+    <insert id="create" parameterType="com.etl.sfdc.user.model.dto.Member">
         INSERT INTO config.member(
             name,
             username,

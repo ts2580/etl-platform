@@ -1,5 +1,6 @@
 package com.apache.sfdc.common;
 
+import com.etlplatform.common.error.AppException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Set;

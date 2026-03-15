@@ -14,4 +14,7 @@ public interface UserRepository {
 
     @Select("select * from config.member where username = #{username}")
     Optional<Member> findByUsername(String username);
+
+    @Select("select * from config.member where email = #{email}")
+    Optional<Member> findByEmail(String email);
 }

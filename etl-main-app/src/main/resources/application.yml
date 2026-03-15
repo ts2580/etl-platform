@@ -1,0 +1,35 @@
+app:
+  # DB optional mode.
+  # false: UI/CSS/OAuth 진입 화면만 확인 가능, DB 기능은 503 FEATURE_DISABLED 로 응답
+  # true : DB/MyBatis 관련 빈 활성화
+  db:
+    enabled: ${APP_DB_ENABLED:false}
+
+spring:
+  datasource:
+    # APP_DB_ENABLED=true 일 때만 실제 값 필요
+    url: ${DB_URL:}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.etl.sfdc.user.model.dto
+  configuration:
+    mapUnderscoreToCamelCase: true
+
+salesforce:
+  # OAuth 로그인/콜백에 필요한 설정
+  clientId: ${SALESFORCE_CLIENT_ID:}
+  clientSecret: ${SALESFORCE_CLIENT_SECRET:}
+  redirectUri: ${SALESFORCE_REDIRECT_URI:}
+  authUrl: ${SALESFORCE_AUTH_URL:}
+  tokenUrl: ${SALESFORCE_TOKEN_URL:}
+  allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:https://yuricompany-dev-ed.develop.lightning.force.com}
+  myDomain: ${SALESFORCE_MY_DOMAIN:}
+  access-token-ttl-minutes: 55
+
+aws:
+  # routing-engine 호출용 ALB 주소. 예) https://example.com
+  albUri: ${ALB_URI:}

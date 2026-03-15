@@ -1,4 +1,4 @@
-# etl-platfor
+# etl-platform
 
 Salesforce ETL 플랫폼을 **단일 Repo + Gradle 멀티모듈**로 관리하기 위한 통합 프로젝트.
 

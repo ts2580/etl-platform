@@ -6,7 +6,7 @@ app:
     enabled: ${APP_DB_ENABLED:false}
 
 server:
-    port: 3931
+  port: ${ROUTING_APP_PORT:3931}
 
 camel:
     component:

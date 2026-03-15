@@ -14,7 +14,7 @@ public class NoOpUserService implements UserService {
     }
 
     @Override
-    public Member create(String username, String email, String password, String description) {
+    public Member create(String name, String username, String email, String password, String description) {
         throw new FeatureDisabledException("DB 비활성 모드에서는 회원가입을 사용할 수 없습니다.");
     }
 }

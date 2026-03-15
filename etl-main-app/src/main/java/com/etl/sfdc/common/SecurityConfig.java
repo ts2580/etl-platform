@@ -42,6 +42,7 @@ public class SecurityConfig {
                 )
                 .formLogin(formLogin -> formLogin
                         .loginPage("/user/login")
+                        .usernameParameter("id")
                         .defaultSuccessUrl("/")
                         .failureUrl("/user/login?error=login")
                 )
@@ -57,6 +58,9 @@ public class SecurityConfig {
                                 .expiredSessionStrategy(new UserSessionExpiredStrategy())
                                 .sessionRegistry(sessionRegistry())
                         )
+                )
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .accessDeniedHandler((request, response, accessDeniedException) -> response.sendRedirect("/"))
                 );
         return http.build();
     }

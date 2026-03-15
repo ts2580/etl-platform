@@ -14,6 +14,7 @@
         <foreach item="record" collection="listUnderQuery" separator=",">
             ${record}
         </foreach>
+        ${tailQuery}
     </insert>
 
 
@@ -22,11 +23,7 @@
     </update>
 
     <delete id="deleteObject">
-        DELETE FROM ${selectedObject}
-        WHERE sfid IN
-        <foreach item="id" collection="listDeleteIds" open="(" separator="," close=")">
-            ${id}
-        </foreach>
+        ${strDelete}
     </delete>
 
 </mapper>

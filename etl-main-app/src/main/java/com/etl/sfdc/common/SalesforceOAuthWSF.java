@@ -50,6 +50,7 @@ public class SalesforceOAuthWSF {
             log.warn("OAuth callback received without authorization code");
             return;
         }
+        log.info("OAuth callback received with authorization code");
         validateOauthConfiguration();
 
         SalesforceOAuthClient.TokenResponse token = oauthClient.exchangeAuthorizationCode(
@@ -66,9 +67,36 @@ public class SalesforceOAuthWSF {
     }
 
     private void validateOauthConfiguration() {
-        if (isBlank(clientId) || isBlank(clientSecret) || isBlank(redirectUri) || isBlank(authUrl) || isBlank(tokenUrl)) {
-            throw new AppException("Salesforce OAuth 설정값이 비어 있습니다. 환경변수를 확인해주세요: SALESFORCE_CLIENT_ID, SALESFORCE_CLIENT_SECRET, SALESFORCE_REDIRECT_URI, SALESFORCE_AUTH_URL, SALESFORCE_TOKEN_URL");
+        StringBuilder missing = new StringBuilder();
+
+        appendMissing(missing, "SALESFORCE_CLIENT_ID", clientId);
+        appendMissing(missing, "SALESFORCE_CLIENT_SECRET", clientSecret);
+        appendMissing(missing, "SALESFORCE_REDIRECT_URI", redirectUri);
+        appendMissing(missing, "SALESFORCE_AUTH_URL", authUrl);
+        appendMissing(missing, "SALESFORCE_TOKEN_URL", tokenUrl);
+
+        if (missing.length() > 0) {
+            String missingKeys = missing.toString();
+            log.error("Salesforce OAuth configuration missing. missingKeys={}, redirectUri={}, authUrl={}, tokenUrl={}",
+                    missingKeys,
+                    safeValue(redirectUri),
+                    safeValue(authUrl),
+                    safeValue(tokenUrl));
+            throw new AppException("Salesforce OAuth 설정값이 비어 있습니다. 누락 키: " + missingKeys);
         }
+    }
+
+    private void appendMissing(StringBuilder missing, String key, String value) {
+        if (isBlank(value)) {
+            if (missing.length() > 0) {
+                missing.append(", ");
+            }
+            missing.append(key);
+        }
+    }
+
+    private String safeValue(String value) {
+        return isBlank(value) ? "<blank>" : value;
     }
 
     private boolean isBlank(String value) {

@@ -14,6 +14,7 @@
         <foreach item="record" collection="listUnderQuery" separator=",">
             ${record}
         </foreach>
+        ${tailQuery}
     </insert>
 
     <update id="updateObject">
@@ -21,12 +22,31 @@
     </update>
 
     <delete id="deleteObject">
-        DELETE FROM ${selectedObject}
-        WHERE sfid IN
-        <foreach item="id" collection="listDeleteIds" open="(" separator="," close=")">
-            ${id}
-        </foreach>
+        ${strDelete}
     </delete>
+
+    <select id="countActiveCdcSlots" resultType="int">
+        SELECT COUNT(*)
+        FROM cdc_slot_registry
+        WHERE is_active = TRUE
+    </select>
+
+    <insert id="upsertActiveCdcSlot">
+        INSERT INTO cdc_slot_registry (
+            selected_object,
+            is_active,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{selectedObject},
+            TRUE,
+            NOW(),
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            is_active = TRUE,
+            updated_at = NOW()
+    </insert>
 
 </mapper>
 

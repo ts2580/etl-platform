@@ -16,6 +16,9 @@ salesforce:
   allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:https://yuricompany-dev-ed.develop.lightning.force.com}
   access-token-ttl-minutes: 55
 
+server:
+  port: ${FILE_APP_PORT:9443}
+
 spring:
   datasource:
     # APP_DB_ENABLED=true 일 때만 실제 값 필요

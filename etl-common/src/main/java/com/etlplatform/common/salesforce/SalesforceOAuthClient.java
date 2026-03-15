@@ -2,7 +2,11 @@ package com.etlplatform.common.salesforce;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.*;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -12,6 +16,7 @@ import java.util.Objects;
  *
  * Supports:
  * - Authorization Code Grant (code -> access/refresh token)
+ * - Refresh Token Grant (refresh token -> access token)
  * - Password Grant (username/password -> access token)
  */
 public class SalesforceOAuthClient {
@@ -69,6 +74,41 @@ public class SalesforceOAuthClient {
             String instanceUrl = rootNode.path("instance_url").asText(null);
 
             return new TokenResponse(accessToken, refreshToken, instanceUrl, body);
+        }
+    }
+
+    public TokenResponse exchangeRefreshToken(
+            String tokenUrl,
+            String refreshToken,
+            String clientId,
+            String clientSecret
+    ) throws IOException {
+
+        RequestBody requestBody = new FormBody.Builder()
+                .add("grant_type", "refresh_token")
+                .add("refresh_token", refreshToken)
+                .add("client_id", clientId)
+                .add("client_secret", clientSecret)
+                .build();
+
+        Request tokenRequest = new Request.Builder()
+                .url(tokenUrl)
+                .post(requestBody)
+                .build();
+
+        try (Response tokenResponse = http.newCall(tokenRequest).execute()) {
+            if (!tokenResponse.isSuccessful()) {
+                throw new IOException("Salesforce refresh token request failed: HTTP " + tokenResponse.code());
+            }
+
+            String body = Objects.requireNonNull(tokenResponse.body()).string();
+            JsonNode rootNode = objectMapper.readTree(body);
+
+            String accessToken = rootNode.path("access_token").asText(null);
+            String nextRefreshToken = rootNode.path("refresh_token").asText(null);
+            String instanceUrl = rootNode.path("instance_url").asText(null);
+
+            return new TokenResponse(accessToken, nextRefreshToken, instanceUrl, body);
         }
     }
 

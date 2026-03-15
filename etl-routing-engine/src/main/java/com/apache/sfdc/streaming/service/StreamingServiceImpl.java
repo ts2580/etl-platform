@@ -1,11 +1,11 @@
 package com.apache.sfdc.streaming.service;
 
 import com.etlplatform.common.error.AppException;
+import com.apache.sfdc.common.SalesforceObjectSchemaBuilder;
+import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
 import com.apache.sfdc.common.SalesforceRouterBuilder;
 import com.apache.sfdc.common.SqlSanitizer;
-import com.apache.sfdc.streaming.dto.FieldDefinition;
 import com.apache.sfdc.streaming.repository.StreamingRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +59,7 @@ public class StreamingServiceImpl implements StreamingService {
         Map<String, Object> returnMap = new HashMap<>();
         OkHttpClient client = new OkHttpClient();
         ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode;
+        SchemaResult schemaResult;
 
         Request request = new Request.Builder()
                 .url(instanceUrl + "/services/data/v" + apiVersion + "/sobjects/" + selectedObject + "/describe")
@@ -67,103 +67,18 @@ public class StreamingServiceImpl implements StreamingService {
                 .addHeader("Content-Type", "application/json")
                 .build();
 
-        StringBuilder ddl = new StringBuilder();
-        List<String> listFields = new ArrayList<>();
-        Map<String, String> mapType = new HashMap<>();
-
         try (Response response = client.newCall(request).execute()) {
-            String responseBody = Objects.requireNonNull(response.body()).string();
-            rootNode = objectMapper.readTree(responseBody);
-            JsonNode fields = rootNode.get("fields");
-            if (fields == null || !fields.isArray()) {
-                throw new AppException("Invalid Salesforce describe response");
-            }
-
-            List<FieldDefinition> listDef = objectMapper.convertValue(fields, new TypeReference<List<FieldDefinition>>() {});
-            ddl.append("CREATE OR REPLACE table config.").append(selectedObject).append("(");
-
-            for (FieldDefinition obj : listDef) {
-                mapType.put(obj.name, obj.type);
-                String label = obj.label.replace("'", "`");
-
-                switch (obj.type) {
-                    case "id" -> ddl.append("sfid VARCHAR(18) primary key not null comment '").append(label).append("',");
-                    case "textarea" -> {
-                        if (obj.length > 4000) {
-                            ddl.append(obj.name).append(" TEXT comment '").append(label).append("',");
-                        } else {
-                            ddl.append(obj.name).append(" VARCHAR(").append(obj.length).append(") comment '").append(label).append("',");
-                        }
-                        listFields.add(obj.name);
-                    }
-                    case "reference" -> {
-                        ddl.append(obj.name).append(" VARCHAR(18) comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "string", "picklist", "multipicklist", "phone", "url" -> {
-                        ddl.append(obj.name).append(" VARCHAR(").append(obj.length).append(") comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "boolean" -> {
-                        ddl.append(obj.name).append(" boolean comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "datetime" -> {
-                        ddl.append(obj.name).append(" TIMESTAMP comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "date" -> {
-                        ddl.append(obj.name).append(" date comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "time" -> {
-                        ddl.append(obj.name).append(" time comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "double", "percent", "currency" -> {
-                        ddl.append(obj.name).append(" double precision comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    case "int" -> {
-                        ddl.append(obj.name).append(" int comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                    default -> {
-                        ddl.append(obj.name).append(" VARCHAR(255) comment '").append(label).append("',");
-                        listFields.add(obj.name);
-                    }
-                }
-            }
-
-            ddl.deleteCharAt(ddl.length() - 1);
-            ddl.append(");");
+            JsonNode fields = objectMapper.readTree(response.body().string()).get("fields");
+            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(selectedObject, fields, objectMapper);
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
         }
 
-        returnMap.put("mapType", mapType);
-        streamingRepository.setTable(ddl.toString());
+        returnMap.put("mapType", schemaResult.mapType());
+        streamingRepository.setTable(schemaResult.ddl());
+        returnMap.put("soqlForPushTopic", schemaResult.soqlForPushTopic());
 
-        StringBuilder soql = new StringBuilder();
-        StringBuilder soqlForPushTopic = new StringBuilder();
-        for (String field : listFields) {
-            SqlSanitizer.validateIdentifier(field);
-            soql.append(field).append(",");
-            if (!"textarea".equals(mapType.get(field))) {
-                soqlForPushTopic.append(field).append(",");
-            }
-        }
-
-        if (soql.isEmpty()) {
-            throw new AppException("No supported fields for object: " + selectedObject);
-        }
-
-        soql.deleteCharAt(soql.length() - 1);
-        soqlForPushTopic.deleteCharAt(soqlForPushTopic.length() - 1);
-        returnMap.put("soqlForPushTopic", soqlForPushTopic);
-
-        String query = "SELECT Id, " + soql + " FROM " + selectedObject;
-
+        String query = SalesforceObjectSchemaBuilder.buildInitialQuery(selectedObject, schemaResult.fields());
         request = new Request.Builder()
                 .url(instanceUrl + "/services/data/v" + apiVersion + "/query/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8))
                 .addHeader("Authorization", "Bearer " + token)
@@ -171,27 +86,15 @@ public class StreamingServiceImpl implements StreamingService {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            rootNode = objectMapper.readTree(Objects.requireNonNull(response.body()).string());
-            JsonNode records = rootNode.get("records");
+            JsonNode records = objectMapper.readTree(response.body().string()).get("records");
 
             if (records != null && !records.isEmpty()) {
-                String upperQuery = "Insert Into config." + selectedObject + "(sfid, " + soql + ") values";
-                List<String> listUnderQuery = new ArrayList<>();
-
-                for (JsonNode record : records) {
-                    StringBuilder underQuery = new StringBuilder();
-                    underQuery.append("('").append(record.get("Id").asText()).append("',");
-                    for (String field : listFields) {
-                        String sfType = mapType.get(field);
-                        underQuery.append(SqlSanitizer.sanitizeValue(record.get(field), sfType)).append(",");
-                    }
-                    underQuery.deleteCharAt(underQuery.length() - 1);
-                    underQuery.append(")");
-                    listUnderQuery.add(underQuery.toString());
-                }
+                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(selectedObject, schemaResult.soql());
+                String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
+                List<String> listUnderQuery = collectInsertRows(records, schemaResult);
 
                 Instant start = Instant.now();
-                int insertedData = streamingRepository.insertObject(upperQuery, listUnderQuery);
+                int insertedData = streamingRepository.insertObject(upperQuery, listUnderQuery, tailQuery);
                 Instant end = Instant.now();
                 Duration interval = Duration.between(start, end);
 
@@ -274,5 +177,12 @@ public class StreamingServiceImpl implements StreamingService {
             myCamelContext.close();
             throw e;
         }
+    }
+    private List<String> collectInsertRows(JsonNode records, SchemaResult schemaResult) {
+        List<String> listUnderQuery = new ArrayList<>();
+        for (JsonNode record : records) {
+            listUnderQuery.add(SalesforceObjectSchemaBuilder.buildInsertValues(record, schemaResult.fields(), schemaResult.mapType()));
+        }
+        return listUnderQuery;
     }
 }
