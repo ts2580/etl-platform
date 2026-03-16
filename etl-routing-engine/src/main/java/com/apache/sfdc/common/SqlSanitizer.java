@@ -23,6 +23,10 @@ public final class SqlSanitizer {
         validateIdentifier(tableName);
     }
 
+    public static void validateSchemaName(String schemaName) {
+        validateIdentifier(schemaName);
+    }
+
     public static String sanitizeValue(JsonNode valueNode, String sfType) {
         if (valueNode == null || valueNode.isNull()) {
             return "null";
@@ -32,7 +36,8 @@ public final class SqlSanitizer {
             case "double", "percent", "currency" -> toNumeric(valueNode, sfType);
             case "int" -> toInt(valueNode);
             case "boolean" -> toBoolean(valueNode);
-            case "datetime" -> quoteAndNormalizeDateTime(valueNode.asText());
+            case "datetime" -> toDateTimeLiteral(valueNode);
+            case "date" -> toDateLiteral(valueNode);
             case "time" -> quoteAndNormalizeTime(valueNode.asText());
             default -> quoteString(valueNode.asText());
         };
@@ -62,8 +67,32 @@ public final class SqlSanitizer {
         return valueNode.asBoolean() ? "true" : "false";
     }
 
+    private static String toDateTimeLiteral(JsonNode valueNode) {
+        String raw = valueNode.asText();
+        if (raw.matches("^\\d{13}$")) {
+            return "FROM_UNIXTIME(" + raw + " / 1000)";
+        }
+        if (raw.matches("^\\d{10}$")) {
+            return "FROM_UNIXTIME(" + raw + ")";
+        }
+        return quoteAndNormalizeDateTime(raw);
+    }
+
+    private static String toDateLiteral(JsonNode valueNode) {
+        String raw = valueNode.asText();
+        if (raw.matches("^\\d{13}$")) {
+            return "DATE(FROM_UNIXTIME(" + raw + " / 1000))";
+        }
+        if (raw.matches("^\\d{10}$")) {
+            return "DATE(FROM_UNIXTIME(" + raw + "))";
+        }
+        return quoteString(raw);
+    }
+
     private static String quoteAndNormalizeDateTime(String value) {
-        String normalized = value.replace(".000+0000", "").replace("T", " ");
+        String normalized = value.replace(".000+0000", "")
+                .replace("T", " ")
+                .replace("Z", "");
         return quoteString(normalized);
     }
 

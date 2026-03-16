@@ -12,8 +12,7 @@ salesforce:
   redirectUri: ${SALESFORCE_REDIRECT_URI:}
   authUrl: ${SALESFORCE_AUTH_URL:}
   tokenUrl: ${SALESFORCE_TOKEN_URL:}
-  myDomain: ${SALESFORCE_MY_DOMAIN:}
-  allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:https://yuricompany-dev-ed.develop.lightning.force.com}
+  allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:}
   access-token-ttl-minutes: 55
 
 server:

@@ -62,18 +62,22 @@ public class SalesforceOAuthClient {
                 .build();
 
         try (Response tokenResponse = http.newCall(tokenRequest).execute()) {
+            String body = tokenResponse.body() != null ? tokenResponse.body().string() : "";
             if (!tokenResponse.isSuccessful()) {
-                throw new IOException("Salesforce token request failed: HTTP " + tokenResponse.code());
+                String message = body == null || body.isBlank()
+                        ? "(empty)"
+                        : body;
+                throw new IOException("Salesforce token request failed: HTTP " + tokenResponse.code() + " body=" + message);
             }
 
-            String body = Objects.requireNonNull(tokenResponse.body()).string();
             JsonNode rootNode = objectMapper.readTree(body);
 
             String accessToken = rootNode.path("access_token").asText(null);
             String refreshToken = rootNode.path("refresh_token").asText(null);
             String instanceUrl = rootNode.path("instance_url").asText(null);
+            String idUrl = rootNode.path("id").asText(null);
 
-            return new TokenResponse(accessToken, refreshToken, instanceUrl, body);
+            return new TokenResponse(accessToken, refreshToken, instanceUrl, idUrl, body);
         }
     }
 
@@ -97,18 +101,22 @@ public class SalesforceOAuthClient {
                 .build();
 
         try (Response tokenResponse = http.newCall(tokenRequest).execute()) {
+            String body = tokenResponse.body() != null ? tokenResponse.body().string() : "";
             if (!tokenResponse.isSuccessful()) {
-                throw new IOException("Salesforce refresh token request failed: HTTP " + tokenResponse.code());
+                String message = body == null || body.isBlank()
+                        ? "(empty)"
+                        : body;
+                throw new IOException("Salesforce refresh token request failed: HTTP " + tokenResponse.code() + " body=" + message);
             }
 
-            String body = Objects.requireNonNull(tokenResponse.body()).string();
             JsonNode rootNode = objectMapper.readTree(body);
 
             String accessToken = rootNode.path("access_token").asText(null);
             String nextRefreshToken = rootNode.path("refresh_token").asText(null);
             String instanceUrl = rootNode.path("instance_url").asText(null);
+            String idUrl = rootNode.path("id").asText(null);
 
-            return new TokenResponse(accessToken, nextRefreshToken, instanceUrl, body);
+            return new TokenResponse(accessToken, nextRefreshToken, instanceUrl, idUrl, body);
         }
     }
 
@@ -147,6 +155,7 @@ public class SalesforceOAuthClient {
             String accessToken,
             String refreshToken,
             String instanceUrl,
+            String id,
             String rawJson
     ) {}
 }

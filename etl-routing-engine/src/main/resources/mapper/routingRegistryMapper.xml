@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.apache.sfdc.common.RoutingRegistryRepository">
+
+    <insert id="upsertRoutingRegistry" parameterType="map">
+        INSERT INTO routing.routing_registry (
+            org_key,
+            org_name,
+            my_domain,
+            target_schema,
+            target_table,
+            instance_name,
+            org_type,
+            is_sandbox,
+            selected_object,
+            object_label,
+            routing_protocol,
+            routing_endpoint,
+            routing_status,
+            source_status,
+            initial_load_count,
+            last_error_message,
+            activated_at,
+            released_at,
+            last_synced_at,
+            created_by,
+            updated_by,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{orgKey},
+            #{orgName},
+            #{myDomain},
+            #{targetSchema},
+            #{targetTable},
+            #{instanceName},
+            #{orgType},
+            #{sandbox},
+            #{selectedObject},
+            #{objectLabel},
+            #{routingProtocol},
+            #{routingEndpoint},
+            #{routingStatus},
+            #{sourceStatus},
+            #{initialLoadCount},
+            #{lastErrorMessage},
+            COALESCE(#{activatedAt}, NOW()),
+            #{releasedAt},
+            COALESCE(#{lastSyncedAt}, NOW()),
+            #{createdBy},
+            #{updatedBy},
+            NOW(),
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            org_name = VALUES(org_name),
+            my_domain = VALUES(my_domain),
+            target_schema = VALUES(target_schema),
+            target_table = VALUES(target_table),
+            instance_name = VALUES(instance_name),
+            org_type = VALUES(org_type),
+            is_sandbox = VALUES(is_sandbox),
+            object_label = VALUES(object_label),
+            routing_endpoint = VALUES(routing_endpoint),
+            routing_status = VALUES(routing_status),
+            source_status = VALUES(source_status),
+            initial_load_count = VALUES(initial_load_count),
+            last_error_message = VALUES(last_error_message),
+            released_at = VALUES(released_at),
+            last_synced_at = VALUES(last_synced_at),
+            updated_by = VALUES(updated_by),
+            updated_at = NOW()
+    </insert>
+
+    <insert id="insertRoutingHistory" parameterType="map">
+        INSERT INTO routing.routing_history (
+            routing_registry_id,
+            org_key,
+            selected_object,
+            routing_protocol,
+            event_type,
+            event_status,
+            event_stage,
+            endpoint,
+            message,
+            detail_text,
+            initial_load_count,
+            actor,
+            created_at
+        ) VALUES (
+            #{routingRegistryId},
+            #{orgKey},
+            #{selectedObject},
+            #{routingProtocol},
+            #{eventType},
+            #{eventStatus},
+            #{eventStage},
+            #{endpoint},
+            #{message},
+            #{detailText},
+            #{initialLoadCount},
+            #{actor},
+            NOW()
+        )
+    </insert>
+
+
+    <select id="findActiveRoutes" resultType="map">
+        SELECT
+            org_key AS orgKey,
+            org_name AS orgName,
+            my_domain AS myDomain,
+            object_label AS objectLabel,
+            selected_object AS objectName,
+            routing_protocol AS protocol,
+            routing_endpoint AS endpoint,
+            routing_status AS routingStatus,
+            source_status AS sourceStatus,
+            initial_load_count AS initialLoadCount,
+            last_error_message AS lastErrorMessage,
+            last_synced_at AS lastSyncedAt,
+            activated_at AS activatedAt,
+            released_at AS releasedAt,
+            is_sandbox AS isSandbox,
+            instance_name AS instanceName,
+            org_type AS orgType
+        FROM routing.routing_registry
+        WHERE routing_status = 'ACTIVE'
+        ORDER BY org_name, selected_object ASC, routing_protocol DESC
+    </select>
+
+    <select id="findActiveRoutesByOrg" resultType="map">
+        SELECT
+            org_key AS orgKey,
+            org_name AS orgName,
+            my_domain AS myDomain,
+            object_label AS objectLabel,
+            selected_object AS objectName,
+            routing_protocol AS protocol,
+            routing_endpoint AS endpoint,
+            routing_status AS routingStatus,
+            source_status AS sourceStatus,
+            initial_load_count AS initialLoadCount,
+            last_error_message AS lastErrorMessage,
+            last_synced_at AS lastSyncedAt,
+            activated_at AS activatedAt,
+            released_at AS releasedAt,
+            is_sandbox AS isSandbox,
+            instance_name AS instanceName,
+            org_type AS orgType
+        FROM routing.routing_registry
+        WHERE routing_status = 'ACTIVE'
+          AND org_key = #{orgKey}
+        ORDER BY selected_object ASC, routing_protocol DESC
+    </select>
+
+    <select id="findActiveOrgs" resultType="map">
+        SELECT
+            org_key AS orgKey,
+            MAX(org_name) AS orgName,
+            MAX(instance_name) AS instanceName,
+            MAX(org_type) AS orgType,
+            MAX(is_sandbox) AS isSandbox,
+            MAX(my_domain) AS myDomain
+        FROM routing.routing_registry
+        WHERE routing_status = 'ACTIVE'
+        GROUP BY org_key
+        ORDER BY MAX(org_name)
+    </select>
+
+    <select id="findActiveOrgsByOrg" resultType="map">
+        SELECT
+            org_key AS orgKey,
+            MAX(org_name) AS orgName,
+            MAX(instance_name) AS instanceName,
+            MAX(org_type) AS orgType,
+            MAX(is_sandbox) AS isSandbox,
+            MAX(my_domain) AS myDomain
+        FROM routing.routing_registry
+        WHERE routing_status = 'ACTIVE'
+          AND org_key = #{orgKey}
+        GROUP BY org_key
+    </select>
+
+    <update id="markRoutingReleased">
+        UPDATE routing.routing_registry
+        SET routing_status = 'RELEASED',
+            source_status = 'INACTIVE',
+            last_error_message = #{message},
+            released_at = NOW(),
+            last_synced_at = NOW(),
+            updated_by = #{updatedBy},
+            updated_at = NOW()
+        WHERE org_key = #{orgKey}
+          AND selected_object = #{selectedObject}
+          AND routing_protocol = #{routingProtocol}
+    </update>
+
+    <update id="markRoutingFailed">
+        UPDATE routing.routing_registry
+        SET routing_status = 'FAILED',
+            source_status = 'ERROR',
+            last_error_message = #{message},
+            last_synced_at = NOW(),
+            updated_by = #{updatedBy},
+            updated_at = NOW()
+        WHERE org_key = #{orgKey}
+          AND selected_object = #{selectedObject}
+          AND routing_protocol = #{routingProtocol}
+    </update>
+
+    <select id="countActiveSlots" resultType="int">
+        SELECT COUNT(*)
+        FROM routing.ingestion_slot_registry
+        WHERE is_active = TRUE
+          AND routing_protocol = #{routingProtocol}
+    </select>
+
+    <update id="deactivateSlotsByObject">
+        UPDATE routing.ingestion_slot_registry
+        SET is_active = FALSE,
+            deactivated_at = NOW(),
+            updated_at = NOW()
+        WHERE selected_object = #{selectedObject}
+          AND routing_protocol = #{routingProtocol}
+    </update>
+
+    <insert id="insertSlot" parameterType="map">
+        INSERT INTO routing.ingestion_slot_registry (
+            org_key,
+            selected_object,
+            routing_protocol,
+            routing_registry_id,
+            is_active,
+            activated_at,
+            deactivated_at,
+            note,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{orgKey},
+            #{selectedObject},
+            #{routingProtocol},
+            #{routingRegistryId},
+            TRUE,
+            NOW(),
+            NULL,
+            #{note},
+            NOW(),
+            NOW()
+        )
+        ON DUPLICATE KEY UPDATE
+            routing_protocol = VALUES(routing_protocol),
+            routing_registry_id = VALUES(routing_registry_id),
+            is_active = TRUE,
+            deactivated_at = NULL,
+            updated_at = NOW(),
+            note = VALUES(note)
+    </insert>
+
+    <select id="findActiveSlots" resultType="map">
+        SELECT id,
+               org_key AS orgKey,
+               selected_object AS selectedObject,
+               routing_protocol AS routingProtocol,
+               routing_registry_id AS routingRegistryId,
+               is_active AS isActive,
+               activated_at AS activatedAt,
+               deactivated_at AS deactivatedAt,
+               note,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM routing.ingestion_slot_registry
+        WHERE is_active = TRUE
+          AND routing_protocol = #{routingProtocol}
+    </select>
+
+</mapper>

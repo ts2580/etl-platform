@@ -60,7 +60,13 @@ public class PubSubServiceImpl implements PubSubService {
     @Override
     public Map<String, Object> createCdcChannel(Map<String, String> mapProperty, String token) throws Exception {
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
         String resolvedInstanceUrl = resolveInstanceUrl(mapProperty);
+
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+        SqlSanitizer.validateSchemaName(targetSchema);
 
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
@@ -137,9 +143,33 @@ public class PubSubServiceImpl implements PubSubService {
     }
 
     @Override
+    public void dropTable(Map<String, String> mapProperty) {
+        String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+        SqlSanitizer.validateSchemaName(targetSchema);
+
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
+        SqlSanitizer.validateTableName(selectedObject);
+
+        String ddl = "DROP TABLE IF EXISTS `" + targetSchema + "`." + "`" + selectedObject + "`";
+        pubSubRepository.setTable(ddl);
+    }
+
+    @Override
     public Map<String, Object> setTable(Map<String, String> mapProperty, String token) {
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
         String resolvedInstanceUrl = resolveInstanceUrl(mapProperty);
+
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+        SqlSanitizer.validateSchemaName(targetSchema);
 
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
@@ -161,7 +191,7 @@ public class PubSubServiceImpl implements PubSubService {
 
         try (Response response = client.newCall(request).execute()) {
             JsonNode responseBody = objectMapper.readTree(response.body().string());
-            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(selectedObject, responseBody.get("fields"), objectMapper);
+            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(targetSchema, selectedObject, responseBody.get("fields"), objectMapper);
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
         }
@@ -181,7 +211,7 @@ public class PubSubServiceImpl implements PubSubService {
             JsonNode records = rootNode.get("records");
 
             if (records != null && !records.isEmpty()) {
-                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(selectedObject, schemaResult.soql());
+                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
                 String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
                 List<String> listUnderQuery = collectInsertRows(records, schemaResult);
 
@@ -208,6 +238,13 @@ public class PubSubServiceImpl implements PubSubService {
     @Override
     public void subscribeCDC(Map<String, String> mapProperty, Map<String, Object> mapType) throws Exception {
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+        SqlSanitizer.validateSchemaName(targetSchema);
+
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
@@ -220,7 +257,7 @@ public class PubSubServiceImpl implements PubSubService {
         sfEcology.setRefreshToken(mapProperty.get("refreshToken"));
         sfEcology.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(selectedObject, mapType, pubSubRepository);
+        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(targetSchema, selectedObject, mapType, pubSubRepository);
 
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
@@ -236,17 +273,26 @@ public class PubSubServiceImpl implements PubSubService {
     }
 
     @Override
-    public void markCdcSlotActive(String selectedObject) {
+    public void markSlotActive(String selectedObject, String ingestionProtocol, String orgKey, Long routingRegistryId) {
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
         SqlSanitizer.validateTableName(selectedObject);
-        pubSubRepository.upsertActiveCdcSlot(selectedObject);
+        pubSubRepository.upsertActiveSlot(orgKey, selectedObject, ingestionProtocol, routingRegistryId, "routing slot active by pubsub");
     }
 
     @Override
-    public Map<String, Object> getCdcSlotSummary() {
-        int used = pubSubRepository.countActiveCdcSlots();
+    public void deactivateSlot(String selectedObject, String ingestionProtocol) {
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
+        SqlSanitizer.validateTableName(selectedObject);
+        pubSubRepository.deactivateSlot(ingestionProtocol, selectedObject);
+    }
+
+    @Override
+    public Map<String, Object> getSlotSummary(String ingestionProtocol) {
+        int used = pubSubRepository.countActiveSlots(ingestionProtocol);
         int limit = 5;
 
         Map<String, Object> result = new HashMap<>();

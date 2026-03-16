@@ -16,15 +16,12 @@ public class HealthController {
     @Value("${app.db.enabled:false}")
     private boolean dbEnabled;
 
-    @Value("${salesforce.clientId:}")
-    private String clientId;
-
     @Value("${salesforce.redirectUri:}")
     private String redirectUri;
 
     @GetMapping
     public ResponseEntity<HealthStatusResponse> health() {
-        boolean salesforceConfigured = !clientId.isBlank() && !redirectUri.isBlank();
+        boolean salesforceConfigured = !redirectUri.isBlank();
         return ResponseEntity.ok(new HealthStatusResponse("etl-main-app", "UP", dbEnabled, salesforceConfigured, Instant.now()));
     }
 }

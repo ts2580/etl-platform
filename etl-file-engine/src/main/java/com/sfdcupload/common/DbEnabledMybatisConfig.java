@@ -15,7 +15,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
-@MapperScan("com.sfdcupload.file.repository")
+@MapperScan({"com.sfdcupload.file.repository", "com.sfdcupload.common"})
 public class DbEnabledMybatisConfig {
 
     @Bean

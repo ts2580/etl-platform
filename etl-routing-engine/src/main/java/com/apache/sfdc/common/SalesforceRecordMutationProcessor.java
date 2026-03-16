@@ -13,19 +13,20 @@ import java.util.Set;
 @Slf4j
 public class SalesforceRecordMutationProcessor {
 
-    public MutationResult apply(String selectedObject,
+    public MutationResult apply(String targetSchema,
+                                String selectedObject,
                                 Map<String, Object> mapType,
                                 SalesforceRecordMutation mutation,
                                 SalesforceMutationRepositoryPort repository,
                                 String sourceLabel) {
 
         if (mutation.type().isDelete()) {
-            int deleted = delete(selectedObject, mutation, repository, sourceLabel);
+            int deleted = delete(targetSchema, selectedObject, mutation, repository, sourceLabel);
             return new MutationResult(0, 0, deleted);
         }
 
         StringBuilder strUpdate = new StringBuilder();
-        strUpdate.append("UPDATE config.").append(selectedObject).append(" SET ");
+        strUpdate.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject)).append(" SET ");
 
         int assignmentCount = appendAssignments(strUpdate, mapType, mutation.payload(), mutation.targetFields(), mutation.nulledFields());
         if (assignmentCount > 0) {
@@ -43,26 +44,28 @@ public class SalesforceRecordMutationProcessor {
 
             int updated = repository.updateObject(strUpdate);
             if (updated == 0 && mutation.type().isCreateLike()) {
-                int inserted = insertFallback(selectedObject, mapType, mutation, repository, sourceLabel);
+                int inserted = insertFallback(targetSchema, selectedObject, mapType, mutation, repository, sourceLabel);
                 return new MutationResult(updated, inserted, 0);
             }
             return new MutationResult(updated, 0, 0);
         }
 
         if (mutation.type().isCreateLike()) {
-            int inserted = insertMinimal(selectedObject, mutation.sfid(), repository);
+            int inserted = insertMinimal(targetSchema, selectedObject, mutation.sfid(), repository);
             return new MutationResult(0, inserted, 0);
         }
 
         return new MutationResult(0, 0, 0);
     }
 
-    private int delete(String selectedObject,
+    private int delete(String targetSchema,
+                       String selectedObject,
                        SalesforceRecordMutation mutation,
                        SalesforceMutationRepositoryPort repository,
                        String sourceLabel) {
         Instant deleteStart = Instant.now();
         StringBuilder strDelete = SalesforceObjectSchemaBuilder.buildConditionalDeleteSql(
+                targetSchema,
                 selectedObject,
                 SqlSanitizer.quoteSfid(mutation.sfid()),
                 mutation.incomingEventLiteral()
@@ -92,7 +95,8 @@ public class SalesforceRecordMutationProcessor {
         return assignmentCount;
     }
 
-    private int insertFallback(String selectedObject,
+    private int insertFallback(String targetSchema,
+                               String selectedObject,
                                Map<String, Object> mapType,
                                SalesforceRecordMutation mutation,
                                SalesforceMutationRepositoryPort repository,
@@ -114,7 +118,7 @@ public class SalesforceRecordMutationProcessor {
                 .append(",")
                 .append(mutation.incomingEventLiteral());
 
-        String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(selectedObject, String.join(",", insertFields));
+        String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, String.join(",", insertFields));
         String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, insertFields);
 
         Instant insertStart = Instant.now();
@@ -124,8 +128,8 @@ public class SalesforceRecordMutationProcessor {
         return inserted;
     }
 
-    private int insertMinimal(String selectedObject, String sfid, SalesforceMutationRepositoryPort repository) {
-        String upperQuery = "Insert Into config." + selectedObject + "(sfid, "
+    private int insertMinimal(String targetSchema, String selectedObject, String sfid, SalesforceMutationRepositoryPort repository) {
+        String upperQuery = "Insert Into " + SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject) + "(sfid, "
                 + SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN + ", "
                 + SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN + ") values";
         return repository.insertObject(upperQuery, List.of("(" + SqlSanitizer.quoteSfid(sfid) + ", null, null)"), "");

@@ -12,7 +12,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${salesforce.allowed-origins:https://yuricompany-dev-ed.develop.lightning.force.com}")
+    @Value("${salesforce.allowed-origins:}")
     private String allowedOrigins;
 
     @Bean

@@ -29,12 +29,11 @@ SALESFORCE_CLIENT_SECRET=
 SALESFORCE_REDIRECT_URI=
 SALESFORCE_AUTH_URL=https://login.salesforce.com/services/oauth2/authorize
 SALESFORCE_TOKEN_URL=https://login.salesforce.com/services/oauth2/token
-SALESFORCE_MY_DOMAIN=https://yourinstance.my.salesforce.com
-SALESFORCE_ALLOWED_ORIGINS=https://yuricompany-dev-ed.develop.lightning.force.com
+SALESFORCE_ALLOWED_ORIGINS=http://localhost:8080
 
 # 모듈별 포트(필요시 변경)
-MAIN_APP_PORT=8080
 ROUTING_APP_PORT=3931
+ROUTING_ENGINE_BASE_URL=http://localhost:3931
 FILE_APP_PORT=9443
 
 # routing-engine
@@ -42,10 +41,8 @@ REDIS_URL=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
-ALB_URI=http://localhost:3931
 SALESFORCE_LOGIN_URL=https://login.salesforce.com
 SALESFORCE_API_VERSION=60.0
-SALESFORCE_INSTANCE_URL=https://yourinstance.my.salesforce.com
 
 JAVA_TOOL_OPTIONS="-Xms256m -Xmx512m"
 EOF

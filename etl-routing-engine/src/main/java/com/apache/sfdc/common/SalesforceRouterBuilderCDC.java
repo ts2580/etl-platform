@@ -10,13 +10,15 @@ import java.util.Map;
 
 @Slf4j
 public class SalesforceRouterBuilderCDC extends RouteBuilder {
+    private final String targetSchema;
     private final String selectedObject;
     private final Map<String, Object> mapType;
     private final PubSubRepository pubSubRepository;
     private final SalesforceCdcPayloadMapper payloadMapper = new SalesforceCdcPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
-    public SalesforceRouterBuilderCDC(String selectedObject, Map<String, Object> mapType, PubSubRepository pubSubRepository) {
+    public SalesforceRouterBuilderCDC(String targetSchema, String selectedObject, Map<String, Object> mapType, PubSubRepository pubSubRepository) {
+        this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
         this.mapType = mapType;
         this.pubSubRepository = pubSubRepository;
@@ -24,6 +26,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
+        SqlSanitizer.validateSchemaName(targetSchema);
         SqlSanitizer.validateTableName(selectedObject);
 
         String eventName = selectedObject.contains("__c")
@@ -74,6 +77,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                         }
 
                         SalesforceRecordMutationProcessor.MutationResult result = mutationProcessor.apply(
+                                targetSchema,
                                 selectedObject,
                                 mapType,
                                 mutationOptional.get(),

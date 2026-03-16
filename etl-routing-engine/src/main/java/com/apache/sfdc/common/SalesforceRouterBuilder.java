@@ -9,13 +9,15 @@ import java.util.Map;
 
 @Slf4j
 public class SalesforceRouterBuilder extends RouteBuilder {
+    private final String targetSchema;
     private final String selectedObject;
     private final Map<String, Object> mapType;
     private final StreamingRepository streamingRepository;
     private final SalesforceStreamingPayloadMapper payloadMapper = new SalesforceStreamingPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
-    public SalesforceRouterBuilder(String selectedObject, Map<String, Object> mapType, StreamingRepository streamingRepository) {
+    public SalesforceRouterBuilder(String targetSchema, String selectedObject, Map<String, Object> mapType, StreamingRepository streamingRepository) {
+        this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
         this.mapType = mapType;
         this.streamingRepository = streamingRepository;
@@ -23,6 +25,7 @@ public class SalesforceRouterBuilder extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
+        SqlSanitizer.validateSchemaName(targetSchema);
         SqlSanitizer.validateTableName(selectedObject);
 
         SalesforceMutationRepositoryPort repositoryPort = new SalesforceMutationRepositoryPort() {
@@ -69,6 +72,7 @@ public class SalesforceRouterBuilder extends RouteBuilder {
                             }
 
                             SalesforceRecordMutationProcessor.MutationResult result = mutationProcessor.apply(
+                                    targetSchema,
                                     selectedObject,
                                     mapType,
                                     mutationOptional.get(),

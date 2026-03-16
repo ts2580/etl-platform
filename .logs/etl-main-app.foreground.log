@@ -10,31 +10,32 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-15T23:12:00.732+09:00  INFO 56896 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 56896 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-15T23:12:00.736+09:00  INFO 56896 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
-2026-03-15T23:12:02.617+09:00  INFO 56896 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-15T23:12:02.639+09:00  INFO 56896 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-15T23:12:02.640+09:00  INFO 56896 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-15T23:12:02.676+09:00  INFO 56896 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-15T23:12:02.678+09:00  INFO 56896 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1869 ms
+2026-03-17T02:40:01.728+09:00  INFO 140505 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 140505 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-17T02:40:01.731+09:00  INFO 140505 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
+2026-03-17T02:40:03.667+09:00  INFO 140505 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-17T02:40:03.702+09:00  INFO 140505 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-17T02:40:03.702+09:00  INFO 140505 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-17T02:40:03.736+09:00  INFO 140505 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-17T02:40:03.737+09:00  INFO 140505 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1954 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-15T23:12:03.669+09:00  INFO 56896 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
-2026-03-15T23:12:04.234+09:00  INFO 56896 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2026-03-15T23:12:04.349+09:00  INFO 56896 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-15T23:12:04.367+09:00  INFO 56896 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 4.266 seconds (process running for 4.936)
-2026-03-15T23:12:04.421+09:00  INFO 56896 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-15T23:12:04.421+09:00  INFO 56896 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-15T23:12:04.423+09:00  INFO 56896 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
-2026-03-15T23:12:07.623+09:00  INFO 56896 --- [nio-8080-exec-4] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-15T23:12:07.688+09:00  INFO 56896 --- [nio-8080-exec-4] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@24aa0e8d
-2026-03-15T23:12:07.689+09:00  INFO 56896 --- [nio-8080-exec-4] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-15T23:12:07.784+09:00  INFO 56896 --- [nio-8080-exec-5] c.etl.sfdc.etl.controller.ETLController  : ETL object list requested without access token. Redirecting to /login
-2026-03-15T23:12:10.001+09:00  INFO 56896 --- [nio-8080-exec-7] com.etl.sfdc.common.SalesforceOAuthWSF   : OAuth callback received with authorization code
-2026-03-15T23:12:15.778+09:00  INFO 56896 --- [nio-8080-exec-9] c.etl.sfdc.etl.service.ETLServiceImpl    : Fetched Salesforce objects successfully. count=1287
-2026-03-15T23:12:21.447+09:00  INFO 56896 --- [io-8080-exec-10] c.etl.sfdc.etl.controller.ETLController  : Submitting ETL object selection. selectedObject=Account, ingestionMode=CDC
-2026-03-15T23:12:21.458+09:00  INFO 56896 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : Calling routing engine. selectedObject=Account, ingestionMode=CDC, endpoint=/pubsub
-2026-03-15T23:12:26.314+09:00  INFO 56896 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing engine call completed. selectedObject=Account, ingestionMode=CDC, response={"status":"SUCCESS","selectedObject":"Account","message":"CDC 설정이 완료되었어요.","failureStage":"-","failureDetail":"-","cdcCreationStatus":"ALREADY_EXISTS","cdcCreationMessage":"Account CDC 채널이 이미 존재해요.","initialLoadCount":12,"subscribeStatus":"STARTED","slotRegistryStatus":"ACTIVE","cdcResponse":null}
-2026-03-15T23:13:32.047+09:00  INFO 56896 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-15T23:13:32.049+09:00  INFO 56896 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-15T23:13:32.077+09:00  INFO 56896 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-15T23:13:32.088+09:00  INFO 56896 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-17T02:40:04.790+09:00  INFO 140505 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
+2026-03-17T02:40:05.333+09:00  INFO 140505 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
+2026-03-17T02:40:05.446+09:00  INFO 140505 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-17T02:40:05.465+09:00  INFO 140505 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 4.37 seconds (process running for 5.033)
+2026-03-17T02:41:11.166+09:00  INFO 140505 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-17T02:41:11.166+09:00  INFO 140505 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-17T02:41:11.167+09:00  INFO 140505 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-17T02:41:13.720+09:00  INFO 140505 --- [nio-8080-exec-4] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-17T02:41:13.781+09:00  INFO 140505 --- [nio-8080-exec-4] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@7742dff6
+2026-03-17T02:41:13.783+09:00  INFO 140505 --- [nio-8080-exec-4] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-17T02:41:24.561+09:00  INFO 140505 --- [nio-8080-exec-8] c.etl.sfdc.etl.service.ETLServiceImpl    : Fetched Salesforce objects successfully. count=1287
+2026-03-17T02:41:33.177+09:00  INFO 140505 --- [nio-8080-exec-9] c.etl.sfdc.etl.controller.ETLController  : Submitting ETL object selection. selectedObject=Account, ingestionMode=CDC
+2026-03-17T02:41:33.189+09:00  INFO 140505 --- [nio-8080-exec-9] c.etl.sfdc.etl.service.ETLServiceImpl    : Calling routing engine. selectedObject=Account, ingestionMode=CDC, endpoint=/pubsub
+2026-03-17T02:41:38.390+09:00  INFO 140505 --- [nio-8080-exec-9] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing engine call completed. selectedObject=Account, ingestionMode=CDC, response={"status":"SUCCESS","selectedObject":"Account","message":"CDC 설정이 완료되었어요.","failureStage":"-","failureDetail":"-","cdcCreationStatus":"CREATED","cdcCreationMessage":"Account CDC 채널 생성 완료","initialLoadCount":12,"subscribeStatus":"STARTED","slotRegistryStatus":"ACTIVE","cdcResponse":"{\"id\":\"0v8WU0000009UA9YAM\",\"success\":true,\"errors\":[],\"warnings\":[],\"infos\":[]}"}
+2026-03-17T02:41:42.933+09:00  WARN 140505 --- [io-8080-exec-10] c.e.sfdc.common.SalesforceTokenManager   : Failed to refresh Salesforce access token for org 005WU000009BP7ZYAW: Salesforce refresh token request failed: HTTP 400 body={"error":"invalid_grant","error_description":"expired access/refresh token"}
+2026-03-17T02:42:49.324+09:00  WARN 140505 --- [nio-8080-exec-4] c.e.sfdc.common.SalesforceTokenManager   : Failed to refresh Salesforce access token for org 005WU000009BP7ZYAW: Salesforce refresh token request failed: HTTP 400 body={"error":"invalid_grant","error_description":"expired access/refresh token"}
+2026-03-17T02:42:56.069+09:00  WARN 140505 --- [nio-8080-exec-7] c.e.sfdc.common.SalesforceTokenManager   : Failed to refresh Salesforce access token for org 005WU000009BP7ZYAW: Salesforce refresh token request failed: HTTP 400 body={"error":"invalid_grant","error_description":"expired access/refresh token"}
+2026-03-17T02:44:04.328+09:00  INFO 140505 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-17T02:44:04.330+09:00  INFO 140505 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-17T02:44:04.351+09:00  INFO 140505 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-17T02:44:04.359+09:00  INFO 140505 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

@@ -58,16 +58,43 @@
         <div sec:authorize="isAuthenticated()" class="mt-5 sm:mt-6">
             <div class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
                 <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 현재 사용자</p>
-                <p class="mt-2 text-base font-bold text-slate-800 sm:text-lg"><strong>[[${member.getUsername()}]] ([[${member.getDescription()}]])</strong>님, 인증이 완료됐어요.</p>
+                <p class="mt-2 text-base font-bold text-slate-800 sm:text-lg"><strong>[[${displayName}]]</strong>님</p>
                 <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
                 <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
             </div>
 
-            <div class="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 lg:grid-cols-4">
-                <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100" th:href="@{/user/logout}">로그아웃</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/login}">세일즈포스 로그인</a>
+            <div class="mt-4 rounded-2xl border border-[#d9ddfb] bg-white p-4 sm:p-5">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700">등록된 Salesforce Org</p>
+                        <p class="mt-1 text-xs text-slate-500">현재 등록된 오그를 빠르게 확인해 주세요.</p>
+                    </div>
+                    <a class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white" th:href="@{/etl/orgs}">관리로 이동</a>
+                </div>
+                <div class="mt-3 overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <tbody>
+                        <tr th:if="${orgs == null || #lists.isEmpty(orgs)}">
+                            <td colspan="2" class="py-3 text-slate-500">등록된 Org이 없습니다.</td>
+                        </tr>
+                        <tr th:each="org : ${orgs}" class="border-t">
+                            <td class="py-2" th:text="${org.orgName}"></td>
+                            <td class="py-2 text-right text-slate-500" th:text="${org.myDomain}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 lg:grid-cols-5">
+                <form th:action="@{/user/logout}" method="post" class="inline">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100">로그아웃</button>
+                </form>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/orgs}">Salesforce Org 관리</a>
                 <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects}">오브젝트 선택</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" href="http://192.168.0.62:9443/file">파일 엔진</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/dashboard}">라우팅 대시보드</a>
+                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="${activeOrg != null} ? @{'http://192.168.0.62:9443/file'(orgKey=${activeOrg.orgKey})} : @{'http://192.168.0.62:9443/file'}">파일 엔진</a>
             </div>
         </div>
     </main>

@@ -1,5 +1,6 @@
 package com.apache.sfdc.pubsub.controller;
 
+import com.apache.sfdc.common.RoutingRegistrySupport;
 import com.apache.sfdc.pubsub.service.PubSubService;
 import com.etlplatform.common.validation.RequestValidationUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
@@ -21,10 +23,47 @@ import java.util.Map;
 public class PubSubController {
 
     private final PubSubService pubSubService;
+    private final RoutingRegistrySupport routingRegistrySupport;
 
     @GetMapping("/pubsub/slots/summary")
     public Map<String, Object> getCdcSlotSummary() {
-        return pubSubService.getCdcSlotSummary();
+        return pubSubService.getSlotSummary("CDC");
+    }
+
+    @PostMapping("/pubsub/drop")
+    public ResponseEntity<Map<String, Object>> dropTable(@RequestParam("selectedObject") String selectedObject,
+                                                       @RequestParam("targetSchema") String targetSchema) {
+        String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
+        String resolvedSchema = RequestValidationUtils.requireText(targetSchema, "targetSchema").trim();
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            Map<String, String> mapProperty = new java.util.HashMap<>();
+            mapProperty.put("selectedObject", sanitizedObject);
+            mapProperty.put("targetSchema", resolvedSchema);
+            pubSubService.dropTable(mapProperty);
+            result.put("status", "SUCCESS");
+            result.put("selectedObject", sanitizedObject);
+            result.put("targetSchema", resolvedSchema);
+            result.put("message", "CDC 테이블 삭제 완료");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            result.put("status", "FAILED");
+            result.put("selectedObject", sanitizedObject);
+            result.put("targetSchema", resolvedSchema);
+            result.put("message", "CDC 테이블 삭제 실패: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    @PostMapping("/pubsub/slots/deactivate")
+    public Map<String, Object> deactivateCdcSlot(@RequestParam("selectedObject") String selectedObject) {
+        String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
+        pubSubService.deactivateSlot(sanitizedObject, "CDC");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "SUCCESS");
+        result.put("selectedObject", sanitizedObject);
+        result.put("message", "CDC 슬롯 비활성화 완료");
+        return result;
     }
 
     @PostMapping("/pubsub")
@@ -33,6 +72,8 @@ public class PubSubController {
         Map<String, String> mapProperty = objectMapper.readValue(strJson, Map.class);
         String selectedObject = RequestValidationUtils.requireIdentifier(mapProperty.get("selectedObject"), "selectedObject");
         String token = RequestValidationUtils.requireText(mapProperty.get("accessToken"), "accessToken");
+        String actor = mapProperty.getOrDefault("actor", "system");
+        String orgKey = mapProperty.getOrDefault("orgKey", mapProperty.getOrDefault("instanceUrl", "default-org"));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "FAILED");
@@ -66,9 +107,23 @@ public class PubSubController {
             result.put("subscribeStatus", "STARTED");
             log.info("Pubsub stage success. selectedObject={}, stage=SUBSCRIBE", selectedObject);
 
-            pubSubService.markCdcSlotActive(selectedObject);
+            pubSubService.markSlotActive(selectedObject, "CDC", orgKey, null);
             result.put("slotRegistryStatus", "ACTIVE");
             log.info("Pubsub stage success. selectedObject={}, stage=SLOT_REGISTRY", selectedObject);
+
+            Map<String, Object> registry = routingRegistrySupport.buildRouteMetadata(
+                    mapProperty,
+                    "CDC",
+                    "/pubsub",
+                    "ACTIVE",
+                    "ACTIVE",
+                    ((Number) result.get("initialLoadCount")).intValue(),
+                    null,
+                    actor
+            );
+            routingRegistrySupport.upsertRegistry(registry);
+            routingRegistrySupport.insertHistory(orgKey, selectedObject, "CDC", "REGISTER", "SUCCESS", "COMPLETE", "/pubsub",
+                    "CDC 설정이 완료되었어요.", String.valueOf(result.getOrDefault("cdcResponse", "")), ((Number) result.get("initialLoadCount")).intValue(), actor);
 
             result.put("status", "SUCCESS");
             result.put("message", "CDC 설정이 완료되었어요.");
@@ -78,9 +133,24 @@ public class PubSubController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             String stage = String.valueOf(result.getOrDefault("failureStage", "UNKNOWN"));
+            String failureMessage = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            Map<String, Object> registry = routingRegistrySupport.buildRouteMetadata(
+                    mapProperty,
+                    "CDC",
+                    "/pubsub",
+                    "FAILED",
+                    "ERROR",
+                    0,
+                    failureMessage,
+                    actor
+            );
+            routingRegistrySupport.upsertRegistry(registry);
+            routingRegistrySupport.markFailed(orgKey, selectedObject, "CDC", failureMessage, actor);
+            routingRegistrySupport.insertHistory(orgKey, selectedObject, "CDC", "REGISTER", "FAILED", stage, "/pubsub",
+                    "CDC 설정 실패", failureMessage, 0, actor);
             result.put("status", "FAILED");
             result.put("message", "CDC 설정 중 문제가 발생했어요.");
-            result.put("failureDetail", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+            result.put("failureDetail", failureMessage);
             log.error("Pubsub stage failed. selectedObject={}, stage={}, message={}", selectedObject, stage, result.get("failureDetail"), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }

@@ -22,7 +22,7 @@ public class FileMigrationService {
     private static final long MAX_SIZE_BYTES = 35_000_000L;
     private static final long MAX_TOTAL_BATCH_SIZE = 6_000_000L;
 
-    public void migrate(String dataId, int cycle, String accessToken, SseEmitter emitter) {
+    public void migrate(String dataId, int cycle, String accessToken, String myDomain, SseEmitter emitter) {
         try {
             int totalProcessed = 0;
             int loopCount = 0;
@@ -39,9 +39,9 @@ public class FileMigrationService {
                 List<ExcelFile> listSuccessAll = new ArrayList<>();
                 BatchGroups groups = splitBySize(listExcelFile);
 
-                uploadBigFiles(emitter, accessToken, listSuccessAll, groups.big());
-                uploadMediumFiles(emitter, accessToken, listSuccessAll, groups.medium());
-                uploadSmallBatches(emitter, accessToken, listSuccessAll, groups.smallBatches());
+                uploadBigFiles(emitter, accessToken, myDomain, listSuccessAll, groups.big());
+                uploadMediumFiles(emitter, accessToken, myDomain, listSuccessAll, groups.medium());
+                uploadSmallBatches(emitter, accessToken, myDomain, listSuccessAll, groups.smallBatches());
 
                 if (!listSuccessAll.isEmpty()) {
                     int updateCnt = fileService.updateAccFile(listSuccessAll);
@@ -105,8 +105,8 @@ public class FileMigrationService {
     }
 
     private void flushCurrentSmallBatch(List<ExcelFile> currentSmallBatch,
-                                       List<List<ExcelFile>> smallBatches,
-                                       List<ExcelFile> medium) {
+                                        List<List<ExcelFile>> smallBatches,
+                                        List<ExcelFile> medium) {
         if (currentSmallBatch.isEmpty()) {
             return;
         }
@@ -119,7 +119,7 @@ public class FileMigrationService {
         smallBatches.add(new ArrayList<>(currentSmallBatch));
     }
 
-    private void uploadBigFiles(SseEmitter emitter, String accessToken, List<ExcelFile> listSuccessAll, List<ExcelFile> listBig) throws Exception {
+    private void uploadBigFiles(SseEmitter emitter, String accessToken, String myDomain, List<ExcelFile> listSuccessAll, List<ExcelFile> listBig) throws Exception {
         if (listBig.isEmpty()) {
             return;
         }
@@ -129,7 +129,8 @@ public class FileMigrationService {
                     excelFile.getAppendFile(),
                     excelFile.getBbsAttachFileName(),
                     excelFile.getSfid(),
-                    accessToken
+                    accessToken,
+                    myDomain
             );
             if (result) {
                 excelFile.setIsMig(1);
@@ -141,13 +142,14 @@ public class FileMigrationService {
         }
     }
 
-    private void uploadMediumFiles(SseEmitter emitter, String accessToken, List<ExcelFile> listSuccessAll, List<ExcelFile> listMedium) throws Exception {
+    private void uploadMediumFiles(SseEmitter emitter, String accessToken, String myDomain, List<ExcelFile> listSuccessAll, List<ExcelFile> listMedium) throws Exception {
         for (ExcelFile excelFile : listMedium) {
             boolean result = salesforceFileUpload.uploadFileViaContentVersionAPI(
                     excelFile.getAppendFile(),
                     excelFile.getBbsAttachFileName(),
                     excelFile.getSfid(),
-                    accessToken
+                    accessToken,
+                    myDomain
             );
             if (result) {
                 excelFile.setIsMig(1);
@@ -159,9 +161,9 @@ public class FileMigrationService {
         }
     }
 
-    private void uploadSmallBatches(SseEmitter emitter, String accessToken, List<ExcelFile> listSuccessAll, List<List<ExcelFile>> listSmallPrime) throws IOException {
+    private void uploadSmallBatches(SseEmitter emitter, String accessToken, String myDomain, List<ExcelFile> listSuccessAll, List<List<ExcelFile>> listSmallPrime) throws IOException {
         for (List<ExcelFile> excelFiles : listSmallPrime) {
-            List<ExcelFile> listSuccess = salesforceFileUpload.uploadFileBatch(excelFiles, accessToken);
+            List<ExcelFile> listSuccess = salesforceFileUpload.uploadFileBatch(excelFiles, accessToken, myDomain);
             if (!listSuccess.isEmpty()) {
                 listSuccessAll.addAll(listSuccess);
                 sendEvent(emitter, "✅ ContentVersionAPI Batch " + listSuccess.size() + "건 성공 ");

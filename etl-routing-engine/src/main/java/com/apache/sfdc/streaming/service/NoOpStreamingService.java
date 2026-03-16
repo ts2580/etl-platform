@@ -23,4 +23,9 @@ public class NoOpStreamingService implements StreamingService {
     public void subscribePushTopic(Map<String, String> mapProperty, String token, Map<String, Object> mapType) {
         throw new FeatureDisabledException("DB 비활성 모드에서는 Streaming 구독 기능을 사용할 수 없습니다.");
     }
+
+    @Override
+    public void dropTable(Map<String, String> mapProperty) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 테이블 제거 기능을 사용할 수 없습니다.");
+    }
 }

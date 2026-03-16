@@ -51,6 +51,12 @@ public class StreamingServiceImpl implements StreamingService {
     @Override
     public Map<String, Object> setTable(Map<String, String> mapProperty, String token) {
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+
+        SqlSanitizer.validateSchemaName(targetSchema);
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
@@ -69,7 +75,7 @@ public class StreamingServiceImpl implements StreamingService {
 
         try (Response response = client.newCall(request).execute()) {
             JsonNode fields = objectMapper.readTree(response.body().string()).get("fields");
-            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(selectedObject, fields, objectMapper);
+            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(targetSchema, selectedObject, fields, objectMapper);
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
         }
@@ -89,7 +95,7 @@ public class StreamingServiceImpl implements StreamingService {
             JsonNode records = objectMapper.readTree(response.body().string()).get("records");
 
             if (records != null && !records.isEmpty()) {
-                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(selectedObject, schemaResult.soql());
+                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
                 String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
                 List<String> listUnderQuery = collectInsertRows(records, schemaResult);
 
@@ -113,6 +119,12 @@ public class StreamingServiceImpl implements StreamingService {
     @Override
     public String setPushTopic(Map<String, String> mapProperty, Map<String, Object> mapReturn, String token) throws Exception {
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+
+        SqlSanitizer.validateSchemaName(targetSchema);
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
@@ -149,10 +161,33 @@ public class StreamingServiceImpl implements StreamingService {
     }
 
     @Override
+    public void dropTable(Map<String, String> mapProperty) throws Exception {
+        String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+        SqlSanitizer.validateSchemaName(targetSchema);
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
+        SqlSanitizer.validateTableName(selectedObject);
+
+        String ddl = "DROP TABLE IF EXISTS `" + targetSchema + "`." + "`" + selectedObject + "`";
+        streamingRepository.setTable(ddl);
+    }
+
+    @Override
     public void subscribePushTopic(Map<String, String> mapProperty, String token, Map<String, Object> mapType) throws Exception {
         mapType.put("sfid", "Id");
 
         String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("targetSchema is required");
+        }
+
+        SqlSanitizer.validateSchemaName(targetSchema);
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
@@ -165,7 +200,7 @@ public class StreamingServiceImpl implements StreamingService {
         sfComponent.setRefreshToken(mapProperty.get("refreshToken"));
         sfComponent.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilder(selectedObject, mapType, streamingRepository);
+        RouteBuilder routeBuilder = new SalesforceRouterBuilder(targetSchema, selectedObject, mapType, streamingRepository);
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfComponent);

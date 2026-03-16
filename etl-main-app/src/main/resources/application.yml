@@ -1,7 +1,6 @@
 app:
   # DB optional mode.
   # false: UI/CSS/OAuth 진입 화면만 확인 가능, DB 기능은 503 FEATURE_DISABLED 로 응답
-  # true : DB/MyBatis 관련 빈 활성화
   db:
     enabled: ${APP_DB_ENABLED:false}
 
@@ -21,15 +20,13 @@ mybatis:
 
 salesforce:
   # OAuth 로그인/콜백에 필요한 설정
-  clientId: ${SALESFORCE_CLIENT_ID:}
-  clientSecret: ${SALESFORCE_CLIENT_SECRET:}
   redirectUri: ${SALESFORCE_REDIRECT_URI:}
-  authUrl: ${SALESFORCE_AUTH_URL:}
-  tokenUrl: ${SALESFORCE_TOKEN_URL:}
-  allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:https://yuricompany-dev-ed.develop.lightning.force.com}
-  myDomain: ${SALESFORCE_MY_DOMAIN:}
+  authUrl: ${SALESFORCE_AUTH_URL:https://login.salesforce.com/services/oauth2/authorize}
+  tokenUrl: ${SALESFORCE_TOKEN_URL:https://login.salesforce.com/services/oauth2/token}
   access-token-ttl-minutes: 55
 
-aws:
-  # routing-engine 호출용 ALB 주소. 예) https://example.com
-  albUri: ${ALB_URI:}
+
+
+routing:
+  engine:
+    base-url: ${ROUTING_ENGINE_BASE_URL:http://localhost:${ROUTING_APP_PORT:3931}}

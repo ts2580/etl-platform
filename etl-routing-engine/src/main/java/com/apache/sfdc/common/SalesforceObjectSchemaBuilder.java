@@ -11,9 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Salesforce 객체의 describe 응답을 기반으로 DDL/조회 SQL 조립에 필요한 공통 스키마 정보를 구성한다.
- */
 public final class SalesforceObjectSchemaBuilder {
 
     public static final String LAST_MODIFIED_FIELD = "LastModifiedDate";
@@ -22,14 +19,17 @@ public final class SalesforceObjectSchemaBuilder {
 
     private SalesforceObjectSchemaBuilder() {}
 
-    public static SchemaResult buildSchema(String selectedObject, JsonNode fieldsNode) throws IOException {
-        return buildSchema(selectedObject, fieldsNode, new ObjectMapper());
+    public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode) throws IOException {
+        return buildSchema(targetSchema, selectedObject, fieldsNode, new ObjectMapper());
     }
 
-    public static SchemaResult buildSchema(String selectedObject, JsonNode fieldsNode, ObjectMapper objectMapper) throws IOException {
+    public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode, ObjectMapper objectMapper) throws IOException {
         if (fieldsNode == null || !fieldsNode.isArray()) {
             throw new IllegalArgumentException("Invalid Salesforce describe fields response");
         }
+
+        SqlSanitizer.validateSchemaName(targetSchema);
+        SqlSanitizer.validateTableName(selectedObject);
 
         List<FieldDefinition> listDef = objectMapper.convertValue(fieldsNode, new TypeReference<List<FieldDefinition>>() {});
 
@@ -39,7 +39,7 @@ public final class SalesforceObjectSchemaBuilder {
         List<String> listFields = new ArrayList<>();
         Map<String, String> mapType = new HashMap<>();
 
-        ddl.append("CREATE OR REPLACE table config.").append(selectedObject).append("(");
+        ddl.append("CREATE TABLE IF NOT EXISTS ").append(qualifiedName(targetSchema, selectedObject)).append("(");
 
         for (FieldDefinition obj : listDef) {
             mapType.put(obj.name, obj.type);
@@ -131,8 +131,8 @@ public final class SalesforceObjectSchemaBuilder {
         return underQuery.toString();
     }
 
-    public static String buildInsertSql(String selectedObject, String soql) {
-        return "Insert Into config." + selectedObject + "(sfid, " + soql + ", "
+    public static String buildInsertSql(String targetSchema, String selectedObject, String soql) {
+        return "Insert Into " + qualifiedName(targetSchema, selectedObject) + "(sfid, " + soql + ", "
                 + INTERNAL_LAST_MODIFIED_COLUMN + ", " + INTERNAL_LAST_EVENT_AT_COLUMN + ") values";
     }
 
@@ -184,15 +184,21 @@ public final class SalesforceObjectSchemaBuilder {
         sql.append(";");
     }
 
-    public static StringBuilder buildConditionalDeleteSql(String selectedObject, String sfidLiteral, String incomingEventLiteral) {
+    public static StringBuilder buildConditionalDeleteSql(String targetSchema, String selectedObject, String sfidLiteral, String incomingEventLiteral) {
         StringBuilder sql = new StringBuilder();
-        sql.append("DELETE FROM config.").append(selectedObject)
+        sql.append("DELETE FROM ").append(qualifiedName(targetSchema, selectedObject))
                 .append(" WHERE sfid = ").append(sfidLiteral)
                 .append(" AND (")
                 .append(INTERNAL_LAST_EVENT_AT_COLUMN).append(" IS NULL OR ")
                 .append(INTERNAL_LAST_EVENT_AT_COLUMN).append(" <= ").append(incomingEventLiteral)
                 .append(");");
         return sql;
+    }
+
+    public static String qualifiedName(String targetSchema, String tableName) {
+        SqlSanitizer.validateSchemaName(targetSchema);
+        SqlSanitizer.validateTableName(tableName);
+        return "`" + targetSchema + "`.`" + tableName + "`";
     }
 
     public record SchemaResult(String ddl, Map<String, String> mapType, List<String> fields,

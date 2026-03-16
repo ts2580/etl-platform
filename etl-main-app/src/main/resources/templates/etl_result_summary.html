@@ -15,18 +15,21 @@
                 <div class="flex items-start gap-3">
                     <span th:if="${resultSummary.status == 'SUCCESS'}" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-lg sm:h-10 sm:w-10 sm:text-xl">✅</span>
                     <span th:if="${resultSummary.status == 'FAILED'}" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                    <span th:if="${resultSummary.status == 'SKIPPED'}" class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">ℹ️</span>
                     <div>
                         <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">ETL 실행 결과</h2>
                         <p th:if="${resultSummary.status == 'SUCCESS'}" class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">선택한 오브젝트에 대한 연결과 적재 설정이 정상적으로 완료됐어요.</p>
                         <p th:if="${resultSummary.status == 'FAILED'}" class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">설정 도중 확인이 필요한 문제가 발생했어요. 아래 내용을 보고 다시 진행하면 돼요.</p>
+                        <p th:if="${resultSummary.status == 'SKIPPED'}" class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">요청은 접수되었고, 현재 라우팅 연동 비활성화 모드라 실제 호출은 건너뛰고 결과만 정리했어요.</p>
                     </div>
                 </div>
             </div>
             <span th:if="${resultSummary.status == 'SUCCESS'}" class="inline-flex items-center self-start rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm sm:px-3 sm:text-sm">✅ 성공</span>
             <span th:if="${resultSummary.status == 'FAILED'}" class="inline-flex items-center self-start rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700 shadow-sm sm:px-3 sm:text-sm">⚠️ 실패</span>
+            <span th:if="${resultSummary.status == 'SKIPPED'}" class="inline-flex items-center self-start rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 shadow-sm sm:px-3 sm:text-sm">ℹ️ 비활성화</span>
         </div>
 
-        <div th:class="${resultSummary.status == 'SUCCESS'} ? 'mt-5 rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:mt-6 sm:p-5' : 'mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:mt-6 sm:p-5'">
+        <div th:class="${resultSummary.status == 'SUCCESS'} ? 'mt-5 rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:mt-6 sm:p-5' : (${resultSummary.status == 'SKIPPED'} ? 'mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:mt-6 sm:p-5' : 'mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:mt-6 sm:p-5')">
             <div class="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                 <span class="rounded-full bg-[#f8faff] px-2.5 py-1 font-semibold text-[#312e81] shadow-sm sm:px-3" th:text="${resultSummary.selectedObject}">Account</span>
                 <span class="text-slate-400">•</span>
@@ -34,7 +37,7 @@
                 <span class="text-slate-400">•</span>
                 <span class="rounded-full bg-[#f8faff] px-2.5 py-1 font-medium text-slate-600 shadow-sm sm:px-3" th:text="${resultSummary.endpoint}">/streaming</span>
             </div>
-            <p class="mt-3 text-sm font-medium leading-6" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-slate-700' : ' text-rose-700'" th:text="${resultSummary.engineMessage}">설정 메시지</p>
+            <p class="mt-3 text-sm font-medium leading-6" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-slate-700' : (${resultSummary.status == 'SKIPPED'} ? ' text-amber-700' : ' text-rose-700')" th:text="${resultSummary.engineMessage}">설정 메시지</p>
         </div>
 
         <div th:if="${resultSummary.status == 'FAILED'}" class="mt-5 rounded-2xl border border-rose-200 bg-[#f8faff] p-4 shadow-sm sm:mt-6 sm:p-5">
@@ -46,12 +49,21 @@
                 </div>
             </div>
         </div>
+        <div th:if="${resultSummary.status == 'SKIPPED'}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6 sm:p-5">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">ℹ️</span>
+                <div>
+                    <h3 class="text-base font-bold text-amber-700 sm:text-lg">비활성화 모드</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">라우팅 엔진 연동이 OFF 상태라 실제 라우팅 호출은 수행하지 않고, 화면 확인용 결과만 반환했어요.</p>
+                </div>
+            </div>
+        </div>
 
         <div class="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
-            <div th:class="${resultSummary.status == 'SUCCESS'} ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm' : 'rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm'">
+            <div th:class="${resultSummary.status == 'SUCCESS'} ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm' : (${resultSummary.status == 'SKIPPED'} ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm' : 'rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm')">
                 <div class="flex items-center justify-between gap-2">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide sm:text-xs" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-emerald-600' : ' text-amber-600'">ℹ️ 초기 적재 건수</p>
-                    <span th:if="${resultSummary.initialLoadCount == 0}" class="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-700 sm:text-[11px]">데이터 없음</span>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide sm:text-xs" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-emerald-600' : (${resultSummary.status == 'SKIPPED'} ? ' text-amber-600' : ' text-amber-600')">ℹ️ 초기 적재 건수</p>
+                    <span th:if="${resultSummary.initialLoadCount == 0}" class="rounded-full px-2 py-1 text-[10px] font-semibold sm:text-[11px]" th:classappend="${resultSummary.status == 'FAILED'} ? ' bg-amber-100 text-amber-700' : ' bg-amber-100 text-amber-700'" th:text="${resultSummary.initialLoadCount == 0 ? '데이터 없음' : '적재 완료'}">데이터 없음</span>
                     <span th:if="${resultSummary.initialLoadCount > 0}" class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 sm:text-[11px]">적재 완료</span>
                 </div>
                 <p class="mt-3 text-2xl font-bold text-slate-800 sm:text-3xl" th:text="${resultSummary.initialLoadCount}">0</p>
@@ -67,8 +79,8 @@
                 <p class="mt-2 text-xs leading-5 text-slate-500">실시간 동기화를 위한 구독 시작 상태를 보여줘요.</p>
             </div>
 
-            <div th:class="${resultSummary.status == 'SUCCESS'} ? 'rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm' : 'rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm'">
-                <p class="text-[11px] font-semibold uppercase tracking-wide sm:text-xs" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-slate-500' : ' text-rose-600'">⚠️ 실행 메시지</p>
+            <div th:class="${resultSummary.status == 'SUCCESS'} ? 'rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm' : (${resultSummary.status == 'SKIPPED'} ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm' : 'rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm')">
+                <p class="text-[11px] font-semibold uppercase tracking-wide sm:text-xs" th:classappend="${resultSummary.status == 'SUCCESS'} ? ' text-slate-500' : (${resultSummary.status == 'SKIPPED'} ? ' text-amber-600' : ' text-rose-600')">⚠️ 실행 메시지</p>
                 <p class="mt-3 text-sm font-semibold leading-6 text-slate-800 sm:text-base" th:text="${resultSummary.message}">설정이 완료되었어요.</p>
             </div>
         </div>
@@ -118,7 +130,8 @@
         </details>
 
         <div class="mt-5 flex flex-col gap-2 sm:mt-6 sm:flex-row sm:flex-wrap">
-            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects}">다른 오브젝트 이어서 설정</a>
+            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects(orgKey=${activeOrgKey})}">다른 오브젝트 이어서 설정</a>
+            <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100" th:href="@{/etl/dashboard(orgKey=${activeOrgKey})}">라우팅 대시보드 보기</a>
             <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" th:href="@{/}">홈으로 이동</a>
         </div>
     </main>
