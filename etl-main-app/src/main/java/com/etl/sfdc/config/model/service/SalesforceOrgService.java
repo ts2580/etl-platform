@@ -32,13 +32,12 @@ public class SalesforceOrgService {
         return repository.findByOrgKey(orgKey);
     }
 
-    public SalesforceOrgCredential registerOrUpdateOrg(String orgName, String myDomain, String refreshToken, boolean isDefault) {
+    public SalesforceOrgCredential registerOrUpdateOrg(String orgName, String myDomain, boolean isDefault) {
         SalesforceOrgCredential org = new SalesforceOrgCredential();
         org.setOrgKey(UUID.randomUUID().toString());
         org.setOrgName(normalizeOrgName(orgName == null || orgName.isBlank() ? myDomain : orgName));
         org.setMyDomain(normalizeMyDomain(myDomain));
         org.setSchemaName(buildSchemaName(org.getOrgName()));
-        org.setRefreshToken(refreshToken);
         org.setIsActive(true);
         org.setIsDefault(isDefault);
         if (isDefault) {
@@ -49,17 +48,13 @@ public class SalesforceOrgService {
         return repository.findByOrgKey(org.getOrgKey());
     }
 
-    public SalesforceOrgCredential registerOrUpdateFromOAuth(String instanceUrl,
-                                                             String orgId,
-                                                             String orgNameInput,
-                                                             String myDomainInput,
-                                                             String clientId,
-                                                             String clientSecret,
-                                                             String accessToken,
-                                                             String refreshToken,
-                                                             boolean isDefault) {
-        String myDomain = normalizeMyDomain(myDomainInput == null || myDomainInput.isBlank() ? instanceUrl : myDomainInput);
-        String resolvedOrgKey = (orgId == null || orgId.isBlank()) ? normalizeMyDomain(myDomain) : orgId;
+    public SalesforceOrgCredential registerOrUpdateClientCredentials(String orgNameInput,
+                                                                      String myDomainInput,
+                                                                      String clientId,
+                                                                      String clientSecret,
+                                                                      boolean isDefault) {
+        String myDomain = normalizeMyDomain(myDomainInput);
+        String resolvedOrgKey = normalizeMyDomain(myDomain);
 
         String sourceOrgName = (orgNameInput == null || orgNameInput.isBlank()) ? resolvedOrgKey : orgNameInput;
         String resolvedOrgName;
@@ -80,8 +75,6 @@ public class SalesforceOrgService {
             org.setSchemaName(schemaName);
             org.setClientId(clientId);
             org.setClientSecret(clientSecret);
-            org.setAccessToken(accessToken);
-            org.setRefreshToken(refreshToken);
             org.setIsActive(true);
             org.setIsDefault(isDefault || hasNoDefaultActiveOrg());
             if (Boolean.TRUE.equals(org.getIsDefault())) {
@@ -97,8 +90,6 @@ public class SalesforceOrgService {
         existing.setSchemaName(schemaName);
         existing.setClientId(clientId);
         existing.setClientSecret(clientSecret);
-        existing.setAccessToken(accessToken);
-        existing.setRefreshToken(refreshToken);
         existing.setIsActive(true);
         existing.setIsDefault(existing.getIsDefault() != null ? existing.getIsDefault() || isDefault : isDefault);
         if (isDefault) {
@@ -119,9 +110,18 @@ public class SalesforceOrgService {
 
     public void deactivateOrg(String orgKey) {
         SalesforceOrgCredential org = repository.findByOrgKey(orgKey);
-        repository.setActiveFlag(orgKey, false);
-        if (org != null) {
-            dropOrgSchema(org.getSchemaName());
+        if (org == null) {
+            return;
+        }
+
+        repository.deleteByOrgKey(orgKey);
+        dropOrgSchema(org.getSchemaName());
+
+        if (Boolean.TRUE.equals(org.getIsDefault())) {
+            SalesforceOrgCredential nextOrg = getDefaultOrg();
+            if (nextOrg != null) {
+                repository.setDefaultOrg(nextOrg.getOrgKey());
+            }
         }
     }
 
@@ -134,16 +134,13 @@ public class SalesforceOrgService {
         return getActiveOrgs().stream().noneMatch(org -> Boolean.TRUE.equals(org.getIsDefault()));
     }
 
-    public void persistTokens(String orgKey, String accessToken, String refreshToken) {
+    public void persistTokens(String orgKey, String accessToken) {
         SalesforceOrgCredential existing = repository.findByOrgKey(orgKey);
         if (existing == null) {
             return;
         }
         if (accessToken != null && !accessToken.isBlank()) {
             existing.setAccessToken(accessToken);
-        }
-        if (refreshToken != null && !refreshToken.isBlank()) {
-            existing.setRefreshToken(refreshToken);
         }
         repository.upsertSalesforceOrg(existing);
     }

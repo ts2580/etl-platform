@@ -4,11 +4,9 @@ import com.etlplatform.common.error.AppException;
 import com.etlplatform.common.validation.RequestValidationUtils;
 import com.sfdcupload.common.SalesforceOrgCredential;
 import com.sfdcupload.common.SalesforceOrgService;
-import com.sfdcupload.common.SalesforceTokenManager;
 import com.sfdcupload.file.service.FileMigrationService;
 import com.sfdcupload.file.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,7 +34,6 @@ import java.nio.file.StandardOpenOption;
 public class FileController {
 
     private final FileService fileService;
-    private final SalesforceTokenManager tokenManager;
     private final SalesforceOrgService salesforceOrgService;
     private final FileMigrationService fileMigrationService;
 
@@ -73,25 +70,22 @@ public class FileController {
     }
 
     @GetMapping("/upload")
-    public SseEmitter upload(@RequestParam String dataId, @RequestParam int cycle, HttpSession session) {
+    public SseEmitter upload(@RequestParam String dataId,
+                             @RequestParam int cycle,
+                             @RequestParam(required = false) String orgKey) {
         String validatedDataId = RequestValidationUtils.requireSimpleKey(dataId, "dataId");
         int validatedCycle = RequestValidationUtils.requirePositive(cycle, "cycle");
         SseEmitter emitter = new SseEmitter(0L);
 
-        SalesforceOrgCredential activeOrg = salesforceOrgService.resolveSelectedOrg(tokenManager.getActiveOrgKey(session));
+        SalesforceOrgCredential activeOrg = salesforceOrgService.resolveSelectedOrg(orgKey);
         if (activeOrg == null) {
-            throw new AppException("사용할 Salesforce org가 없습니다. 메인 화면에서 org를 먼저 선택해 주세요.");
+            throw new AppException("사용할 Salesforce org가 없습니다. 메인 모듈에서 org를 먼저 선택해 주세요.");
         }
-        tokenManager.setActiveOrg(session, activeOrg.getOrgKey());
 
-        String accessToken = tokenManager.getAccessToken(session);
-        if (accessToken == null) {
-            accessToken = tokenManager.refreshAccessToken(session, activeOrg);
+        String accessToken = activeOrg.getAccessToken();
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new AppException("파일 모듈에서 사용할 Salesforce access token이 없어요. 메인 모듈에서 토큰을 먼저 받아와 주세요.");
         }
-        if (accessToken == null) {
-            throw new AppException("파일 모듈에서 Salesforce 인증 정보를 불러오지 못했어요. 선택한 org의 refresh token을 확인해 주세요.");
-        }
-        salesforceOrgService.storeAccessToken(activeOrg.getOrgKey(), accessToken);
 
         String myDomain = activeOrg.getMyDomain();
         if (myDomain == null || myDomain.isBlank()) {

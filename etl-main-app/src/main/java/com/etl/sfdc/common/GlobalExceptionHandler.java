@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleAppException(AppException ex, HttpServletRequest request) {
         log.warn("Application exception: {}", ex.getMessage(), ex);
         if (wantsHtml(request)) {
-            return htmlError(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "요청을 처리하지 못했어요", ex.getMessage(), "/etl/objects");
+            return htmlError(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "요청을 처리하지 못했어요", ex.getMessage(), "/etl/orgs");
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ApiErrorResponse("BAD_REQUEST", "Invalid request", ex.getMessage()));

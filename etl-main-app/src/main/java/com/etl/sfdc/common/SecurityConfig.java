@@ -23,8 +23,6 @@ public class SecurityConfig {
             "/",
             "/user/login",
             "/user/signup",
-            "/login",
-            "/oauth/callback",
             "/css/**",
             "/js/**",
             "/images/**",

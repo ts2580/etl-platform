@@ -26,9 +26,7 @@ DB_PASSWORD=CHANGE_ME
 
 SALESFORCE_CLIENT_ID=
 SALESFORCE_CLIENT_SECRET=
-SALESFORCE_REDIRECT_URI=
-SALESFORCE_AUTH_URL=https://login.salesforce.com/services/oauth2/authorize
-SALESFORCE_TOKEN_URL=https://login.salesforce.com/services/oauth2/token
+SALESFORCE_TOKEN_URL=/services/oauth2/token
 SALESFORCE_ALLOWED_ORIGINS=http://localhost:8080
 
 # 모듈별 포트(필요시 변경)

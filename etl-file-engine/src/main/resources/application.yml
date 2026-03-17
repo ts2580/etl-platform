@@ -6,14 +6,9 @@ app:
     enabled: ${APP_DB_ENABLED:false}
 
 salesforce:
-  # 파일 업로드 OAuth / API 호출용 설정
-  clientId: ${SALESFORCE_CLIENT_ID:}
-  clientSecret: ${SALESFORCE_CLIENT_SECRET:}
-  redirectUri: ${SALESFORCE_REDIRECT_URI:}
-  authUrl: ${SALESFORCE_AUTH_URL:}
-  tokenUrl: ${SALESFORCE_TOKEN_URL:}
+  # 파일 엔진은 메인 모듈이 저장한 org/myDomain/accessToken 정보를 조회해 사용합니다.
   allowed-origins: ${SALESFORCE_ALLOWED_ORIGINS:}
-  access-token-ttl-minutes: 55
+  tokenUrl: ${SALESFORCE_TOKEN_URL:/services/oauth2/token}
 
 server:
   port: ${FILE_APP_PORT:9443}

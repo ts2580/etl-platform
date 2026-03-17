@@ -12,7 +12,6 @@ public class SalesforceOrgCredential {
     private String clientId;
     private String clientSecret;
     private String accessToken;
-    private String refreshToken;
     private String accessTokenIssuedAt;
     private Boolean isActive;
     private Boolean isDefault;

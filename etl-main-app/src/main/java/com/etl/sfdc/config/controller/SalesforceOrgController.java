@@ -3,7 +3,6 @@ package com.etl.sfdc.config.controller;
 import com.etl.sfdc.config.model.service.SalesforceOrgService;
 import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
 import com.etl.sfdc.common.SalesforceTokenManager;
-import com.etl.sfdc.common.SalesforceOAuthWSF;
 import com.etl.sfdc.common.UserSession;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 @Controller
 @RequiredArgsConstructor
@@ -24,7 +21,6 @@ public class SalesforceOrgController {
 
     public static final String ACTIVE_ORG_SESSION_KEY = "ACTIVE_SALESFORCE_ORG_KEY";
     private final SalesforceOrgService salesforceOrgService;
-    private final SalesforceOAuthWSF salesforceOAuthWSF;
     private final SalesforceTokenManager tokenManager;
     private final UserSession userSession;
 
@@ -38,7 +34,7 @@ public class SalesforceOrgController {
         return "org_management";
     }
 
-    @PostMapping("/etl/orgs/oauth/register")
+    @PostMapping("/etl/orgs/register")
     public String registerOrgOauth(@RequestParam("orgName") String orgName,
                                    @RequestParam("myDomain") String myDomain,
                                    @RequestParam("clientId") String clientId,
@@ -71,18 +67,24 @@ public class SalesforceOrgController {
             return "org_management";
         }
 
-        String state = salesforceOAuthWSF.createPendingOAuthContext(
-                session,
+        SalesforceOrgCredential org = salesforceOrgService.registerOrUpdateClientCredentials(
                 orgName,
                 myDomain,
                 clientId,
                 clientSecret,
-                null,
-                null,
-                null,
                 isDefault
         );
-        return "redirect:/oauth/start?state=" + URLEncoder.encode(state, StandardCharsets.UTF_8);
+        session.setAttribute(ACTIVE_ORG_SESSION_KEY, org.getOrgKey());
+        tokenManager.setActiveOrg(session, org.getOrgKey());
+
+        SalesforceTokenManager.RefreshResult refreshResult = tokenManager.refreshClientCredentialsToken(session, org);
+        if (refreshResult != null && refreshResult.accessToken() != null && !refreshResult.accessToken().isBlank()) {
+            salesforceOrgService.persistTokens(org.getOrgKey(), refreshResult.accessToken());
+            tokenManager.setAccessToken(session, refreshResult.accessToken());
+            return "redirect:/etl/orgs?message=org_registered";
+        }
+
+        return "redirect:/etl/orgs?message=org_registered_but_token_failed&orgKey=" + org.getOrgKey();
     }
 
     @PostMapping(value = "/etl/orgs/select")
@@ -123,27 +125,17 @@ public class SalesforceOrgController {
             return "redirect:/etl/orgs?message=oauth_start_failed&reason=missing_client_info";
         }
 
-        // 우선 refresh_token grant를 먼저 시도
-        SalesforceTokenManager.RefreshResult refreshResult = tokenManager.refreshTokenPair(session, org);
+        // CLIENT_CREDENTIALS 기준으로 접근 토큰 갱신
+        SalesforceTokenManager.RefreshResult refreshResult = tokenManager.refreshClientCredentialsToken(session, org);
         if (refreshResult != null && refreshResult.accessToken() != null && !refreshResult.accessToken().isBlank()) {
-            salesforceOrgService.persistTokens(orgKey, refreshResult.accessToken(), refreshResult.refreshToken());
+            salesforceOrgService.persistTokens(orgKey, refreshResult.accessToken());
+            tokenManager.setAccessToken(session, refreshResult.accessToken());
             tokenManager.setActiveOrg(session, orgKey);
             return "redirect:/etl/orgs?message=token_refreshed&orgKey=" + orgKey;
         }
 
-        // refresh token이 깨졌거나 만료된 경우: 저장된 클라이언트 정보로 OAuth를 재시작해 토큰 전체를 새로 받는다
-        String state = salesforceOAuthWSF.createPendingOAuthContext(
-                session,
-                org.getOrgName(),
-                org.getMyDomain(),
-                clientId,
-                clientSecret,
-                null,
-                null,
-                null,
-                Boolean.TRUE.equals(org.getIsDefault())
-        );
-        return "redirect:/oauth/start?state=" + URLEncoder.encode(state, StandardCharsets.UTF_8);
+        // client credentials 기반 access token 발급 실패
+        return "redirect:/etl/orgs?message=token_refresh_failed&reason=client_credentials_failed&orgKey=" + orgKey;
     }
 
     @PostMapping(value = "/etl/orgs/deactivate")
