@@ -17,7 +17,16 @@ function upload(button) {
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = "";
 
-    const source = new EventSource(`/upload?dataId=${encodeURIComponent(dataId)}&cycle=${cycleCount}`);
+    const orgKey = params.get('orgKey');
+    const uploadParams = new URLSearchParams({
+        dataId,
+        cycle: String(cycleCount),
+    });
+    if (orgKey) {
+        uploadParams.set('orgKey', orgKey);
+    }
+
+    const source = new EventSource(`/upload?${uploadParams.toString()}`);
 
     source.onmessage = function(event) {
         if (event.data.startsWith("progress:")) {

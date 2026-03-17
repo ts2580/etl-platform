@@ -1,8 +1,11 @@
 package com.etl.sfdc.etl.controller;
 
+import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
+import com.etl.sfdc.config.model.service.SalesforceOrgService;
 import com.etl.sfdc.common.SalesforceTokenManager;
 import com.etl.sfdc.common.UserSession;
 import com.etl.sfdc.etl.dto.ObjectDefinition;
+import com.etl.sfdc.etl.dto.ObjectSearchResult;
 import com.etl.sfdc.etl.service.ETLService;
 import com.etlplatform.common.error.AppException;
 import com.etlplatform.common.validation.RequestValidationUtils;
@@ -17,7 +20,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Optional;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Controller
@@ -29,34 +36,110 @@ public class ETLController {
     private final UserSession userSession;
     private final SalesforceTokenManager tokenManager;
     private final ETLService etlService;
+    private final SalesforceOrgService salesforceOrgService;
 
     @GetMapping("/objects")
-    public String getObjects(Model model, HttpSession session, HttpServletResponse response) throws Exception {
-        String accessToken = tokenManager.getAccessToken(session);
-        if (accessToken == null) {
-            log.info("ETL object list requested without access token. Redirecting to /login");
-            response.sendRedirect("/login");
+    public String getObjects(Model model, HttpSession session, HttpServletResponse response,
+                            @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                            @RequestParam(value = "q", required = false) String searchQuery,
+                            @RequestParam(value = "selectedObject", required = false) String selectedObject,
+                            @RequestParam(value = "status", required = false, defaultValue = "ALL") String statusFilter,
+                            @RequestParam(value = "sort", required = false, defaultValue = "LABEL_ASC") String sort,
+                            @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
+                            @RequestParam(value = "size", required = false, defaultValue = "20") Integer size) throws Exception {
+        ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
+        if (context.accessToken == null) {
+            log.info("ETL object list requested without access token. Redirecting to /etl/orgs");
+            response.sendRedirect("/etl/orgs?message=need_org_auth" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() + "&reason=refresh_failed" : ""));
             return null;
         }
 
-        List<ObjectDefinition> objectDefinitions;
+        String actor = currentActor();
+
+        Map<String, String> ingestionStatusByObject;
         try {
-            objectDefinitions = etlService.getObjects(accessToken);
+            ingestionStatusByObject = etlService.getIngestionStatusByObject(context.accessToken, context.myDomain);
         } catch (AppException e) {
             if (e.getMessage() != null && e.getMessage().contains("401")) {
-                String refreshedAccessToken = tokenManager.refreshAccessToken(session);
-                if (refreshedAccessToken == null) {
-                    log.warn("Failed to recover from Salesforce 401 while fetching object list. Redirecting to /login");
-                    response.sendRedirect("/login");
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken != null) {
+                    ingestionStatusByObject = etlService.getIngestionStatusByObject(refreshedAccessToken, context.myDomain);
+                } else {
+                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
                     return null;
                 }
-                objectDefinitions = etlService.getObjects(refreshedAccessToken);
             } else {
                 throw e;
             }
         }
-        model.addAttribute("objectDefinitions", objectDefinitions);
+
+        try {
+            etlService.syncRoutingRegistryFromSalesforce(context.accessToken, actor, context.myDomain);
+        } catch (AppException e) {
+            if (e.getMessage() != null && e.getMessage().contains("401")) {
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken != null) {
+                    etlService.syncRoutingRegistryFromSalesforce(refreshedAccessToken, actor, context.myDomain);
+                } else {
+                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+                    return null;
+                }
+            } else {
+                throw e;
+            }
+        }
+
+        String normalizedQuery = normalizeQuery(searchQuery);
+        String normalizedSelectedObject = normalizeSelectedObject(selectedObject);
+        String normalizedStatusFilter = normalizeStatusFilter(statusFilter);
+        String normalizedSort = normalizeSort(sort);
+        int pageSize = normalizePageSize(size);
+        int requestedPage = page == null ? 1 : page;
+        final Map<String, String> statusMap = ingestionStatusByObject;
+
+        List<ObjectDefinition> allObjects = etlService.getObjects(context.accessToken, context.myDomain);
+        allObjects = allObjects == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(allObjects);
+
+        List<ObjectDefinition> filteredObjects = allObjects;
+
+        int totalObjectCount = filteredObjects.size();
+        int totalPages = Math.max(1, (int) Math.ceil((double) Math.max(totalObjectCount, 1) / pageSize));
+        int currentPage = Math.max(1, Math.min(requestedPage, totalPages));
+        int fromIndex = totalObjectCount == 0 ? 0 : Math.min((currentPage - 1) * pageSize, totalObjectCount - 1);
+        int toIndex = totalObjectCount == 0 ? 0 : Math.min(fromIndex + pageSize, totalObjectCount);
+
+        boolean selectedObjectExists = normalizedSelectedObject != null
+                && filteredObjects.stream().anyMatch(object -> normalizedSelectedObject.equals(object.getName()));
+
+        String defaultSelectedObject = selectedObjectExists
+                ? normalizedSelectedObject
+                : filteredObjects.stream()
+                    .map(ObjectDefinition::getName)
+                    .filter(ingestionStatusByObject::containsKey)
+                    .findFirst()
+                    .orElseGet(() -> filteredObjects.stream().findFirst().map(ObjectDefinition::getName).orElse(null));
+
+        model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
+        model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
+        model.addAttribute("objectDefinitions", filteredObjects);
         model.addAttribute("cdcSlotSummary", etlService.getCdcSlotSummary());
+        model.addAttribute("ingestionStatusByObject", ingestionStatusByObject);
+        model.addAttribute("selectedObject", defaultSelectedObject);
+        model.addAttribute("selectedIngestionMode", defaultSelectedObject != null ? ingestionStatusByObject.get(defaultSelectedObject) : null);
+        model.addAttribute("activeOrgKey", context.org == null ? null : context.org.getOrgKey());
+        model.addAttribute("searchQuery", normalizedQuery);
+        model.addAttribute("selectedObjectQuery", defaultSelectedObject);
+        model.addAttribute("selectedObjectVisible", filteredObjects.stream().anyMatch(object -> object.getName().equals(defaultSelectedObject)));
+        model.addAttribute("selectedObjectStatus", defaultSelectedObject == null ? null : ingestionStatusByObject.get(defaultSelectedObject));
+        model.addAttribute("statusFilter", normalizedStatusFilter);
+        model.addAttribute("sort", normalizedSort);
+        model.addAttribute("pageSize", pageSize);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalObjectCount", totalObjectCount);
+        model.addAttribute("pageStartIndex", totalObjectCount == 0 ? 0 : fromIndex + 1);
+        model.addAttribute("pageEndIndex", toIndex);
+        model.addAttribute("pageNumbers", buildPageNumbers(currentPage, totalPages));
 
         if (userSession.getUserAccount() != null) {
             model.addAttribute(userSession.getUserAccount().getMember());
@@ -64,22 +147,232 @@ public class ETLController {
         return "object_select_form";
     }
 
+    @GetMapping("/dashboard")
+    public String getDashboard(Model model, HttpSession session, HttpServletResponse response,
+                              @RequestParam(value = "orgKey", required = false) String requestedOrgKey) throws Exception {
+        ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
+        if (context.accessToken == null) {
+            if (context.requiresOrgLogin) {
+                log.info("No active Salesforce org/session. Redirecting to /etl/orgs");
+                response.sendRedirect("/etl/orgs?message=need_org_auth" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() + "&reason=refresh_failed" : ""));
+                return null;
+            }
+            log.info("ETL dashboard requested without access token. Redirecting to /etl/orgs");
+            response.sendRedirect("/etl/orgs?message=need_org_auth" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() + "&reason=refresh_failed" : ""));
+            return null;
+        }
+
+        if (context.accessToken != null) {
+            try {
+                String actor = currentActor();
+                etlService.syncRoutingRegistryFromSalesforce(context.accessToken, actor, context.myDomain);
+            } catch (AppException e) {
+                if (e.getMessage() != null && e.getMessage().contains("401")) {
+                    String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                    if (refreshedAccessToken != null) {
+                        etlService.syncRoutingRegistryFromSalesforce(refreshedAccessToken, currentActor(), context.myDomain);
+                    } else {
+                        response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+                        return null;
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+        String orgKey = context.org == null ? null : context.org.getOrgKey();
+        model.addAttribute("dashboard", etlService.getRoutingDashboard(orgKey));
+
+        if (userSession.getUserAccount() != null) {
+            model.addAttribute(userSession.getUserAccount().getMember());
+        }
+        model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
+        model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
+        return "etl_dashboard";
+    }
+
+    @GetMapping("/routes/detail")
+    public String getRouteDetail(@RequestParam("selectedObject") String selectedObject,
+                                 @RequestParam("routingProtocol") String routingProtocol,
+                                 @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                                 Model model,
+                                 HttpSession session,
+                                 HttpServletResponse response) throws Exception {
+        ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
+        if (context.accessToken == null) {
+            response.sendRedirect("/etl/orgs?message=need_org_auth" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() + "&reason=refresh_failed" : ""));
+            return null;
+        }
+
+        try {
+            try {
+                String actor = currentActor();
+                etlService.syncRoutingRegistryFromSalesforce(context.accessToken, actor, context.myDomain);
+            } catch (AppException e) {
+                if (e.getMessage() != null && e.getMessage().contains("401")) {
+                    String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                    if (refreshedAccessToken == null && context.org != null) {
+                        response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed&orgKey=" + context.org.getOrgKey());
+                        return null;
+                    }
+                    if (refreshedAccessToken != null && context.org != null) {
+                        tokenManager.setActiveOrg(session, context.org.getOrgKey());
+                    }
+                } else {
+                    throw e;
+                }
+            }
+
+            if (context.accessToken == null) {
+                if (context.org == null) {
+                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed");
+                    return null;
+                }
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken == null) {
+                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed&orgKey=" + context.org.getOrgKey());
+                    return null;
+                }
+            }
+
+            model.addAttribute("routeDetail", etlService.getRouteDetail(
+                    context.accessToken,
+                    context.myDomain,
+                    context.org == null ? null : context.org.getOrgKey(),
+                    selectedObject,
+                    routingProtocol
+            ));
+            model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
+            model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
+            if (userSession.getUserAccount() != null) {
+                model.addAttribute(userSession.getUserAccount().getMember());
+            }
+            return "etl_route_detail";
+        } catch (AppException e) {
+            log.warn("Failed to open route detail. selectedObject={}, routingProtocol={}, message={}", selectedObject, routingProtocol, e.getMessage());
+            model.addAttribute("dashboard", etlService.getRoutingDashboard(context.org == null ? null : context.org.getOrgKey()));
+            model.addAttribute("dashboardError", e.getMessage());
+            model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
+            model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
+            if (userSession.getUserAccount() != null) {
+                model.addAttribute(userSession.getUserAccount().getMember());
+            }
+            return "etl_dashboard";
+        }
+    }
+
+    @PostMapping("/reprocess")
+    public String reprocessObject(@RequestParam("selectedObject") String selectedObject,
+                                  @RequestParam("ingestionMode") String ingestionMode,
+                                  @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                                  Model model,
+                                  HttpSession session,
+                                  HttpServletResponse response) throws Exception {
+        return setObjects(selectedObject, ingestionMode, requestedOrgKey, model, session, response);
+    }
+
+    @PostMapping("/release")
+    public String releaseObject(@RequestParam("selectedObject") String selectedObject,
+                                @RequestParam("ingestionMode") String ingestionMode,
+                                @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                                Model model,
+                                HttpSession session,
+                                HttpServletResponse response) throws Exception {
+        return doRelease(selectedObject, ingestionMode, requestedOrgKey, null, model, session, response);
+    }
+
+    @PostMapping("/dashboard/release")
+    public String releaseFromDashboard(@RequestParam("selectedObject") String selectedObject,
+                                      @RequestParam("ingestionMode") String ingestionMode,
+                                      @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                                      Model model,
+                                      HttpSession session,
+                                      HttpServletResponse response) throws Exception {
+        return doRelease(selectedObject, ingestionMode, requestedOrgKey, "/etl/dashboard", model, session, response);
+    }
+
+    private String doRelease(String selectedObject,
+                            String ingestionMode,
+                            String requestedOrgKey,
+                            String redirectToDashboard,
+                            Model model,
+                            HttpSession session,
+                            HttpServletResponse response) throws Exception {
+        ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
+        String accessToken = getValidAccessTokenForOperation(context, session, response);
+        if (accessToken == null) {
+            return null;
+        }
+
+        String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
+        String sanitizedMode = RequestValidationUtils.requireText(ingestionMode, "ingestionMode").trim().toUpperCase();
+
+        if (userSession.getUserAccount() != null) {
+            model.addAttribute(userSession.getUserAccount().getMember());
+        }
+
+        String actor = currentActor();
+        try {
+            Map<String, Object> resultSummary = etlService.releaseObject(
+                    sanitizedObject,
+                    sanitizedMode,
+                    accessToken,
+                    actor,
+                    context.myDomain,
+                    context.org == null ? null : context.org.getOrgKey()
+            );
+
+            model.addAttribute("activeOrgKey", context.org == null ? null : context.org.getOrgKey());
+            if (redirectToDashboard != null) {
+                return "redirect:/etl/dashboard" + (context.org != null ? "?orgKey=" + context.org.getOrgKey() : "");
+            }
+
+            model.addAttribute("resultSummary", resultSummary);
+            return "etl_result_summary";
+        } catch (AppException e) {
+            if (e.getMessage() != null && e.getMessage().contains("401") && context.org != null) {
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken != null) {
+                    Map<String, Object> retrySummary = etlService.releaseObject(
+                            sanitizedObject,
+                            sanitizedMode,
+                            refreshedAccessToken,
+                            actor,
+                            context.myDomain,
+                            context.org.getOrgKey()
+                    );
+
+                    model.addAttribute("activeOrgKey", context.org == null ? null : context.org.getOrgKey());
+                    if (redirectToDashboard != null) {
+                        return "redirect:/etl/dashboard" + (context.org != null ? "?orgKey=" + context.org.getOrgKey() : "");
+                    }
+
+                    model.addAttribute("resultSummary", retrySummary);
+                    return "etl_result_summary";
+                }
+            }
+            throw e;
+        }
+    }
+
     @PostMapping("/ddl")
     public String setObjects(@RequestParam("selectedObject") String selectedObject,
                              @RequestParam("ingestionMode") String ingestionMode,
+                             @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
                              Model model,
-                             HttpSession session) throws Exception {
-        String accessToken = tokenManager.getAccessToken(session);
-        String refreshToken = tokenManager.getRefreshToken(session);
+                             HttpSession session,
+                             HttpServletResponse response) throws Exception {
+        ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
+        String accessToken = getValidAccessTokenForOperation(context, session, response);
+        if (accessToken == null) {
+            return null;
+        }
+
         String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
         String sanitizedMode = RequestValidationUtils.requireText(ingestionMode, "ingestionMode").trim().toUpperCase();
 
         if (!"STREAMING".equals(sanitizedMode) && !"CDC".equals(sanitizedMode)) {
             throw new AppException("ingestionMode는 STREAMING 또는 CDC만 허용됩니다.");
-        }
-
-        if (accessToken == null || refreshToken == null) {
-            throw new AppException("세션이 만료되었습니다. 다시 Salesforce 로그인 해주세요.");
         }
 
         if (userSession.getUserAccount() != null) {
@@ -88,12 +381,42 @@ public class ETLController {
 
         try {
             log.info("Submitting ETL object selection. selectedObject={}, ingestionMode={}", sanitizedObject, sanitizedMode);
-            Map<String, Object> resultSummary = etlService.setObjects(sanitizedObject, sanitizedMode, accessToken, refreshToken);
+            String actor = currentActor();
+            model.addAttribute("activeOrgKey", context.org == null ? null : context.org.getOrgKey());
+            Map<String, Object> resultSummary = etlService.setObjects(
+                    sanitizedObject,
+                    sanitizedMode,
+                    accessToken,
+                    actor,
+                    context.myDomain,
+                    context.org == null ? null : context.org.getOrgKey(),
+                    context.org == null ? "default" : context.org.getOrgName()
+            );
             model.addAttribute("resultSummary", resultSummary);
             return "etl_result_summary";
         } catch (AppException e) {
+            if (e.getMessage() != null && e.getMessage().contains("401") && context.org != null) {
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken != null) {
+                    String actor = currentActor();
+                    Map<String, Object> resultSummary = etlService.setObjects(
+                            sanitizedObject,
+                            sanitizedMode,
+                            refreshedAccessToken,
+                            actor,
+                            context.myDomain,
+                            context.org.getOrgKey(),
+                            context.org.getOrgName()
+                    );
+                    model.addAttribute("resultSummary", resultSummary);
+                    return "etl_result_summary";
+                }
+                response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed&orgKey=" + context.org.getOrgKey());
+                return null;
+            }
+
             log.warn("ETL submission rejected. selectedObject={}, ingestionMode={}, message={}", sanitizedObject, sanitizedMode, e.getMessage());
-            Map<String, Object> failureSummary = new java.util.HashMap<>();
+            Map<String, Object> failureSummary = new HashMap<>();
             failureSummary.put("selectedObject", sanitizedObject);
             failureSummary.put("ingestionMode", sanitizedMode);
             failureSummary.put("endpoint", "CDC".equals(sanitizedMode) ? "/pubsub" : "/streaming");
@@ -112,5 +435,369 @@ public class ETLController {
             model.addAttribute("resultSummary", failureSummary);
             return "etl_result_summary";
         }
+    }
+
+    private ExecutionContext resolveExecutionContext(HttpSession session, String requestedOrgKey) throws Exception {
+        ExecutionContext context = new ExecutionContext();
+        context.myDomain = null;
+        context.requiresOrgLogin = false;
+
+        SalesforceOrgCredential selectedOrg = null;
+        if (requestedOrgKey != null && !requestedOrgKey.isBlank()) {
+            selectedOrg = salesforceOrgService.getOrg(requestedOrgKey);
+            if (selectedOrg != null && Boolean.TRUE.equals(selectedOrg.getIsActive())) {
+                context.org = selectedOrg;
+                tokenManager.setActiveOrg(session, selectedOrg.getOrgKey());
+            }
+        }
+
+        if (context.org == null) {
+            String sessionOrgKey = tokenManager.getActiveOrgKey(session);
+            if (sessionOrgKey != null && !sessionOrgKey.isBlank()) {
+                selectedOrg = salesforceOrgService.getOrg(sessionOrgKey);
+                if (selectedOrg != null && Boolean.TRUE.equals(selectedOrg.getIsActive())) {
+                    context.org = selectedOrg;
+                }
+            }
+        }
+
+        if (context.org == null) {
+            context.org = salesforceOrgService.getDefaultOrg();
+            if (context.org != null) {
+                tokenManager.setActiveOrg(session, context.org.getOrgKey());
+            }
+        }
+
+        if (context.org != null) {
+            String currentOrgKey = context.org.getOrgKey();
+            context.myDomain = context.org.getMyDomain();
+            String sessionActiveOrg = tokenManager.getActiveOrgKey(session);
+            String sessionAccessToken = tokenManager.getAccessToken(session);
+
+            // 1) 우선 세션 토큰 사용(현재 active org와 일치할 때)
+            if (currentOrgKey.equals(sessionActiveOrg) && sessionAccessToken != null) {
+                context.accessToken = sessionAccessToken;
+            }
+
+            // 2) 세션 토큰이 없거나 org가 바뀐 경우, DB에 저장된 최신 토큰 사용
+            if (context.accessToken == null) {
+                context.accessToken = context.org.getAccessToken();
+                if (context.accessToken != null) {
+                    tokenManager.setAccessToken(session, context.accessToken);
+                    tokenManager.setActiveOrg(session, currentOrgKey);
+                }
+            }
+
+            // 3) 그래도 없으면 client credentials으로 접근 토큰 갱신 시도
+            if (context.accessToken == null) {
+                String refreshed = refreshAccessTokenIfNeeded(context, session);
+                if (refreshed == null) {
+                    context.requiresOrgLogin = true;
+                }
+            }
+
+            if (context.accessToken == null) {
+                tokenManager.setActiveOrg(session, currentOrgKey);
+                log.warn("Active org token unavailable for org {}. Redirecting to org re-login flow.", currentOrgKey);
+            } else if (currentOrgKey.equals(tokenManager.getActiveOrgKey(session)) == false) {
+                tokenManager.setActiveOrg(session, currentOrgKey);
+            }
+        } else {
+            context.accessToken = tokenManager.getAccessToken(session);
+            if (context.accessToken == null) {
+                context.requiresOrgLogin = true;
+            }
+        }
+
+        return context;
+    }
+
+    private ObjectSearchResult fetchObjectSearchResult(ExecutionContext context,
+                                                       HttpSession session,
+                                                       HttpServletResponse response,
+                                                       String query,
+                                                       String sort,
+                                                       int page,
+                                                       int size) throws Exception {
+        try {
+            return etlService.searchObjects(context.accessToken, context.myDomain, query, sort, page, size);
+        } catch (AppException e) {
+            boolean unauthorized = isSalesforceAuthFailure(e);
+            if (!unauthorized) {
+                throw e;
+            }
+
+            String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+            if (refreshedAccessToken == null) {
+                response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+                return null;
+            }
+
+            tokenManager.setActiveOrg(session, context.org != null ? context.org.getOrgKey() : null);
+            try {
+                return etlService.searchObjects(refreshedAccessToken, context.myDomain, query, sort, page, size);
+            } catch (AppException retryFailure) {
+                if (isSalesforceAuthFailure(retryFailure)) {
+                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+                    return null;
+                }
+                throw retryFailure;
+            }
+        }
+    }
+
+    private ObjectSearchResult applyStatusAwarePaging(ExecutionContext context,
+                                                      HttpSession session,
+                                                      HttpServletResponse response,
+                                                      String query,
+                                                      String sort,
+                                                      String statusFilter,
+                                                      int pageSize,
+                                                      int requestedPage,
+                                                      Map<String, String> ingestionStatusByObject) throws Exception {
+        int resolvedPage = Math.max(1, requestedPage);
+        int skip = (resolvedPage - 1) * pageSize;
+        int fetchPage = 1;
+        int sourcePageSize = Math.max(pageSize * 3, 100);
+        int matchedTotal = 0;
+        List<ObjectDefinition> pageObjects = new java.util.ArrayList<>();
+
+        while (true) {
+            ObjectSearchResult batch = fetchObjectSearchResult(context, session, response, query, sort, fetchPage, sourcePageSize);
+            if (batch == null) {
+                return null;
+            }
+            List<ObjectDefinition> sourceObjects = batch.getObjects() == null ? List.of() : batch.getObjects();
+            if (sourceObjects.isEmpty()) {
+                break;
+            }
+
+            for (ObjectDefinition object : sourceObjects) {
+                if (!matchesStatusFilter(object, ingestionStatusByObject, statusFilter)) {
+                    continue;
+                }
+                if (matchedTotal >= skip && pageObjects.size() < pageSize) {
+                    pageObjects.add(object);
+                }
+                matchedTotal++;
+            }
+
+            if (sourceObjects.size() < sourcePageSize) {
+                break;
+            }
+            fetchPage++;
+        }
+
+        return new ObjectSearchResult(pageObjects, matchedTotal, resolvedPage, pageSize, true);
+    }
+
+    private boolean isSalesforceAuthFailure(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String upper = message.toUpperCase(Locale.ROOT);
+                if (upper.contains("401")
+                        || upper.contains("INVALID_SESSION_ID")
+                        || upper.contains("SESSION EXPIRED")
+                        || upper.contains("EXPIRED ACCESS TOKEN")
+                        || upper.contains("AUTHENTICATION FAILURE")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private String getValidAccessTokenForOperation(ExecutionContext context, HttpSession session, HttpServletResponse response) throws Exception {
+        if (context.org != null) {
+            String orgKey = context.org.getOrgKey();
+            String currentAccess = context.accessToken;
+            if (currentAccess != null) {
+                return currentAccess;
+            }
+
+            String refreshed = refreshAccessTokenIfNeeded(context, session);
+            if (refreshed != null) {
+                return refreshed;
+            }
+
+            response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + "&orgKey=" + orgKey);
+            return null;
+        }
+
+        response.sendRedirect("/etl/orgs?message=need_org_auth");
+        return null;
+    }
+
+
+    private String currentActor() {
+        return userSession.getUserAccount() != null ? userSession.getUserAccount().getMember().getUsername() : "system";
+    }
+
+    private String normalizeQuery(String searchQuery) {
+        return searchQuery == null ? "" : searchQuery.trim();
+    }
+
+    private String normalizeSelectedObject(String selectedObject) {
+        if (selectedObject == null || selectedObject.isBlank()) {
+            return null;
+        }
+        return selectedObject.trim();
+    }
+
+    private String normalizeStatusFilter(String statusFilter) {
+        if (statusFilter == null || statusFilter.isBlank()) {
+            return "ALL";
+        }
+        String normalized = statusFilter.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "NONE", "STREAMING", "CDC" -> normalized;
+            default -> "ALL";
+        };
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "LABEL_ASC";
+        }
+        String normalized = sort.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "LABEL_ASC", "LABEL_DESC", "API_ASC", "API_DESC", "STATUS_ASC", "STATUS_DESC" -> normalized;
+            default -> "LABEL_ASC";
+        };
+    }
+
+    private int normalizePageSize(Integer size) {
+        if (size == null) {
+            return 20;
+        }
+        return switch (size) {
+            case 10, 20, 50, 100 -> size;
+            default -> 20;
+        };
+    }
+
+    private Comparator<ObjectDefinition> resolveSortComparator(String sort, Map<String, String> ingestionStatusByObject) {
+        Comparator<ObjectDefinition> labelComparator = Comparator.comparing(
+                (ObjectDefinition object) -> Optional.ofNullable(object.getLabel()).orElse(""),
+                String.CASE_INSENSITIVE_ORDER
+        );
+        Comparator<ObjectDefinition> apiComparator = Comparator.comparing(
+                (ObjectDefinition object) -> Optional.ofNullable(object.getName()).orElse(""),
+                String.CASE_INSENSITIVE_ORDER
+        );
+        Comparator<ObjectDefinition> statusComparator = Comparator.comparing(
+                (ObjectDefinition object) -> Optional.ofNullable(ingestionStatusByObject.get(object.getName())).orElse("NONE"),
+                String.CASE_INSENSITIVE_ORDER
+        ).thenComparing(labelComparator);
+
+        return switch (sort) {
+            case "LABEL_DESC" -> labelComparator.reversed().thenComparing(apiComparator);
+            case "API_ASC" -> apiComparator.thenComparing(labelComparator);
+            case "API_DESC" -> apiComparator.reversed().thenComparing(labelComparator);
+            case "STATUS_ASC" -> statusComparator;
+            case "STATUS_DESC" -> statusComparator.reversed();
+            default -> labelComparator.thenComparing(apiComparator);
+        };
+    }
+
+    private List<Integer> buildPageNumbers(int currentPage, int totalPages) {
+        int window = 2;
+        int start = Math.max(1, currentPage - window);
+        int end = Math.min(totalPages, currentPage + window);
+        if (end - start < window * 2) {
+            if (start == 1) {
+                end = Math.min(totalPages, start + window * 2);
+            } else if (end == totalPages) {
+                start = Math.max(1, end - window * 2);
+            }
+        }
+        return java.util.stream.IntStream.rangeClosed(start, end).boxed().toList();
+    }
+
+    private boolean matchesSearch(ObjectDefinition object, String normalizedQuery) {
+        if (normalizedQuery == null || normalizedQuery.isBlank()) {
+            return true;
+        }
+        String query = normalizedQuery.toLowerCase(Locale.ROOT);
+        return Optional.ofNullable(object.getLabel()).orElse("").toLowerCase(Locale.ROOT).contains(query)
+                || Optional.ofNullable(object.getName()).orElse("").toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private boolean matchesStatusFilter(ObjectDefinition object, Map<String, String> ingestionStatusByObject, String statusFilter) {
+        String status = ingestionStatusByObject.get(object.getName());
+        return switch (statusFilter) {
+            case "NONE" -> status == null || status.isBlank();
+            case "STREAMING", "CDC" -> statusFilter.equalsIgnoreCase(status);
+            default -> true;
+        };
+    }
+
+    private String refreshAccessTokenIfNeeded(ExecutionContext context, HttpSession session) {
+        String actor = currentActor();
+        String caller = detectCallerMethod();
+        if (context == null || context.org == null) {
+            log.warn("[TOKEN-REFRESH] Skip refresh request. reason=missing_context, caller={}, actor={}, org=unknown", caller, actor);
+            return null;
+        }
+
+        String orgKey = context.org.getOrgKey();
+        log.info("[TOKEN-REFRESH] Start. caller={}, actor={}, orgKey={}, myDomain={}", caller, actor, orgKey, context.myDomain);
+
+        SalesforceTokenManager.RefreshResult refreshedTokens = tokenManager.refreshClientCredentialsToken(session, context.org);
+        if (refreshedTokens == null || refreshedTokens.accessToken() == null || refreshedTokens.accessToken().isBlank()) {
+            log.warn("[TOKEN-REFRESH] Failed. caller={}, actor={}, orgKey={} (token refresh returned empty)", caller, actor, orgKey);
+            return null;
+        }
+
+        salesforceOrgService.storeAccessToken(context.org.getOrgKey(), refreshedTokens.accessToken());
+        tokenManager.setActiveOrg(session, context.org.getOrgKey());
+        tokenManager.setAccessToken(session, refreshedTokens.accessToken());
+        context.accessToken = refreshedTokens.accessToken();
+        log.info("[TOKEN-REFRESH] SUCCESS. caller={}, actor={}, orgKey={}, cause=token_expired", caller, actor, orgKey);
+
+        try {
+            etlService.refreshRoutingModuleCredentials(
+                    refreshedTokens.accessToken(),
+                    context.myDomain,
+                    context.org.getOrgKey()
+            );
+            log.info("[TOKEN-REFRESH] Routing module credentials refreshed. caller={}, actor={}, orgKey={}", caller, actor, orgKey);
+        } catch (Exception e) {
+            log.warn("[TOKEN-REFRESH] Failed to refresh routing module credentials. caller={}, actor={}, orgKey={}", caller, actor, context.org.getOrgKey());
+        }
+
+        return refreshedTokens.accessToken();
+    }
+
+    private String detectCallerMethod() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (StackTraceElement element : stackTrace) {
+            String className = element.getClassName();
+            String methodName = element.getMethodName();
+            if (className.endsWith("ETLController")
+                    && !"refreshAccessTokenIfNeeded".equals(methodName)
+                    && !"detectCallerMethod".equals(methodName)
+                    && !"getClass".equals(methodName)) {
+                return className.substring(className.lastIndexOf('.') + 1) + "." + methodName + "(" + element.getLineNumber() + ")";
+            }
+        }
+        return "Unknown";
+    }
+
+    private String requireAccessToken(ExecutionContext context) {
+        if (context.accessToken == null) {
+            throw new AppException("세션이 만료되었습니다. 다시 Salesforce 로그인 해주세요.");
+        }
+        return context.accessToken;
+    }
+
+    private static class ExecutionContext {
+        SalesforceOrgCredential org;
+        String accessToken;
+        String myDomain;
+        boolean requiresOrgLogin;
     }
 }

@@ -9,4 +9,11 @@ public class ObjectDefinition {
     public String label;
     public String labelPlural;
     public String name;
+
+    public String getLabel() {
+        if (label == null || label.isBlank() || label.startsWith("__MISSING LABEL__")) {
+            return name;
+        }
+        return label;
+    }
 }

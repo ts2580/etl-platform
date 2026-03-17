@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Salesforce Org 관리</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/top-progress.css">
+    <script defer src="/js/top-progress.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
+<div id="top-progress-bar" aria-hidden="true"></div>
+
+<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🏢</span>
+                <div>
+                    <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">Salesforce Org 관리</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">오그별 myDomain, Connected App 정보로 인증을 연결하고 기본 org를 관리할 수 있어요.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" th:href="@{/}">홈으로</a>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'need_org_auth' and param.reason != null and param.reason[0] == 'refresh_failed'}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">재인증 필요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">이 Org의 토큰 갱신 실패 → 다시 인증 필요</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'token_refreshed'}" class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🔁</span>
+                <div>
+                    <h3 class="text-base font-bold text-emerald-700 sm:text-lg">토큰 갱신 완료</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">선택한 Org의 access token을 갱신했어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'token_refresh_failed'}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">토큰 갱신 실패</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">토큰 갱신에 실패했어요. 접근 토큰 만료일 수 있어요. 로그인 재인증이 필요할 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${message == 'need_org_login_inputs' || (param.message != null and param.message[0] == 'need_org_login_inputs')}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-amber-700 sm:text-lg">입력값을 먼저 확인해 주세요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">Org 이름, myDomain, Client ID, Client Secret을 모두 채워야 인증을 시작할 수 있어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${message == 'invalid_org_name' || (param.message != null and param.message[0] == 'invalid_org_name')}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">Org 이름 형식이 맞지 않아요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">Org 이름은 영문으로 시작하고, 영문/숫자/공백/_ 만 사용할 수 있어요. 길이는 2~48자예요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'oauth_start_failed'}" class="hidden mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">OAuth 시작에 실패했어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">입력값이나 OAuth 설정을 다시 확인한 뒤 한 번 더 시도해 주세요.</p>
+                    <p th:if="${param.reason != null and param.reason[0] == 'missing_client_info'}" class="mt-2 text-xs leading-6 text-rose-600">저장된 Client ID/Client Secret이 없어 재로그인 흐름을 시작하지 못했어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'oauth_callback_failed'}" class="hidden mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">OAuth 인증 완료 처리에 실패했어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">Salesforce 인증은 끝났더라도 앱 등록 처리 중 오류가 났을 수 있어요. 다시 시도해 주세요.</p>
+                    <p th:if="${param.reason != null}" class="mt-2 text-xs leading-6 text-rose-600" th:text="${param.reason[0]}"></p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_registered'}" class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-lg sm:h-10 sm:w-10 sm:text-xl">✅</span>
+                <div>
+                    <h3 class="text-base font-bold text-emerald-700 sm:text-lg">새 org가 등록됐어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">Client Credentials 설정 저장 후 access token까지 자동 발급했어요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_registered_but_token_failed'}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-amber-700 sm:text-lg">org는 등록됐지만 토큰 발급은 실패했어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">Client Credentials 설정은 저장됐어요. 아래 목록에서 토큰 갱신을 다시 시도하거나, 로그의 reason/body를 확인해 주세요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_activated'}" class="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🌿</span>
+                <div>
+                    <h3 class="text-base font-bold text-indigo-700 sm:text-lg">기본 org가 변경됐어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">이제 해당 org를 기본 대상으로 사용해요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_deactivated'}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🗑️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">org가 삭제됐어요</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">목록에서 제거했고, 더 이상 기본 org로도 사용되지 않아요.</p>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-5 rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:mt-6 sm:p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 새 인증 등록</p>
+                    <h3 class="mt-2 text-base font-bold text-[#312e81] sm:text-lg">Client Credentials org 등록</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">아래 정보를 입력하고 <strong>새 인증 등록</strong>을 누르면, org/client credential 정보를 저장해요. 실제 access token 발급은 <strong>토큰 갱신</strong>에서 처리합니다.</p>
+                </div>
+            </div>
+
+            <form id="add-org-form" th:action="@{/etl/orgs/register}" method="post" class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">Org 이름</label>
+                    <input name="orgName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: MyOrg1 / Demo_Org" required th:value="${orgNameInput}"/>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">My Domain</label>
+                    <input name="myDomain" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="https://xxxx.my.salesforce.com" required th:value="${myDomainInput}"/>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">Client ID (CID)</label>
+                    <input name="clientId" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="Salesforce Connected App Client ID" required th:value="${clientIdInput}"/>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">Client Secret (CPW)</label>
+                    <input type="password" name="clientSecret" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="Salesforce Connected App Client Secret" required th:value="${clientSecretInput}"/>
+                </div>
+                <div class="sm:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <input type="checkbox" name="isDefault" value="true" class="h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:checked="${isDefaultInput}"/>
+                        기본 org로 지정
+                    </label>
+                    <button class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">새 인증 등록</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="mt-5 rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm sm:mt-6">
+            <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 등록 org 목록</p>
+                <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">현재 등록된 Salesforce org</h3>
+                <p class="mt-1 text-sm leading-6 text-slate-500">기본 org 전환이나 삭제는 아래 버튼으로 처리할 수 있어요.</p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-100 text-sm">
+                    <thead class="bg-slate-50 text-slate-700">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">Org명</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">myDomain</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">기본</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">동작</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-[#f8faff]">
+                    <tr th:each="org : ${orgs}" class="transition hover:bg-indigo-50/40">
+                        <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" th:text="${org.orgName}">Org</td>
+                        <td class="px-4 py-3 text-slate-500 sm:px-5" th:text="${org.myDomain}">https://example.my.salesforce.com</td>
+                        <td class="px-4 py-3 sm:px-5">
+                            <div class="flex flex-wrap gap-1.5">
+                                <span th:if="${orgKey == activeOrgKey or org.orgKey == activeOrgKey}" class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700">선택됨</span>
+                                <span th:if="${org.isDefault}" class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">기본</span>
+                                <span th:if="${(orgKey != activeOrgKey and org.orgKey != activeOrgKey) and !org.isDefault}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">일반</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 sm:px-5">
+                            <div class="flex flex-wrap gap-2">
+                                <form th:action="@{/etl/orgs/activate}" method="post">
+                                    <input type="hidden" name="orgKey" th:value="${org.orgKey}"/>
+                                    <button class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700">기본 전환</button>
+                                </form>
+                                <form th:action="@{/etl/orgs/select}" method="post">
+                                    <input type="hidden" name="orgKey" th:value="${org.orgKey}"/>
+                                    <input type="hidden" name="returnTo" value="/"/>
+                                    <button class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700">선택</button>
+                                </form>
+                                <form th:action="@{/etl/orgs/refresh}" method="post">
+                                    <input type="hidden" name="orgKey" th:value="${org.orgKey}"/>
+                                    <button class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100">토큰 갱신</button>
+                                </form>
+                                <form th:action="@{/etl/orgs/deactivate}" method="post" onsubmit="return confirm('정말 삭제할까요?');">
+                                    <input type="hidden" name="orgKey" th:value="${org.orgKey}"/>
+                                    <button class="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(orgs)}">
+                        <td colspan="4" class="px-4 py-8 text-center text-slate-500 sm:px-5">등록된 Org이 없습니다.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

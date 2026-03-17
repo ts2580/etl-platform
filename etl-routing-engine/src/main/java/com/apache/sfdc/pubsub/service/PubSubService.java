@@ -7,9 +7,17 @@ public interface PubSubService {
 
     Map<String, Object> setTable(Map<String, String> mapProperty, String token);
 
+    void dropTable(Map<String, String> mapProperty);
+
     void subscribeCDC(Map<String, String> mapProperty, Map<String, Object> mapType) throws Exception;
 
-    void markCdcSlotActive(String selectedObject);
+    void markSlotActive(String selectedObject, String ingestionProtocol, String orgKey, Long routingRegistryId);
 
-    Map<String, Object> getCdcSlotSummary();
+    void deactivateSlot(String selectedObject, String ingestionProtocol);
+
+    Map<String, Object> getSlotSummary(String ingestionProtocol);
+
+    Map<String, Object> refreshCredentials(Map<String, String> mapProperty) throws Exception;
+
+    boolean isRouteActive(String orgKey, String selectedObject);
 }

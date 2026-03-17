@@ -25,28 +25,53 @@
         ${strDelete}
     </delete>
 
-    <select id="countActiveCdcSlots" resultType="int">
+    <select id="countActiveSlots" resultType="int">
         SELECT COUNT(*)
-        FROM cdc_slot_registry
+        FROM routing.ingestion_slot_registry
         WHERE is_active = TRUE
+          AND routing_protocol = #{routingProtocol}
     </select>
 
-    <insert id="upsertActiveCdcSlot">
-        INSERT INTO cdc_slot_registry (
+    <insert id="upsertActiveSlot">
+        INSERT INTO routing.ingestion_slot_registry (
+            org_key,
             selected_object,
+            routing_protocol,
+            routing_registry_id,
             is_active,
+            activated_at,
+            deactivated_at,
+            note,
             created_at,
             updated_at
         ) VALUES (
+            #{orgKey},
             #{selectedObject},
+            #{routingProtocol},
+            #{routingRegistryId},
             TRUE,
+            NOW(),
+            NULL,
+            #{note},
             NOW(),
             NOW()
         )
         ON DUPLICATE KEY UPDATE
+            routing_protocol = VALUES(routing_protocol),
+            routing_registry_id = VALUES(routing_registry_id),
             is_active = TRUE,
-            updated_at = NOW()
+            deactivated_at = NULL,
+            updated_at = NOW(),
+            note = VALUES(note)
     </insert>
 
-</mapper>
+    <update id="deactivateSlot">
+        UPDATE routing.ingestion_slot_registry
+        SET is_active = FALSE,
+            deactivated_at = NOW(),
+            updated_at = NOW()
+        WHERE selected_object = #{selectedObject}
+          AND routing_protocol = #{routingProtocol}
+    </update>
 
+</mapper>

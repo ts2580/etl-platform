@@ -2,16 +2,20 @@ package com.sfdcupload.file.controller;
 
 import com.etlplatform.common.error.AppException;
 import com.etlplatform.common.validation.RequestValidationUtils;
-import com.sfdcupload.common.SalesforceTokenManager;
+import com.sfdcupload.common.SalesforceOrgCredential;
+import com.sfdcupload.common.SalesforceOrgService;
 import com.sfdcupload.file.service.FileMigrationService;
 import com.sfdcupload.file.service.FileService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -30,7 +34,7 @@ import java.nio.file.StandardOpenOption;
 public class FileController {
 
     private final FileService fileService;
-    private final SalesforceTokenManager tokenManager;
+    private final SalesforceOrgService salesforceOrgService;
     private final FileMigrationService fileMigrationService;
 
     private static final Path EFS_ROOT = Paths.get("/mnt/efs/sfdc");
@@ -66,20 +70,33 @@ public class FileController {
     }
 
     @GetMapping("/upload")
-    public SseEmitter upload(@RequestParam String dataId, @RequestParam int cycle, HttpSession session) {
+    public SseEmitter upload(@RequestParam String dataId,
+                             @RequestParam int cycle,
+                             @RequestParam(required = false) String orgKey) {
         String validatedDataId = RequestValidationUtils.requireSimpleKey(dataId, "dataId");
         int validatedCycle = RequestValidationUtils.requirePositive(cycle, "cycle");
         SseEmitter emitter = new SseEmitter(0L);
-        String accessToken = tokenManager.getAccessToken(session);
 
-        if (accessToken == null) {
-            throw new AppException("로그인이 필요합니다. 먼저 OAuth 로그인을 진행해 주세요.");
+        SalesforceOrgCredential activeOrg = salesforceOrgService.resolveSelectedOrg(orgKey);
+        if (activeOrg == null) {
+            throw new AppException("사용할 Salesforce org가 없습니다. 메인 모듈에서 org를 먼저 선택해 주세요.");
         }
 
-        log.info("Starting file upload migration. dataId={}, cycle={}", validatedDataId, validatedCycle);
+        String accessToken = activeOrg.getAccessToken();
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new AppException("파일 모듈에서 사용할 Salesforce access token이 없어요. 메인 모듈에서 토큰을 먼저 받아와 주세요.");
+        }
+
+        String myDomain = activeOrg.getMyDomain();
+        if (myDomain == null || myDomain.isBlank()) {
+            throw new AppException("선택한 org의 myDomain 정보가 비어 있어요.");
+        }
+
+        log.info("Starting file upload migration. dataId={}, cycle={}, orgKey={}", validatedDataId, validatedCycle, activeOrg.getOrgKey());
+        String finalAccessToken = accessToken;
         new Thread(() -> {
             try {
-                fileMigrationService.migrate(validatedDataId, validatedCycle, accessToken, emitter);
+                fileMigrationService.migrate(validatedDataId, validatedCycle, finalAccessToken, myDomain, emitter);
             } catch (Exception e) {
                 log.error("업로드 진행 중 예외 발생. dataId={}", validatedDataId, e);
                 try {

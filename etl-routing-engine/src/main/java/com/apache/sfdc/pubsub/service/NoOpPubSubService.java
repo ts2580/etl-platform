@@ -25,12 +25,32 @@ public class NoOpPubSubService implements PubSubService {
     }
 
     @Override
-    public void markCdcSlotActive(String selectedObject) {
-        throw new FeatureDisabledException("DB 비활성 모드에서는 CDC 슬롯 정보를 기록할 수 없습니다.");
+    public void markSlotActive(String selectedObject, String ingestionProtocol, String orgKey, Long routingRegistryId) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 슬롯 정보를 기록할 수 없습니다.");
     }
 
     @Override
-    public Map<String, Object> getCdcSlotSummary() {
-        throw new FeatureDisabledException("DB 비활성 모드에서는 CDC 슬롯 정보를 조회할 수 없습니다.");
+    public void deactivateSlot(String selectedObject, String ingestionProtocol) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 슬롯 정보를 변경할 수 없습니다.");
+    }
+
+    @Override
+    public Map<String, Object> getSlotSummary(String ingestionProtocol) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 슬롯 정보를 조회할 수 없습니다.");
+    }
+
+    @Override
+    public void dropTable(Map<String, String> mapProperty) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 테이블 제거 기능을 사용할 수 없습니다.");
+    }
+
+    @Override
+    public Map<String, Object> refreshCredentials(Map<String, String> mapProperty) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 CDC credential refresh 기능을 사용할 수 없습니다.");
+    }
+
+    @Override
+    public boolean isRouteActive(String orgKey, String selectedObject) {
+        return false;
     }
 }
