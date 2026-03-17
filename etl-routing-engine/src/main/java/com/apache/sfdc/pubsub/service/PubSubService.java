@@ -16,4 +16,8 @@ public interface PubSubService {
     void deactivateSlot(String selectedObject, String ingestionProtocol);
 
     Map<String, Object> getSlotSummary(String ingestionProtocol);
+
+    Map<String, Object> refreshCredentials(Map<String, String> mapProperty) throws Exception;
+
+    boolean isRouteActive(String orgKey, String selectedObject);
 }

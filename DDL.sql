@@ -30,7 +30,7 @@ CREATE TABLE config.member (
 
 -- =========================================================
 -- config.salesforce_org_credentials
--- 멀티 org 운영용 refresh key/endpoint 관리
+-- 멀티 org 운영용 client credentials / access token 관리
 -- =========================================================
 DROP TABLE IF EXISTS config.salesforce_org_credentials;
 CREATE TABLE config.salesforce_org_credentials (
@@ -42,7 +42,6 @@ CREATE TABLE config.salesforce_org_credentials (
     client_id VARCHAR(255),
     client_secret VARCHAR(255),
     access_token TEXT,
-    refresh_token TEXT NOT NULL,
     access_token_issued_at DATETIME NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,

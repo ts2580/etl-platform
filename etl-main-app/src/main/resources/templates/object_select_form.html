@@ -1,450 +1,788 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>오브젝트 선택</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/top-progress.css">
+    <script defer src="/js/top-progress.js"></script>
 </head>
+
 <body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
-<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
-        <div class="flex items-start gap-3">
-            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🧩</span>
-            <div>
-                <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">오브젝트 선택</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">동기화할 오브젝트를 고른 뒤, 적재 방식은 Streaming 또는 CDC 중 하나만 선택해주세요.</p>
-            </div>
-        </div>
+    <div id="top-progress-bar" aria-hidden="true"></div>
 
-        <div th:if="${submitError}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+    <div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main
+            class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
             <div class="flex items-start gap-3">
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <span
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🧩</span>
                 <div>
-                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">입력 내용을 다시 확인해주세요</h3>
-                    <p class="mt-2 text-sm leading-6 text-slate-700" th:text="${submitError}">처리 중 오류가 발생했어요.</p>
+                    <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">오브젝트 선택</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">동기화할 오브젝트를 고른 뒤, 적재 방식은
+                        "Streaming(PushTopic)" 또는 "Pub/Sub(CDC)" 중 하나만 선택해주세요.</p>
                 </div>
             </div>
-        </div>
 
-        <form th:action="@{/etl/ddl}" method="post" class="mt-5 space-y-5 sm:mt-6 sm:space-y-6" id="objectSelectForm">
-            <input type="hidden" name="orgKey" th:value="${activeOrgKey}"/>
-            <section class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
-                <div class="flex flex-col gap-4">
-                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 적재 방식 선택</p>
-                            <h3 class="mt-2 text-base font-bold text-[#312e81] sm:text-lg">라우팅 모드</h3>
-                            <p class="mt-1 text-sm leading-6 text-slate-500">작동 중인 방식이 있으면 처음부터 체크되고, 다른 방식은 같이 선택되지 않게 잠가둘게요.</p>
+            <div th:if="${submitError}"
+                class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+                <div class="flex items-start gap-3">
+                    <span
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                    <div>
+                        <h3 class="text-base font-bold text-rose-700 sm:text-lg">입력 내용을 다시 확인해주세요</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-700" th:text="${submitError}">처리 중 오류가 발생했어요.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form th:action="@{/etl/ddl}" method="post" class="mt-5 space-y-5 sm:mt-6 sm:space-y-6"
+                id="objectSelectForm">
+                <input type="hidden" name="orgKey" th:value="${activeOrgKey}" />
+                <input type="hidden" id="selectedObjectHidden" th:value="${selectedObject}" />
+                <section
+                    class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">
+                                    ℹ️ 적재 방식 선택</p>
+                                <h3 class="mt-2 text-base font-bold text-[#312e81] sm:text-lg">라우팅 모드</h3>
+                            </div>
+                            <div class="flex flex-wrap gap-2 sm:gap-3">
+                                <label id="streamingLabel"
+                                    class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
+                                    <input id="streamingRadio" type="radio" name="ingestionMode" value="STREAMING"
+                                        class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                        th:checked="${selectedIngestionMode == null or selectedIngestionMode == 'STREAMING'}"
+                                        required>
+                                    <span>PushTopic</span>
+                                </label>
+                                <label id="cdcLabel"
+                                    class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
+                                    <input id="cdcRadio" type="radio" name="ingestionMode" value="CDC"
+                                        class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                        th:checked="${selectedIngestionMode == 'CDC'}" required>
+                                    <span>CDC</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="flex flex-wrap gap-2 sm:gap-3">
-                            <label id="streamingLabel" class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
-                                <input id="streamingRadio" type="radio" name="ingestionMode" value="STREAMING" class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:checked="${selectedIngestionMode == null or selectedIngestionMode == 'STREAMING'}" required>
-                                <span>Streaming</span>
-                            </label>
-                            <label id="cdcLabel" class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-[#f8faff] px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm sm:px-4 sm:text-sm">
-                                <input id="cdcRadio" type="radio" name="ingestionMode" value="CDC" class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500" th:checked="${selectedIngestionMode == 'CDC'}" required>
-                                <span>CDC</span>
-                            </label>
+
+                        <div id="cdcWarningBox"
+                            th:attr="data-used=${cdcSlotSummary.used},data-limit=${cdcSlotSummary.limit},data-available=${cdcSlotSummary.available}"
+                            class="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700 transition shadow-sm">
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-x-4 sm:gap-y-1">
+                                <span id="cdcWarningTitle"
+                                    class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold text-amber-700 sm:text-[11px]">⚠️
+                                    CDC 슬롯 안내</span>
+                                <span class="text-xs font-medium text-slate-600 sm:text-sm">현재 사용: <strong
+                                        th:text="${cdcSlotSummary.used}">0</strong> / <strong
+                                        th:text="${cdcSlotSummary.limit}">5</strong></span>
+                                <span class="text-xs font-medium text-slate-600 sm:text-sm">남은 슬롯: <strong
+                                        id="cdcAvailableCount" th:text="${cdcSlotSummary.available}">5</strong></span>
+                            </div>
+                            <p id="cdcRecommendationText" class="m-0 text-sm leading-6 text-slate-600">
+                                주 업무는
+                                <strong>
+                                    <a class="text-blue-600 underline underline-offset-2 hover:text-blue-700 hover:underline"
+                                        href="https://developer.salesforce.com/docs/atlas.en-us.change_data_capture.meta/change_data_capture/cdc_intro.htm"
+                                        target="_blank"
+                                        rel="noopener noreferrer">CDC(Change Data Capture)</a>
+                                </strong>
+                                사용을 추천해요.
+                                나머지 업무는
+                                <strong>
+                                    <a class="text-blue-600 underline underline-offset-2 hover:text-blue-700 hover:underline"
+                                        href="https://developer.salesforce.com/docs/atlas.en-us.api_streaming.meta/api_streaming/pushtopic_events_intro.htm"
+                                        target="_blank"
+                                        rel="noopener noreferrer">PushTopic</a>
+                                </strong>
+                                사용을 권장해요.
+                            </p>
+                            <p id="cdcSlotMessage" class="m-0 text-xs leading-5 text-slate-500"
+                                th:text="${cdcSlotSummary.message}">CDC는 최대 5개까지 운영할 수 있어요.</p>
+                            <p id="cdcBlockMessage" class="hidden m-0 text-sm font-semibold leading-6 text-rose-700">남은
+                                CDC 슬롯이 없어서 지금은 CDC(Pub/Sub) 등록이 불가능해요. 기존 CDC 슬롯을 정리하거나 Streaming(PushTopic)로 전환해주세요.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        th:href="@{/}">메인 페이지</a>
+                    <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                        th:href="@{/etl/dashboard(orgKey=${activeOrgKey})}">라우팅 대시보드</a>
+                    <button id="submitTopButton"
+                        class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]"
+                        type="submit">설정 실행</button>
+                </div>
+
+                <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                    <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 대상
+                            오브젝트 목록</p>
+                        <div class="mt-2 flex flex-col gap-3">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-800 sm:text-lg">동기화 대상 선택</h3>
+                                <p class="mt-1 text-sm leading-6 text-slate-500">상태별 필터, 검색, 서버 사이드 페이징으로 원하는 오브젝트만 빠르게
+                                    찾을 수 있어요.</p>
+                            </div>
+
+                            <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_120px_auto] lg:items-end"
+                                id="objectFilterControls">
+                                <label class="flex min-w-0 flex-col gap-1 text-xs font-semibold text-slate-500">
+                                    검색
+                                    <input id="objectSearchInput" type="search" th:value="${searchQuery}"
+                                        placeholder="라벨명 또는 API명 검색"
+                                        class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
+                                </label>
+                                <label class="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                                    상태 필터
+                                    <select id="objectStatusFilter"
+                                        class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100">
+                                        <option value="ALL" th:selected="${statusFilter == 'ALL'}">전체</option>
+                                        <option value="NONE" th:selected="${statusFilter == 'NONE'}">미설정</option>
+                                        <option value="STREAMING" th:selected="${statusFilter == 'STREAMING'}">STREAMING
+                                        </option>
+                                        <option value="CDC" th:selected="${statusFilter == 'CDC'}">CDC</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                                    정렬
+                                    <select id="objectSort"
+                                        class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100">
+                                        <option value="LABEL_ASC" th:selected="${sort == 'LABEL_ASC'}">라벨명 ↑</option>
+                                        <option value="LABEL_DESC" th:selected="${sort == 'LABEL_DESC'}">라벨명 ↓</option>
+                                        <option value="API_ASC" th:selected="${sort == 'API_ASC'}">API명 ↑</option>
+                                        <option value="API_DESC" th:selected="${sort == 'API_DESC'}">API명 ↓</option>
+                                        <option value="STATUS_ASC" th:selected="${sort == 'STATUS_ASC'}">상태 ↑</option>
+                                        <option value="STATUS_DESC" th:selected="${sort == 'STATUS_DESC'}">상태 ↓</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                                    페이지 크기
+                                    <select id="objectPageSize"
+                                        class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100">
+                                        <option value="10" th:selected="${pageSize == 10}">10개</option>
+                                        <option value="20" th:selected="${pageSize == 20}">20개</option>
+                                        <option value="50" th:selected="${pageSize == 50}">50개</option>
+                                        <option value="100" th:selected="${pageSize == 100}">100개</option>
+                                    </select>
+                                </label>
+                                <div class="flex gap-2">
+                                    <button type="button" id="applyObjectFilters"
+                                        class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50">적용</button>
+                                    <a th:href="@{/etl/objects(orgKey=${activeOrgKey})}"
+                                        class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">초기화</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="selectedObjectBadge" class="mt-3 flex flex-wrap items-center gap-2"
+                            th:classappend="${selectedObject == null} ? ' hidden'">
+                            <span class="text-xs font-semibold text-slate-500">선택 유지</span>
+                            <span id="selectedObjectBadgeText"
+                                class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+                                th:text="|오브젝트: ${selectedObject}|">오브젝트</span>
+                            <span id="selectedObjectStatusBadge"
+                                th:classappend="${selectedObjectStatus == null} ? ' hidden'"
+                                class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700"
+                                th:text="|상태: ${selectedObjectStatus}|">상태</span>
+                            <span id="selectedObjectInvisibleBadge"
+                                th:classappend="${selectedObjectVisible} ? ' hidden'"
+                                class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">현재
+                                필터/페이지에서는 선택 항목이 안 보여요</span>
+                            <button type="button" id="showSelectedObjectButton"
+                                class="hidden inline-flex items-center rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50">선택 항목 보기</button>
+                        </div>
+                        <div class="mt-3 flex flex-wrap items-center gap-2"
+                            th:if="${!#strings.isEmpty(searchQuery) or statusFilter != 'ALL' or sort != 'LABEL_ASC'}">
+                            <span class="text-xs font-semibold text-slate-500">적용 필터</span>
+                            <span th:if="${!#strings.isEmpty(searchQuery)}"
+                                class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700"
+                                th:text="|검색: ${searchQuery}|">검색</span>
+                            <span th:if="${statusFilter != 'ALL'}"
+                                class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700"
+                                th:text="|상태: ${statusFilter}|">상태</span>
+                            <span th:if="${sort != 'LABEL_ASC'}"
+                                class="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700"
+                                th:text="|정렬: ${sort}|">정렬</span>
                         </div>
                     </div>
 
-
-                    <div id="cdcWarningBox"
-                         th:attr="data-used=${cdcSlotSummary.used},data-limit=${cdcSlotSummary.limit},data-available=${cdcSlotSummary.available}"
-                         class="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700 transition shadow-sm">
-                        <div class="flex flex-wrap items-center gap-2 sm:gap-x-4 sm:gap-y-1">
-                            <span id="cdcWarningTitle" class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-semibold text-amber-700 sm:text-[11px]">⚠️ CDC 슬롯 안내</span>
-                            <span class="text-xs font-medium text-slate-600 sm:text-sm">현재 사용: <strong th:text="${cdcSlotSummary.used}">0</strong> / <strong th:text="${cdcSlotSummary.limit}">5</strong></span>
-                            <span class="text-xs font-medium text-slate-600 sm:text-sm">남은 슬롯: <strong id="cdcAvailableCount" th:text="${cdcSlotSummary.available}">5</strong></span>
-                        </div>
-                        <p id="cdcRecommendationText" class="m-0 text-sm leading-6 text-slate-600">CDC는 중요한 스키마 중심으로 운영하고, 일반 대상은 Streaming 사용을 권장해요.</p>
-                        <p id="cdcSlotMessage" class="m-0 text-xs leading-5 text-slate-500" th:text="${cdcSlotSummary.message}">CDC는 최대 5개까지 운영할 수 있어요.</p>
-                        <p id="cdcBlockMessage" class="hidden m-0 text-sm font-semibold leading-6 text-rose-700">남은 CDC 슬롯이 없어서 지금은 CDC 등록이 불가능해요. Streaming을 사용하거나 기존 CDC 슬롯을 먼저 정리해주세요.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-100 text-sm">
+                            <thead class="bg-slate-50 text-slate-700">
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">
+                                        선택</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">
+                                        라벨명</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">
+                                        API명</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">
+                                        상태</th>
+                                </tr>
+                            </thead>
+                            <tbody id="objectTableBody" class="divide-y divide-slate-100 bg-[#f8faff]">
+                                <tr th:if="${#lists.isEmpty(objectDefinitions)}">
+                                    <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">조건에 맞는 오브젝트가
+                                        없어요.</td>
+                                </tr>
+                                <tr th:each="object : ${objectDefinitions}" class="transition hover:bg-indigo-50/40"
+                                    th:attr="data-object=${object.name},data-label=${object.label},data-active-mode=${ingestionStatusByObject[object.name]},data-routing-active=${ingestionStatusByObject[object.name] != null}">
+                                    <td class="px-4 py-3 sm:px-5" data-label="선택">
+                                        <input type="checkbox"
+                                            class="object-selector h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                            th:attr="name=${ingestionStatusByObject[object.name] == null ? 'selectedObject' : null}"
+                                            th:value="${object.name}"
+                                            th:checked="${selectedObject == object.name or ingestionStatusByObject[object.name] != null}"
+                                            th:disabled="${ingestionStatusByObject[object.name] != null}" />
+                                    </td>
+                                    <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" data-label="라벨명"
+                                        th:text="${object.label}"></td>
+                                    <td class="px-4 py-3 text-slate-500 sm:px-5" data-label="API명"
+                                        th:text="${object.name}"></td>
+                                    <td class="px-4 py-3 sm:px-5">
+                                        <span th:if="${ingestionStatusByObject[object.name] == 'CDC'}"
+                                            class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700">CDC</span>
+                                        <span th:if="${ingestionStatusByObject[object.name] == 'STREAMING'}"
+                                            class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700">STREAMING</span>
+                                        <span th:if="${ingestionStatusByObject[object.name] == null}"
+                                            class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+
+                    <div
+                        class="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                        <div id="paginationSummary" class="text-xs text-slate-600"
+                            th:text="|총 ${totalObjectCount}개 중 ${pageStartIndex}–${pageEndIndex}개 표시 · ${currentPage}/${totalPages} 페이지|">
+                            총 0개 중 0–0개 표시 · 1/1 페이지</div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" id="pageFirstButton"
+                                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">처음</button>
+                            <button type="button" id="pagePrevButton"
+                                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">이전</button>
+                            <div id="pageNumberList" class="flex flex-wrap items-center gap-2"></div>
+                            <button type="button" id="pageNextButton"
+                                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">다음</button>
+                            <button type="button" id="pageLastButton"
+                                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">끝</button>
+
+                            <div
+                                class="ml-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5">
+                                <span class="text-xs font-semibold text-slate-500">페이지 이동</span>
+                                <input id="pageJumpInput" type="number" min="1" th:attr="max=${totalPages}"
+                                    th:value="${currentPage}"
+                                    class="w-16 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
+                                <button type="button" id="pageJumpButton"
+                                    class="rounded-lg border border-slate-200 bg-[#f8faff] px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">이동</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <button id="submitBottomButton"
+                        class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]"
+                        type="submit">설정 실행</button>
                 </div>
-            </section>
+            </form>
+        </main>
+    </div>
 
-            <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <a class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" th:href="@{/etl/dashboard(orgKey=${activeOrgKey})}">라우팅 대시보드</a>
-                <button id="submitTopButton" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" type="submit">설정 실행</button>
-            </div>
-
-            <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
-                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 대상 오브젝트 목록</p>
-                    <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">동기화 대상 선택</h3>
-                    <p class="mt-1 text-sm leading-6 text-slate-500">라벨과 API 이름을 함께 보고 하나의 오브젝트를 선택할 수 있어요.</p>
+    <div id="cdcConfirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 px-4">
+        <div class="w-full max-w-md rounded-[24px] border border-rose-100 bg-[#f8faff] p-5 shadow-2xl sm:p-6">
+            <div class="flex items-start gap-3">
+                <span
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-slate-800 sm:text-lg">CDC(Pub/Sub)로 계속 진행할까요?</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">CDC(Pub/Sub)는 수량 제한이 있는 리소스예요. 정말 중요한 대상인지 한 번 더
+                        확인한 뒤 진행해주세요.</p>
+                    <p class="mt-2 text-sm font-medium text-slate-700">남은 슬롯: <strong
+                            id="modalAvailableCount">0</strong></p>
                 </div>
-
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-100 text-sm">
-                        <thead class="bg-slate-50 text-slate-700">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">선택</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">라벨명</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">API명</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sm:px-5">상태</th>
-                        </tr>
-                        </thead>
-                        <tbody id="objectTableBody" class="divide-y divide-slate-100 bg-[#f8faff]">
-                        <tr th:each="object : ${objectDefinitions}" class="transition hover:bg-indigo-50/40"
-                            th:attr="data-object=${object.name},data-label=${object.label},data-active-mode=${ingestionStatusByObject[object.name]}">
-                            <td class="px-4 py-3 sm:px-5" data-label="선택">
-                                <input type="radio"
-                                       class="h-4 w-4 border-indigo-300 text-indigo-600 focus:ring-indigo-500"
-                                       name="selectedObject"
-                                       th:value="${object.name}"
-                                       th:checked="${selectedObject == object.name}"
-                                       required />
-                            </td>
-                            <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" data-label="라벨명" th:text="${object.label}"></td>
-                            <td class="px-4 py-3 text-slate-500 sm:px-5" data-label="API명" th:text="${object.name}"></td>
-                            <td class="px-4 py-3 sm:px-5">
-                                <span th:if="${ingestionStatusByObject[object.name] == 'CDC'}" class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-700">CDC</span>
-                                <span th:if="${ingestionStatusByObject[object.name] == 'STREAMING'}" class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-700">STREAMING</span>
-                                <span th:if="${ingestionStatusByObject[object.name] == null}" class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">-</span>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                <button id="submitBottomButton" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" type="submit">설정 실행</button>
             </div>
-        </form>
-
-    </main>
-</div>
-
-<div id="cdcConfirmModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 px-4">
-    <div class="w-full max-w-md rounded-[24px] border border-rose-100 bg-[#f8faff] p-5 shadow-2xl sm:p-6">
-        <div class="flex items-start gap-3">
-            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
-            <div>
-                <h3 class="text-base font-bold text-slate-800 sm:text-lg">CDC로 계속 진행할까요?</h3>
-                <p class="mt-2 text-sm leading-6 text-slate-600">CDC는 수량 제한이 있는 리소스예요. 정말 중요한 대상인지 한 번 더 확인한 뒤 진행해주세요.</p>
-                <p class="mt-2 text-sm font-medium text-slate-700">남은 슬롯: <strong id="modalAvailableCount">0</strong></p>
+            <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button type="button" id="cancelCdcSubmit"
+                    class="rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">취소</button>
+                <button type="button" id="confirmCdcSubmit"
+                    class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">계속
+                    진행</button>
             </div>
-        </div>
-        <div class="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button type="button" id="cancelCdcSubmit" class="rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">취소</button>
-            <button type="button" id="confirmCdcSubmit" class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700">계속 진행</button>
         </div>
     </div>
-</div>
 
-<script th:inline="javascript">
-    const form = document.getElementById('objectSelectForm');
-    const streamingRadio = document.getElementById('streamingRadio');
-    const cdcRadio = document.getElementById('cdcRadio');
-    const cdcWarningBox = document.getElementById('cdcWarningBox');
-    const cdcWarningTitle = document.getElementById('cdcWarningTitle');
-    const cdcRecommendationText = document.getElementById('cdcRecommendationText');
-    const cdcSlotMessage = document.getElementById('cdcSlotMessage');
-    const cdcBlockMessage = document.getElementById('cdcBlockMessage');
-    const submitButtons = [document.getElementById('submitTopButton'), document.getElementById('submitBottomButton')];
-    const cdcConfirmModal = document.getElementById('cdcConfirmModal');
-    const confirmCdcSubmit = document.getElementById('confirmCdcSubmit');
-    const cancelCdcSubmit = document.getElementById('cancelCdcSubmit');
-    const modalAvailableCount = document.getElementById('modalAvailableCount');
+    <script th:inline="javascript">
+        const form = document.getElementById('objectSelectForm');
+        const streamingRadio = document.getElementById('streamingRadio');
+        const cdcRadio = document.getElementById('cdcRadio');
+        const cdcWarningBox = document.getElementById('cdcWarningBox');
+        const cdcWarningTitle = document.getElementById('cdcWarningTitle');
+        const cdcRecommendationText = document.getElementById('cdcRecommendationText');
+        const cdcSlotMessage = document.getElementById('cdcSlotMessage');
+        const cdcBlockMessage = document.getElementById('cdcBlockMessage');
+        const submitButtons = [document.getElementById('submitTopButton'), document.getElementById('submitBottomButton')];
+        const cdcConfirmModal = document.getElementById('cdcConfirmModal');
+        const confirmCdcSubmit = document.getElementById('confirmCdcSubmit');
+        const cancelCdcSubmit = document.getElementById('cancelCdcSubmit');
+        const modalAvailableCount = document.getElementById('modalAvailableCount');
+        const available = Number(cdcWarningBox?.dataset.available || 0);
+        const objectSearchInput = document.getElementById('objectSearchInput');
+        const objectStatusFilter = document.getElementById('objectStatusFilter');
+        const objectSort = document.getElementById('objectSort');
+        const objectPageSize = document.getElementById('objectPageSize');
+        const applyObjectFilters = document.getElementById('applyObjectFilters');
+        const selectedObjectHidden = document.getElementById('selectedObjectHidden');
+        const selectedObjectBadge = document.getElementById('selectedObjectBadge');
+        const selectedObjectBadgeText = document.getElementById('selectedObjectBadgeText');
+        const selectedObjectStatusBadge = document.getElementById('selectedObjectStatusBadge');
+        const selectedObjectInvisibleBadge = document.getElementById('selectedObjectInvisibleBadge');
+        const showSelectedObjectButton = document.getElementById('showSelectedObjectButton');
+        const pageJumpInput = document.getElementById('pageJumpInput');
+        const pageJumpButton = document.getElementById('pageJumpButton');
+        const pageFirstButton = document.getElementById('pageFirstButton');
+        const pagePrevButton = document.getElementById('pagePrevButton');
+        const pageNextButton = document.getElementById('pageNextButton');
+        const pageLastButton = document.getElementById('pageLastButton');
+        const pageNumberList = document.getElementById('pageNumberList');
+        const paginationSummary = document.getElementById('paginationSummary');
+        let currentPage = Number(/*[[${currentPage}]]*/ 1);
 
-    const searchInput = document.getElementById('objectSearchInput');
-    const pageSizeSelect = document.getElementById('objectPageSize');
-    const allRows = Array.from(document.querySelectorAll('#objectTableBody tr')).map((row) => {
-        const label = (row.dataset.label || '').trim().toLowerCase();
-        const objectName = (row.dataset.object || '').trim().toLowerCase();
-        const activeMode = row.dataset.activeMode || '';
-        return { row, label, objectName, activeMode };
-    });
-
-    const paginationArea = document.createElement('div');
-    paginationArea.className = 'mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:px-5';
-    const pageInfo = document.createElement('div');
-    pageInfo.className = 'text-xs text-slate-600';
-    const pager = document.createElement('div');
-    pager.className = 'flex items-center gap-2';
-    const firstButton = document.createElement('button');
-    firstButton.type = 'button';
-    firstButton.textContent = '처음';
-    firstButton.className = 'rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40';
-    const prevButton = document.createElement('button');
-    prevButton.type = 'button';
-    prevButton.textContent = '이전';
-    prevButton.className = 'rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40';
-    const nextButton = document.createElement('button');
-    nextButton.type = 'button';
-    nextButton.textContent = '다음';
-    nextButton.className = 'rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40';
-    const lastButton = document.createElement('button');
-    lastButton.type = 'button';
-    lastButton.textContent = '끝';
-    lastButton.className = 'rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-40';
-    const pageButtonsWrap = document.createElement('div');
-    pageButtonsWrap.className = 'flex items-center gap-1';
-
-    pager.appendChild(firstButton);
-    pager.appendChild(prevButton);
-    pager.appendChild(pageButtonsWrap);
-    pager.appendChild(nextButton);
-    pager.appendChild(lastButton);
-    paginationArea.appendChild(pageInfo);
-    paginationArea.appendChild(pager);
-    const sectionRef = document.querySelector('section.rounded-2xl.border.border-slate-200');
-    sectionRef.appendChild(paginationArea);
-
-    let pageSize = Number(pageSizeSelect.value);
-    let currentPage = 1;
-    let filteredRows = allRows;
-
-    function setPage(page) {
-        const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-        currentPage = Math.max(1, Math.min(page, totalPages));
-        const start = (currentPage - 1) * pageSize;
-        const end = Math.min(start + pageSize, filteredRows.length);
-
-        const visibleRows = new Set(filteredRows.slice(start, end).map((item) => item.row));
-        document.querySelectorAll('#objectTableBody tr').forEach((row) => {
-            row.style.display = visibleRows.has(row) ? '' : 'none';
-        });
-
-        const checkedRow = allRows.map((x) => x.row).find((r) => r.querySelector('input[name="selectedObject"]').checked);
-        if (checkedRow && checkedRow.style.display === 'none') {
-            checkedRow.style.display = '';
+        function getSelectedObjectName() {
+            return selectedObjectHidden?.value || getSelectedObjectRadio()?.value || '';
         }
 
-        if (filteredRows.length === 0) {
-            if (!document.getElementById('emptyRow')) {
-                const emptyRow = document.createElement('tr');
-                emptyRow.id = 'emptyRow';
-                emptyRow.innerHTML = '<td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">검색 조건에 맞는 오브젝트가 없어요.</td>';
-                document.getElementById('objectTableBody').appendChild(emptyRow);
+        function getSelectedObjectRadio() {
+            return document.querySelector('input[name="selectedObject"]:checked');
+        }
+
+        function getObjectSelectors() {
+            return Array.from(document.querySelectorAll('input[name="selectedObject"]'));
+        }
+
+        function getSelectedRow() {
+            const selected = getSelectedObjectRadio();
+            return selected ? selected.closest('tr') : null;
+        }
+
+        function getActiveModeForSelection() {
+            return getSelectedRow()?.dataset.activeMode || '';
+        }
+
+        function updateSelectedObjectBadge() {
+            const selectedObject = getSelectedObjectName();
+            const selectedRow = selectedObject
+                ? getAllObjectRows().find((row) => row.dataset.object === selectedObject) || null
+                : null;
+            const activeMode = selectedRow?.dataset.activeMode || '';
+            const isVisible = !!selectedRow && !selectedRow.classList.contains('hidden');
+
+            if (!selectedObject) {
+                selectedObjectBadge?.classList.add('hidden');
+                showSelectedObjectButton?.classList.add('hidden');
+                return;
             }
-            document.getElementById('emptyRow').style.display = '';
-        } else if (document.getElementById('emptyRow')) {
-            document.getElementById('emptyRow').remove();
-        }
 
-        updatePager(totalPages, start + 1, end);
-    }
-
-    function updatePager(totalPages, startIdx, endIdx) {
-        firstButton.disabled = currentPage <= 1;
-        prevButton.disabled = currentPage <= 1;
-        nextButton.disabled = currentPage >= totalPages;
-        lastButton.disabled = currentPage >= totalPages;
-        pageInfo.textContent = `총 ${filteredRows.length}개 중 ${filteredRows.length === 0 ? 0 : startIdx}-${endIdx}개 표시`;
-
-        pageButtonsWrap.innerHTML = '';
-        const maxButtons = 7;
-        const half = Math.floor(maxButtons / 2);
-        let startPage = Math.max(1, currentPage - half);
-        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-        if (endPage - startPage + 1 < maxButtons) {
-            startPage = Math.max(1, endPage - maxButtons + 1);
-        }
-
-        for (let page = startPage; page <= endPage; page += 1) {
-            const pageButton = document.createElement('button');
-            pageButton.type = 'button';
-            pageButton.textContent = String(page);
-            pageButton.className = `rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${page === currentPage ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-700'}`;
-            pageButton.addEventListener('click', () => setPage(page));
-            pageButtonsWrap.appendChild(pageButton);
-        }
-    }
-
-    function applyFilters() {
-        const keyword = (searchInput.value || '').trim().toLowerCase();
-        filteredRows = allRows.filter((item) => {
-            if (!keyword) {
-                return true;
+            selectedObjectBadge?.classList.remove('hidden');
+            if (selectedObjectBadgeText) {
+                selectedObjectBadgeText.textContent = `오브젝트: ${selectedObject}`;
             }
-            return item.label.includes(keyword) || item.objectName.includes(keyword);
-        });
-        currentPage = 1;
-        setPage(1);
-    }
 
-    function getSelectedObjectName() {
-        return getSelectedObjectRadio()?.value || '';
-    }
+            if (activeMode) {
+                selectedObjectStatusBadge?.classList.remove('hidden');
+                if (selectedObjectStatusBadge) {
+                    selectedObjectStatusBadge.textContent = `상태: ${activeMode}`;
+                }
+            } else {
+                selectedObjectStatusBadge?.classList.add('hidden');
+            }
 
-    function getSelectedObjectRadio() {
-        return document.querySelector('input[name="selectedObject"]:checked');
-    }
-
-    function getSelectedRow() {
-        const selected = getSelectedObjectRadio();
-        return selected ? selected.closest('tr') : null;
-    }
-
-    function getActiveModeForSelection() {
-        return getSelectedRow()?.dataset.activeMode || '';
-    }
-
-    function setButtonsDisabled(disabled) {
-        submitButtons.forEach((button) => {
-            button.disabled = disabled;
-            button.classList.toggle('opacity-50', disabled);
-            button.classList.toggle('cursor-not-allowed', disabled);
-        });
-    }
-
-    function applyModeLocks() {
-        const selectedObject = getSelectedObjectName();
-        const activeMode = getActiveModeForSelection();
-
-        streamingRadio.disabled = false;
-        cdcRadio.disabled = false;
-
-        if (!selectedObject || !activeMode) {
-            return;
+            if (isVisible) {
+                selectedObjectInvisibleBadge?.classList.add('hidden');
+                showSelectedObjectButton?.classList.add('hidden');
+            } else {
+                selectedObjectInvisibleBadge?.classList.remove('hidden');
+                showSelectedObjectButton?.classList.remove('hidden');
+            }
         }
 
-        if (activeMode === 'CDC') {
-            cdcRadio.checked = true;
-            streamingRadio.disabled = true;
-        } else if (activeMode === 'STREAMING') {
-            streamingRadio.checked = true;
-            cdcRadio.disabled = true;
-        }
-    }
-
-    function updateCdcUi() {
-        const isCdc = getSelectedMode() === 'CDC';
-        const noSlots = available <= 0;
-        const activeMode = getActiveModeForSelection();
-        const isLockedToStreaming = activeMode === 'STREAMING';
-
-        cdcWarningBox.classList.remove('border-amber-200', 'bg-amber-50', 'border-rose-300', 'bg-rose-50');
-        cdcWarningTitle.classList.remove('bg-amber-100', 'text-amber-700', 'bg-rose-100', 'text-rose-700');
-        cdcRecommendationText.classList.remove('text-slate-600', 'text-rose-700');
-        cdcSlotMessage.classList.remove('text-slate-500', 'text-rose-600');
-        cdcBlockMessage.classList.add('hidden');
-
-        if (isCdc) {
-            cdcWarningBox.classList.add('border-rose-300', 'bg-rose-50');
-            cdcWarningTitle.classList.add('bg-rose-100', 'text-rose-700');
-            cdcRecommendationText.classList.add('text-rose-700');
-            cdcSlotMessage.classList.add('text-rose-600');
-        } else {
-            cdcWarningBox.classList.add('border-amber-200', 'bg-amber-50');
-            cdcWarningTitle.classList.add('bg-amber-100', 'text-amber-700');
-            cdcRecommendationText.classList.add('text-slate-600');
-            cdcSlotMessage.classList.add('text-slate-500');
+        function setButtonsDisabled(disabled) {
+            submitButtons.forEach((button) => {
+                button.disabled = disabled;
+                button.classList.toggle('opacity-50', disabled);
+                button.classList.toggle('cursor-not-allowed', disabled);
+            });
         }
 
-        if ((isCdc && noSlots && activeMode !== 'CDC') || isLockedToStreaming && isCdc) {
-            cdcBlockMessage.classList.remove('hidden');
-            setButtonsDisabled(true);
-        } else {
-            setButtonsDisabled(false);
+        function applyModeLocks() {
+            const selectedObject = getSelectedObjectName();
+            const activeMode = getActiveModeForSelection();
+
+            streamingRadio.disabled = false;
+            cdcRadio.disabled = false;
+
+            if (!selectedObject || !activeMode) {
+                return;
+            }
+
+            if (activeMode === 'CDC') {
+                cdcRadio.checked = true;
+                streamingRadio.disabled = true;
+            } else if (activeMode === 'STREAMING') {
+                streamingRadio.checked = true;
+                cdcRadio.disabled = true;
+            }
         }
-    }
 
-    function getSelectedMode() {
-        return document.querySelector('input[name="ingestionMode"]:checked')?.value || 'STREAMING';
-    }
+        function getSelectedMode() {
+            return document.querySelector('input[name="ingestionMode"]:checked')?.value || 'STREAMING';
+        }
 
-    function openModal() {
-        modalAvailableCount.textContent = String(available);
-        cdcConfirmModal.classList.remove('hidden');
-        cdcConfirmModal.classList.add('flex');
-    }
+        function updateCdcUi() {
+            const isCdc = getSelectedMode() === 'CDC';
+            const noSlots = available <= 0;
+            const activeMode = getActiveModeForSelection();
+            const isLockedToStreaming = activeMode === 'STREAMING';
 
-    function closeModal() {
-        cdcConfirmModal.classList.add('hidden');
-        cdcConfirmModal.classList.remove('flex');
-    }
+            cdcWarningBox.classList.remove('border-amber-200', 'bg-amber-50', 'border-rose-300', 'bg-rose-50');
+            cdcWarningTitle.classList.remove('bg-amber-100', 'text-amber-700', 'bg-rose-100', 'text-rose-700');
+            cdcRecommendationText.classList.remove('text-slate-600', 'text-rose-700');
+            cdcSlotMessage.classList.remove('text-slate-500', 'text-rose-600');
+            cdcBlockMessage.classList.add('hidden');
 
-    function syncUi() {
-        confirmedCdc = false;
-        applyModeLocks();
-        updateCdcUi();
-    }
+            if (isCdc) {
+                cdcWarningBox.classList.add('border-rose-300', 'bg-rose-50');
+                cdcWarningTitle.classList.add('bg-rose-100', 'text-rose-700');
+                cdcRecommendationText.classList.add('text-rose-700');
+                cdcSlotMessage.classList.add('text-rose-600');
+            } else {
+                cdcWarningBox.classList.add('border-amber-200', 'bg-amber-50');
+                cdcWarningTitle.classList.add('bg-amber-100', 'text-amber-700');
+                cdcRecommendationText.classList.add('text-slate-600');
+                cdcSlotMessage.classList.add('text-slate-500');
+            }
 
-    document.querySelectorAll('input[name="selectedObject"]').forEach((radio) => {
-        radio.addEventListener('change', syncUi);
-    });
+            if ((isCdc && noSlots && activeMode !== 'CDC') || (isLockedToStreaming && isCdc)) {
+                cdcBlockMessage.classList.remove('hidden');
+                setButtonsDisabled(true);
+            } else {
+                setButtonsDisabled(false);
+            }
+        }
 
-    document.querySelectorAll('input[name="ingestionMode"]').forEach((radio) => {
-        radio.addEventListener('change', () => {
+        function openModal() {
+            modalAvailableCount.textContent = String(available);
+            cdcConfirmModal.classList.remove('hidden');
+            cdcConfirmModal.classList.add('flex');
+        }
+
+        function closeModal() {
+            cdcConfirmModal.classList.add('hidden');
+            cdcConfirmModal.classList.remove('flex');
+        }
+
+        function syncUi() {
             confirmedCdc = false;
+            applyModeLocks();
             updateCdcUi();
+            updateSelectedObjectBadge();
+        }
+
+        getObjectSelectors().forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    getObjectSelectors().forEach((item) => {
+                        if (item !== checkbox) {
+                            item.checked = false;
+                        }
+                    });
+                    if (selectedObjectHidden) {
+                        selectedObjectHidden.value = checkbox.value;
+                    }
+                } else if (selectedObjectHidden?.value === checkbox.value) {
+                    selectedObjectHidden.value = '';
+                }
+                syncUi();
+            });
         });
-    });
 
-    searchInput?.addEventListener('input', applyFilters);
-    pageSizeSelect?.addEventListener('change', () => {
-        pageSize = Number(pageSizeSelect.value || 20);
-        currentPage = 1;
-        setPage(1);
-    });
-    const setJump = (page) => {
-        setPage(page);
-    };
-    firstButton.addEventListener('click', () => setJump(1));
-    prevButton.addEventListener('click', () => setJump(currentPage - 1));
-    nextButton.addEventListener('click', () => setJump(currentPage + 1));
-    lastButton.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-        setJump(totalPages);
-    });
+        showSelectedObjectButton?.addEventListener('click', () => {
+            const selectedObject = getSelectedObjectName();
+            if (!selectedObject) {
+                return;
+            }
+            const targetRow = getAllObjectRows().find((row) => row.dataset.object === selectedObject);
+            if (!targetRow) {
+                return;
+            }
 
-    let confirmedCdc = false;
-    form.addEventListener('submit', (event) => {
-        const selectedObject = getSelectedObjectName();
-        const isCdc = getSelectedMode() === 'CDC';
-        const noSlots = available <= 0;
-        const activeMode = getActiveModeForSelection();
+            const targetStatus = normalizeStatus(targetRow.dataset.activeMode);
+            if (objectSearchInput) {
+                objectSearchInput.value = selectedObject;
+            }
+            if (objectStatusFilter) {
+                objectStatusFilter.value = targetStatus || 'ALL';
+            }
+            applyClientFilters(1);
+        });
 
-        if (!selectedObject) {
-            return;
+        document.querySelectorAll('input[name="ingestionMode"]').forEach((radio) => {
+            radio.addEventListener('change', () => {
+                confirmedCdc = false;
+                updateCdcUi();
+            });
+        });
+
+        function normalizeStatus(value) {
+            return value == null || value === '' ? '' : value;
         }
 
-        if (activeMode && activeMode !== getSelectedMode()) {
-            event.preventDefault();
-            alert('작동 중인 모드와 다른 탭은 동시에 선택할 수 없어요. 먼저 해지한 뒤 다시 진행해주세요.');
-            syncUi();
-            return;
+        function getAllObjectRows() {
+            return Array.from(document.querySelectorAll('#objectTableBody tr[data-object]'));
         }
 
-        if (isCdc && noSlots && activeMode !== 'CDC') {
-            event.preventDefault();
-            updateCdcUi();
-            alert('남은 CDC 슬롯이 없어서 제출할 수 없어요. Streaming을 선택하거나 기존 CDC 슬롯을 정리해주세요.');
-            return;
+        function getFilteredRows() {
+            const keyword = objectSearchInput?.value?.trim().toLowerCase() || '';
+            const status = objectStatusFilter?.value || 'ALL';
+            const sort = objectSort?.value || 'LABEL_ASC';
+
+            const rows = getAllObjectRows().filter((row) => {
+                const objectName = row.dataset.object?.toLowerCase() || '';
+                const label = row.dataset.label?.toLowerCase() || '';
+                const activeMode = normalizeStatus(row.dataset.activeMode);
+
+                const matchesKeyword = !keyword || objectName.includes(keyword) || label.includes(keyword);
+                const matchesStatus = status === 'ALL' || activeMode === status;
+                return matchesKeyword && matchesStatus;
+            });
+
+            const compareText = (a, b, key, direction = 1) => {
+                const aValue = (a.dataset[key] || '').toLowerCase();
+                const bValue = (b.dataset[key] || '').toLowerCase();
+                return aValue.localeCompare(bValue) * direction;
+            };
+            const compareStatus = (a, b, direction = 1) => {
+                const statusOrder = {'': 0, 'CDC': 1, 'STREAMING': 2};
+                const aValue = statusOrder[normalizeStatus(a.dataset.activeMode)] ?? 0;
+                const bValue = statusOrder[normalizeStatus(b.dataset.activeMode)] ?? 0;
+                if (aValue === bValue) {
+                    return compareText(a, b, 'label', direction);
+                }
+                return (aValue - bValue) * direction;
+            };
+
+            rows.sort((a, b) => {
+                switch (sort) {
+                    case 'LABEL_DESC':
+                        return compareText(a, b, 'label', -1) || compareText(a, b, 'object', -1);
+                    case 'API_ASC':
+                        return compareText(a, b, 'object', 1);
+                    case 'API_DESC':
+                        return compareText(a, b, 'object', -1);
+                    case 'STATUS_ASC':
+                        return compareStatus(a, b, 1);
+                    case 'STATUS_DESC':
+                        return compareStatus(a, b, -1);
+                    case 'LABEL_ASC':
+                    default:
+                        return compareText(a, b, 'label', 1) || compareText(a, b, 'object', 1);
+                }
+            });
+
+            return rows;
         }
 
-        if (isCdc && !confirmedCdc && activeMode !== 'CDC') {
-            event.preventDefault();
-            openModal();
+        function updateEmptyState(visibleCount) {
+            const emptyRow = document.querySelector('#objectTableBody tr:not([data-object])');
+            if (!emptyRow) {
+                return;
+            }
+            emptyRow.classList.toggle('hidden', visibleCount > 0);
         }
-    });
 
-    confirmCdcSubmit.addEventListener('click', () => {
-        confirmedCdc = true;
-        closeModal();
-        form.requestSubmit();
-    });
+        function buildPageNumbers(totalPages, page) {
+            const start = Math.max(1, page - 2);
+            const end = Math.min(totalPages, start + 4);
+            const adjustedStart = Math.max(1, end - 4);
+            const pages = [];
+            for (let i = adjustedStart; i <= end; i++) {
+                pages.push(i);
+            }
+            return pages;
+        }
 
-    cancelCdcSubmit.addEventListener('click', () => {
-        confirmedCdc = false;
-        closeModal();
-    });
+        function renderPagination(totalCount, totalPages, page, pageSize, visibleCount) {
+            const fromIndex = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+            const toIndex = totalCount === 0 ? 0 : Math.min((page - 1) * pageSize + visibleCount, totalCount);
 
-    cdcConfirmModal.addEventListener('click', (event) => {
-        if (event.target === cdcConfirmModal) {
+            if (paginationSummary) {
+                paginationSummary.textContent = `총 ${totalCount}개 중 ${fromIndex}–${toIndex}개 표시 · ${page}/${totalPages} 페이지`;
+            }
+            if (pageJumpInput) {
+                pageJumpInput.max = String(totalPages);
+                pageJumpInput.value = String(page);
+            }
+
+            const toggleButtonState = (button, disabled) => {
+                if (!button) return;
+                button.disabled = disabled;
+                button.classList.toggle('pointer-events-none', disabled);
+                button.classList.toggle('opacity-40', disabled);
+            };
+
+            toggleButtonState(pageFirstButton, page <= 1);
+            toggleButtonState(pagePrevButton, page <= 1);
+            toggleButtonState(pageNextButton, page >= totalPages);
+            toggleButtonState(pageLastButton, page >= totalPages);
+
+            if (pageNumberList) {
+                pageNumberList.innerHTML = '';
+                buildPageNumbers(totalPages, page).forEach((pageNumber) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = String(pageNumber);
+                    button.className = 'rounded-lg border px-3 py-1.5 text-xs font-semibold';
+                    if (pageNumber === page) {
+                        button.classList.add('border-indigo-300', 'bg-indigo-50', 'text-indigo-700');
+                    } else {
+                        button.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
+                    }
+                    button.addEventListener('click', () => applyClientFilters(pageNumber));
+                    pageNumberList.appendChild(button);
+                });
+            }
+        }
+
+        function applyClientFilters(targetPage = 1) {
+            const pageSize = Math.max(1, Number(objectPageSize?.value || 20));
+            const filteredRows = getFilteredRows();
+            const totalCount = filteredRows.length;
+            const totalPages = Math.max(1, Math.ceil(Math.max(totalCount, 1) / pageSize));
+            currentPage = Math.max(1, Math.min(targetPage, totalPages));
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const visibleSet = new Set(filteredRows.slice(startIndex, endIndex));
+
+            getAllObjectRows().forEach((row) => {
+                row.classList.toggle('hidden', !visibleSet.has(row));
+            });
+
+            updateEmptyState(visibleSet.size);
+            renderPagination(totalCount, totalPages, currentPage, pageSize, visibleSet.size);
+            updateSelectedObjectBadge();
+        }
+
+        applyObjectFilters?.addEventListener('click', () => applyClientFilters(1));
+        objectSearchInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyClientFilters(1);
+            }
+        });
+        objectStatusFilter?.addEventListener('change', () => applyClientFilters(1));
+        objectSort?.addEventListener('change', () => applyClientFilters(1));
+        objectPageSize?.addEventListener('change', () => applyClientFilters(1));
+
+        function jumpToPage() {
+            const pageSize = Math.max(1, Number(objectPageSize?.value || 20));
+            const filteredRows = getFilteredRows();
+            const totalPages = Math.max(1, Math.ceil(Math.max(filteredRows.length, 1) / pageSize));
+            const rawValue = Number(pageJumpInput?.value || 1);
+            const safePage = Math.max(1, Math.min(rawValue, totalPages));
+            if (pageJumpInput) {
+                pageJumpInput.value = String(safePage);
+            }
+            applyClientFilters(safePage);
+        }
+
+        pageFirstButton?.addEventListener('click', () => applyClientFilters(1));
+        pagePrevButton?.addEventListener('click', () => applyClientFilters(Math.max(1, currentPage - 1)));
+        pageNextButton?.addEventListener('click', () => applyClientFilters(currentPage + 1));
+        pageLastButton?.addEventListener('click', () => {
+            const pageSize = Math.max(1, Number(objectPageSize?.value || 20));
+            const filteredRows = getFilteredRows();
+            const totalPages = Math.max(1, Math.ceil(Math.max(filteredRows.length, 1) / pageSize));
+            applyClientFilters(totalPages);
+        });
+        pageJumpButton?.addEventListener('click', jumpToPage);
+        pageJumpInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                jumpToPage();
+            }
+        });
+        pageJumpInput?.addEventListener('blur', () => {
+            const rawValue = Number(pageJumpInput.value || 1);
+            const safePage = Math.max(1, rawValue);
+            pageJumpInput.value = String(safePage);
+        });
+
+        let confirmedCdc = false;
+        form.addEventListener('submit', (event) => {
+            const selectedObject = getSelectedObjectName();
+            const isCdc = getSelectedMode() === 'CDC';
+            const noSlots = available <= 0;
+            const activeMode = getActiveModeForSelection();
+
+            if (!selectedObject) {
+                event.preventDefault();
+                alert('오브젝트를 하나 선택해주세요.');
+                return;
+            }
+
+            if (activeMode && activeMode !== getSelectedMode()) {
+                event.preventDefault();
+                alert('작동 중인 모드와 다른 탭은 동시에 선택할 수 없어요. 먼저 해지한 뒤 다시 진행해주세요.');
+                syncUi();
+                return;
+            }
+
+            if (isCdc && noSlots && activeMode !== 'CDC') {
+                event.preventDefault();
+                updateCdcUi();
+                alert('남은 CDC(Pub/Sub) 슬롯이 없어서 제출할 수 없어요. Streaming(PushTopic)로 전환하거나 기존 CDC 슬롯을 정리해주세요.');
+                return;
+            }
+
+            if (isCdc && !confirmedCdc && activeMode !== 'CDC') {
+                event.preventDefault();
+                openModal();
+            }
+        });
+
+        confirmCdcSubmit.addEventListener('click', () => {
+            confirmedCdc = true;
             closeModal();
-        }
-    });
+            form.requestSubmit();
+        });
 
-    syncUi();
-    applyFilters();
-</script>
+        cancelCdcSubmit.addEventListener('click', () => {
+            confirmedCdc = false;
+            closeModal();
+        });
+
+        cdcConfirmModal.addEventListener('click', (event) => {
+            if (event.target === cdcConfirmModal) {
+                closeModal();
+            }
+        });
+
+        syncUi();
+        applyClientFilters(currentPage);
+    </script>
 </body>
+
 </html>

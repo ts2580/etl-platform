@@ -66,6 +66,16 @@ public class PubSubController {
         return result;
     }
 
+    @PostMapping("/pubsub/credentials/refresh")
+    public ResponseEntity<Map<String, Object>> refreshPubSubCredentials(@RequestBody String strJson) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> mapProperty = objectMapper.readValue(strJson, Map.class);
+        String selectedObject = RequestValidationUtils.requireIdentifier(mapProperty.get("selectedObject"), "selectedObject");
+        Map<String, Object> result = pubSubService.refreshCredentials(mapProperty);
+        log.info("Refreshed pubsub credentials. selectedObject={}, status={}", selectedObject, result.get("status"));
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/pubsub")
     public ResponseEntity<Map<String, Object>> setCDC(@RequestBody String strJson) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();

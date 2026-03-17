@@ -1,13 +1,14 @@
 package com.etl.sfdc.common;
 
 import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
-import com.etlplatform.common.salesforce.SalesforceOAuthClient;
+import com.etlplatform.common.salesforce.SalesforceClientCredentialsClient;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.net.URI;
 import java.time.Instant;
 
 @Component
@@ -16,22 +17,15 @@ import java.time.Instant;
 public class SalesforceTokenManager {
     public static final String ACTIVE_ORG_KEY = "ACTIVE_SALESFORCE_ORG_KEY";
     public static final String ACCESS_TOKEN = "SALESFORCE_ACCESS_TOKEN";
-    public static final String REFRESH_TOKEN = "SALESFORCE_REFRESH_TOKEN";
     public static final String TOKEN_ISSUED_AT = "SALESFORCE_TOKEN_ISSUED_AT";
 
-    private final SalesforceOAuthClient oauthClient;
+    private final SalesforceClientCredentialsClient oauthClient;
 
     @Value("${salesforce.access-token-ttl-minutes:55}")
     private long accessTokenTtlMinutes;
 
-    @Value("${salesforce.tokenUrl:https://login.salesforce.com/services/oauth2/token}")
+    @Value("${salesforce.tokenUrl:/services/oauth2/token}")
     private String defaultTokenUrl;
-
-    public void setTokenPair(HttpSession session, String accessToken, String refreshToken) {
-        session.setAttribute(ACCESS_TOKEN, accessToken);
-        session.setAttribute(REFRESH_TOKEN, refreshToken);
-        session.setAttribute(TOKEN_ISSUED_AT, Instant.now().toEpochMilli());
-    }
 
     public void setAccessToken(HttpSession session, String accessToken) {
         session.setAttribute(ACCESS_TOKEN, accessToken);
@@ -41,19 +35,15 @@ public class SalesforceTokenManager {
     public String getAccessToken(HttpSession session) {
         Long issuedAt = (Long) session.getAttribute(TOKEN_ISSUED_AT);
         if (issuedAt == null) {
-            return null;
+            return (String) session.getAttribute(ACCESS_TOKEN);
         }
 
         if (isExpired(issuedAt)) {
-            clear(session);
+            clearAccessToken(session);
             return null;
         }
 
         return (String) session.getAttribute(ACCESS_TOKEN);
-    }
-
-    public String getRefreshToken(HttpSession session) {
-        return (String) session.getAttribute(REFRESH_TOKEN);
     }
 
     public void setActiveOrg(HttpSession session, String orgKey) {
@@ -69,62 +59,50 @@ public class SalesforceTokenManager {
         return v == null ? null : String.valueOf(v);
     }
 
-    public String refreshAccessToken(HttpSession session, String refreshToken, String clientId, String clientSecret) {
-        return refreshAccessToken(session, refreshToken, clientId, clientSecret, null);
-    }
-
     public String refreshAccessToken(HttpSession session, SalesforceOrgCredential orgCredential) {
-        RefreshResult result = refreshTokenPair(session, orgCredential);
+        RefreshResult result = refreshClientCredentialsToken(session, orgCredential);
         return result == null ? null : result.accessToken();
     }
 
-    public RefreshResult refreshTokenPair(HttpSession session, SalesforceOrgCredential orgCredential) {
+    public RefreshResult refreshClientCredentialsToken(HttpSession session, SalesforceOrgCredential orgCredential) {
         if (orgCredential == null) {
             return null;
         }
-        return refreshTokenPair(
+        return refreshClientCredentialsToken(
                 session,
-                orgCredential.getRefreshToken(),
                 orgCredential.getClientId(),
                 orgCredential.getClientSecret(),
+                orgCredential.getMyDomain(),
                 orgCredential.getOrgKey()
         );
     }
 
-    public String refreshAccessToken(HttpSession session, String refreshToken, String clientId, String clientSecret, String orgKey) {
-        RefreshResult result = refreshTokenPair(session, refreshToken, clientId, clientSecret, orgKey);
-        return result == null ? null : result.accessToken();
-    }
-
-    public RefreshResult refreshTokenPair(HttpSession session, String refreshToken, String clientId, String clientSecret, String orgKey) {
-        if (refreshToken == null || refreshToken.isBlank() || clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+    public RefreshResult refreshClientCredentialsToken(HttpSession session, String clientId, String clientSecret, String myDomain, String orgKey) {
+        if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
             return null;
         }
         try {
-            SalesforceOAuthClient.TokenResponse token = oauthClient.exchangeRefreshToken(
-                    defaultTokenUrl,
-                    refreshToken,
+            String tokenUrl = resolveTokenUrl(myDomain);
+            SalesforceClientCredentialsClient.TokenResponse token = oauthClient.exchangeClientCredentials(
+                    tokenUrl,
                     clientId,
                     clientSecret
             );
 
-            String nextRefreshToken = token.refreshToken() == null || token.refreshToken().isBlank()
-                    ? refreshToken
-                    : token.refreshToken();
-            setTokenPair(session, token.accessToken(), nextRefreshToken);
+            setAccessToken(session, token.accessToken());
             if (orgKey != null && !orgKey.isBlank()) {
-                log.info("Salesforce token pair refreshed for org {}", orgKey);
+                log.info("[토큰 만료] Salesforce 접근 토큰 갱신 완료: org {}", orgKey);
             }
-            return new RefreshResult(token.accessToken(), nextRefreshToken);
+            return new RefreshResult(token.accessToken());
         } catch (Exception e) {
-            log.warn("Failed to refresh Salesforce access token for org {}: {}", orgKey, e.getMessage());
-            clear(session);
+            log.warn("[토큰 만료] 토큰 갱신 실패: org {}, tokenUrl={}, reason={}, body={}",
+                    orgKey,
+                    safeValue(resolveTokenUrl(myDomain)),
+                    safeValue(e.getMessage()),
+                    extractFailureBody(e));
+            clearAccessToken(session);
             return null;
         }
-    }
-
-    public String refreshAccessToken(HttpSession session) {
-        return refreshAccessToken(session, getRefreshToken(session), null, null);
     }
 
     private boolean isExpired(Long issuedAt) {
@@ -132,12 +110,94 @@ public class SalesforceTokenManager {
         return System.currentTimeMillis() - issuedAt > ttlMillis;
     }
 
+    public void clearAccessToken(HttpSession session) {
+        session.removeAttribute(ACCESS_TOKEN);
+        session.removeAttribute(TOKEN_ISSUED_AT);
+    }
+
     public void clear(HttpSession session) {
         session.removeAttribute(ACCESS_TOKEN);
-        session.removeAttribute(REFRESH_TOKEN);
         session.removeAttribute(TOKEN_ISSUED_AT);
         session.removeAttribute(ACTIVE_ORG_KEY);
     }
 
-    public record RefreshResult(String accessToken, String refreshToken) {}
+    private String extractFailureBody(Exception e) {
+        String message = e == null ? null : e.getMessage();
+        if (message == null || message.isBlank()) {
+            return "-";
+        }
+
+        int bodyIndex = message.indexOf("body=");
+        if (bodyIndex >= 0) {
+            return truncateForLog(message.substring(bodyIndex + 5).trim());
+        }
+        return truncateForLog(message);
+    }
+
+    private String truncateForLog(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.replaceAll("\n+", " ").trim();
+        return normalized.length() > 500 ? normalized.substring(0, 500) + "..." : normalized;
+    }
+
+    private String safeValue(String value) {
+        return value == null || value.isBlank() ? "-" : truncateForLog(value);
+    }
+
+    private String resolveTokenUrl(String myDomain) {
+        String tokenPath = resolveSalesforcePath(defaultTokenUrl);
+        String loginBaseUrl = resolveSalesforceBaseUrl(myDomain);
+
+        if (tokenPath.startsWith("http://") || tokenPath.startsWith("https://")) {
+            return tokenPath;
+        }
+        return loginBaseUrl + tokenPath;
+    }
+
+    private String resolveSalesforcePath(String value) {
+        String raw = value == null ? "" : value.trim();
+        if (raw.isBlank()) {
+            return "/services/oauth2/token";
+        }
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            return raw;
+        }
+        return raw.startsWith("/") ? raw : "/" + raw;
+    }
+
+    private String resolveSalesforceBaseUrl(String myDomain) {
+        String base = myDomain == null || myDomain.isBlank() ? null : myDomain.trim();
+        String host;
+        String scheme = "https";
+
+        if (base != null) {
+            try {
+                if (base.startsWith("http://") || base.startsWith("https://")) {
+                    URI uri = URI.create(base);
+                    host = uri.getHost();
+                    if (uri.getScheme() != null && !uri.getScheme().isBlank()) {
+                        scheme = uri.getScheme();
+                    }
+                } else {
+                    host = base;
+                }
+            } catch (Exception e) {
+                host = base;
+            }
+
+            if (host != null && !host.isBlank()) {
+                String normalizedHost = host.replaceAll("/+$", "").trim();
+                String withoutPath = normalizedHost.split("[/?]")[0];
+                String[] hostParts = withoutPath.split(":", 2);
+                if (hostParts.length > 0 && !hostParts[0].isBlank()) {
+                    return scheme + "://" + withoutPath;
+                }
+            }
+        }
+        return "https://login.salesforce.com";
+    }
+
+    public record RefreshResult(String accessToken) {}
 }

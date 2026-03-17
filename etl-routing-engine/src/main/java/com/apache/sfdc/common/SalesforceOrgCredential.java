@@ -1,4 +1,4 @@
-package com.sfdcupload.common;
+package com.apache.sfdc.common;
 
 import lombok.Data;
 
@@ -8,6 +8,7 @@ public class SalesforceOrgCredential {
     private String orgKey;
     private String orgName;
     private String myDomain;
+    private String schemaName;
     private String clientId;
     private String clientSecret;
     private String accessToken;

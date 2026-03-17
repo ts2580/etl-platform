@@ -48,6 +48,16 @@ public class StreamingController {
         }
     }
 
+    @PostMapping("/streaming/credentials/refresh")
+    public ResponseEntity<Map<String, Object>> refreshStreamingCredentials(@RequestBody String strJson) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> mapProperty = objectMapper.readValue(strJson, Map.class);
+        String selectedObject = RequestValidationUtils.requireIdentifier(mapProperty.get("selectedObject"), "selectedObject");
+        Map<String, Object> result = routerService.refreshCredentials(mapProperty);
+        log.info("Refreshed streaming credentials. selectedObject={}, status={}", selectedObject, result.get("status"));
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/streaming")
     public ResponseEntity<Map<String, Object>> setPushTopic(@RequestBody String strJson) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();

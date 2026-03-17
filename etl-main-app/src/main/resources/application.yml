@@ -1,6 +1,6 @@
 app:
   # DB optional mode.
-  # false: UI/CSS/OAuth 진입 화면만 확인 가능, DB 기능은 503 FEATURE_DISABLED 로 응답
+  # false: UI/CSS 화면만 확인 가능, DB 기능은 503 FEATURE_DISABLED 로 응답
   db:
     enabled: ${APP_DB_ENABLED:false}
 
@@ -19,10 +19,8 @@ mybatis:
     mapUnderscoreToCamelCase: true
 
 salesforce:
-  # OAuth 로그인/콜백에 필요한 설정
-  redirectUri: ${SALESFORCE_REDIRECT_URI:}
-  authUrl: ${SALESFORCE_AUTH_URL:https://login.salesforce.com/services/oauth2/authorize}
-  tokenUrl: ${SALESFORCE_TOKEN_URL:https://login.salesforce.com/services/oauth2/token}
+  # Client Credentials 기반 access token 발급 설정
+  tokenUrl: ${SALESFORCE_TOKEN_URL:/services/oauth2/token}
   access-token-ttl-minutes: 55
 
 

@@ -1,5 +1,6 @@
 package com.apache.sfdc.pubsub.service;
 
+import com.apache.sfdc.common.RoutingRuntimeKeyUtils;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
 import com.apache.sfdc.common.SalesforceRouterBuilderCDC;
@@ -10,14 +11,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import okhttp3.MediaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.salesforce.AuthenticationType;
 import org.apache.camel.component.salesforce.SalesforceComponent;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,15 +35,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
 public class PubSubServiceImpl implements PubSubService {
 
+    private static final Logger log = LoggerFactory.getLogger(PubSubServiceImpl.class);
+
     private final PubSubRepository pubSubRepository;
+    private final Map<String, PubSubRuntimeState> runtimeStates = new ConcurrentHashMap<>();
 
     @Value("${camel.component.salesforce.instance-url}")
     private String instanceUrl;
@@ -250,26 +257,97 @@ public class PubSubServiceImpl implements PubSubService {
         }
         SqlSanitizer.validateTableName(selectedObject);
 
+        try {
+            startPubSubContext(mapProperty, mapType, AuthenticationType.CLIENT_CREDENTIALS);
+        } catch (Exception primaryFailure) {
+            log.error("subscribeCDC 실패", primaryFailure);
+            throw primaryFailure;
+        }
+    }
+
+    private void startPubSubContext(Map<String, String> mapProperty,
+                                   Map<String, Object> mapType,
+                                   AuthenticationType authType) throws Exception {
+        String selectedObject = mapProperty.get("selectedObject");
+        String targetSchema = mapProperty.get("targetSchema");
+        String resolvedLoginUrl = resolveLoginUrl(mapProperty.get("instanceUrl"));
+
         SalesforceComponent sfEcology = new SalesforceComponent();
-        sfEcology.setLoginUrl(loginUrl);
-        sfEcology.setClientId(clientId);
-        sfEcology.setClientSecret(clientSecret);
-        sfEcology.setRefreshToken(mapProperty.get("refreshToken"));
+        sfEcology.setLoginUrl(resolvedLoginUrl == null || resolvedLoginUrl.isBlank() ? loginUrl : resolvedLoginUrl);
+        applySalesforceAuth(sfEcology, mapProperty, authType);
         sfEcology.setPackages("com.apache.sfdc.router.dto");
 
         RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(targetSchema, selectedObject, mapType, pubSubRepository);
-
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfEcology);
 
         try {
             myCamelContext.start();
+            String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "CDC");
+            runtimeStates.put(routeKey, new PubSubRuntimeState(new HashMap<>(mapProperty), new HashMap<>(mapType), myCamelContext));
+            mapProperty.put("authenticationType", authType.name());
         } catch (Exception e) {
-            log.error("subscribeCDC 실패", e);
+            log.warn("PubSub CamelContext start 실패(auth={})", authType, e);
             myCamelContext.close();
             throw e;
         }
+    }
+
+    @Override
+    public boolean isRouteActive(String orgKey, String selectedObject) {
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(orgKey, selectedObject, "CDC");
+        PubSubRuntimeState state = runtimeStates.get(routeKey);
+        return state != null && state.camelContext != null && state.camelContext.isStarted();
+    }
+
+    @Override
+    public Map<String, Object> refreshCredentials(Map<String, String> mapProperty) throws Exception {
+        String selectedObject = mapProperty.get("selectedObject");
+        if (selectedObject == null || selectedObject.isBlank()) {
+            throw new AppException("selectedObject is required");
+        }
+        SqlSanitizer.validateTableName(selectedObject);
+
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "CDC");
+        PubSubRuntimeState state = runtimeStates.get(routeKey);
+        Map<String, Object> result = new HashMap<>();
+        result.put("selectedObject", selectedObject);
+
+        if (state == null) {
+            result.put("status", "NOT_FOUND");
+            result.put("message", "활성 CDC 런타임이 없어서 credential refresh를 건너뛰었어요.");
+            return result;
+        }
+
+        if (mapProperty.get("accessToken") != null) {
+            state.mapProperty.put("accessToken", mapProperty.get("accessToken"));
+        }
+        if (mapProperty.get("clientId") != null) {
+            state.mapProperty.put("clientId", mapProperty.get("clientId"));
+        }
+        if (mapProperty.get("clientSecret") != null) {
+            state.mapProperty.put("clientSecret", mapProperty.get("clientSecret"));
+        }
+        if (mapProperty.get("instanceUrl") != null) {
+            state.mapProperty.put("instanceUrl", mapProperty.get("instanceUrl"));
+        }
+
+        try {
+            state.camelContext.stop();
+        } catch (Exception e) {
+            log.warn("기존 pubsub camelContext stop 실패. selectedObject={}", selectedObject, e);
+        }
+        try {
+            state.camelContext.close();
+        } catch (Exception e) {
+            log.warn("기존 pubsub camelContext close 실패. selectedObject={}", selectedObject, e);
+        }
+
+        subscribeCDC(state.mapProperty, new HashMap<>(state.mapType));
+        result.put("status", "SUCCESS");
+        result.put("message", "CDC routing credentials refresh가 완료되었어요.");
+        return result;
     }
 
     @Override
@@ -303,6 +381,15 @@ public class PubSubServiceImpl implements PubSubService {
         return result;
     }
 
+    private void applySalesforceAuth(SalesforceComponent sfEcology, Map<String, String> mapProperty, AuthenticationType authType) {
+        String resolvedClientId = mapProperty != null ? mapProperty.get("clientId") : null;
+        String resolvedClientSecret = mapProperty != null ? mapProperty.get("clientSecret") : null;
+
+        sfEcology.setClientId(resolvedClientId != null && !resolvedClientId.isBlank() ? resolvedClientId : clientId);
+        sfEcology.setClientSecret(resolvedClientSecret != null && !resolvedClientSecret.isBlank() ? resolvedClientSecret : clientSecret);
+        sfEcology.setAuthenticationType(AuthenticationType.CLIENT_CREDENTIALS);
+    }
+
     private String resolveInstanceUrl(Map<String, String> mapProperty) {
         String override = mapProperty.get("instanceUrl");
         return override != null && !override.isBlank() ? override : instanceUrl;
@@ -314,6 +401,29 @@ public class PubSubServiceImpl implements PubSubService {
             listUnderQuery.add(SalesforceObjectSchemaBuilder.buildInsertValues(record, schemaResult.fields(), schemaResult.mapType()));
         }
         return listUnderQuery;
+    }
+
+    private String resolveLoginUrl(String instanceUrl) {
+        if (instanceUrl == null || instanceUrl.isBlank()) {
+            return loginUrl;
+        }
+        if (instanceUrl.contains("test.salesforce.com") || instanceUrl.contains("sandbox.my.salesforce.com")) {
+            return "https://test.salesforce.com";
+        }
+        if (instanceUrl.contains("/services/data")) {
+            return "https://login.salesforce.com";
+        }
+        return instanceUrl;
+    }
+
+    private boolean isClientCredentialsNotSupported(Exception e) {
+        String message = e == null || e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
+        return message.contains("invalid_grant")
+                || message.contains("request not supported on this domain")
+                || message.contains("request not supported")
+                || message.contains("failed to start component sf")
+                || message.contains("authentication")
+                || message.contains("credentials");
     }
 
     private String toChangeEventEntity(String selectedObject) {
@@ -341,5 +451,10 @@ public class PubSubServiceImpl implements PubSubService {
         } catch (NumberFormatException e) {
             return 0;
         }
+    }
+
+    private record PubSubRuntimeState(Map<String, String> mapProperty,
+                                      Map<String, Object> mapType,
+                                      CamelContext camelContext) {
     }
 }
