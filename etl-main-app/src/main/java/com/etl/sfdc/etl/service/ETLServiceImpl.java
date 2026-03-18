@@ -233,7 +233,7 @@ public class ETLServiceImpl implements ETLService {
     @Override
     public Map<String, String> getIngestionStatusByObject(String accessToken, String myDomain) throws Exception {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
-        String resolvedOrgKey = extractHost(resolvedMyDomain);
+        String resolvedOrgKey = resolveOrgKey(null, resolvedMyDomain);
         List<Map<String, Object>> activeRoutes = routingDashboardRepository.findActiveRoutesByOrg(resolvedOrgKey);
 
         Map<String, String> statusByObject = new HashMap<>();
@@ -254,7 +254,7 @@ public class ETLServiceImpl implements ETLService {
     @Override
     public void syncRoutingRegistryFromSalesforce(String accessToken, String actor, String myDomain) throws Exception {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
-        String resolvedOrgKey = extractHost(resolvedMyDomain);
+        String resolvedOrgKey = resolveOrgKey(null, resolvedMyDomain);
         List<Map<String, Object>> activeRoutes = routingDashboardRepository.findActiveRoutesByOrg(resolvedOrgKey);
         int routeCount = activeRoutes == null ? 0 : activeRoutes.size();
         log.info("Routing registry sync uses local routing_registry only. orgKey={}, routeCount={}, actor={}", resolvedOrgKey, routeCount, actor);
@@ -411,7 +411,7 @@ public class ETLServiceImpl implements ETLService {
                 .build();
 
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
-        String resolvedOrgKey = orgKey == null || orgKey.isBlank() ? extractHost(resolvedMyDomain) : orgKey;
+        String resolvedOrgKey = resolveOrgKey(orgKey, resolvedMyDomain);
         String resolvedOrgName = orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName;
         String targetSchema = salesforceOrgService.resolveSchemaName(resolvedOrgKey);
         com.etl.sfdc.config.model.dto.SalesforceOrgCredential orgCredential = salesforceOrgService.getOrg(resolvedOrgKey);
@@ -466,7 +466,7 @@ public class ETLServiceImpl implements ETLService {
     @Override
     public void refreshRoutingModuleCredentials(String accessToken, String myDomain, String orgKey) throws Exception {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
-        String resolvedOrgKey = orgKey == null || orgKey.isBlank() ? extractHost(resolvedMyDomain) : orgKey;
+        String resolvedOrgKey = resolveOrgKey(orgKey, resolvedMyDomain);
         com.etl.sfdc.config.model.dto.SalesforceOrgCredential orgCredential = salesforceOrgService.getOrg(resolvedOrgKey);
         String clientId = orgCredential != null ? orgCredential.getClientId() : null;
         String clientSecret = orgCredential != null ? orgCredential.getClientSecret() : null;
@@ -511,8 +511,20 @@ public class ETLServiceImpl implements ETLService {
             if (clientSecret != null && !clientSecret.isBlank()) {
                 payload.put("clientSecret", clientSecret);
             }
-            payload.put("instanceUrl", resolvedMyDomain);
-            payload.put("orgKey", resolvedOrgKey);
+            String routeOrgKey = resolveOrgKey(String.valueOf(route.getOrDefault("orgKey", resolvedOrgKey)), resolvedMyDomain);
+            String routeInstanceUrl = resolveSalesforceDomain(String.valueOf(route.getOrDefault("myDomain", resolvedMyDomain)));
+            String routeOrgName = String.valueOf(route.getOrDefault("orgName", extractHost(routeInstanceUrl)));
+            String routeTargetSchema = String.valueOf(route.getOrDefault("targetSchema", salesforceOrgService.resolveSchemaName(routeOrgKey)));
+            String routeObjectLabel = String.valueOf(route.getOrDefault("objectLabel", selectedObject));
+            payload.put("instanceUrl", routeInstanceUrl);
+            payload.put("orgKey", routeOrgKey);
+            payload.put("orgName", routeOrgName);
+            payload.put("targetSchema", routeTargetSchema);
+            payload.put("targetTable", String.valueOf(route.getOrDefault("targetTable", selectedObject)));
+            payload.put("instanceName", String.valueOf(route.getOrDefault("instanceName", extractHost(routeInstanceUrl))));
+            payload.put("orgType", String.valueOf(route.getOrDefault("orgType", "-")));
+            payload.put("isSandbox", String.valueOf(route.getOrDefault("sandbox", route.getOrDefault("isSandbox", String.valueOf(isSandboxDomain(routeInstanceUrl))))));
+            payload.put("objectLabel", routeObjectLabel == null || routeObjectLabel.isBlank() ? selectedObject : routeObjectLabel);
             String endpoint = "CDC".equals(protocol) ? "/pubsub/credentials/refresh" : "/streaming/credentials/refresh";
 
             RequestBody body = RequestBody.create(objectMapper.writeValueAsString(payload), MediaType.get("application/json; charset=utf-8"));
@@ -663,13 +675,13 @@ public class ETLServiceImpl implements ETLService {
             mapProperty.put("clientSecret", clientSecret);
         }
         mapProperty.put("instanceUrl", resolvedMyDomain);
-        mapProperty.put("orgKey", orgKey == null || orgKey.isBlank() ? extractHost(resolvedMyDomain) : orgKey);
+        mapProperty.put("orgKey", resolveOrgKey(orgKey, resolvedMyDomain));
         mapProperty.put("orgName", orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName);
         mapProperty.put("targetSchema", targetSchema);
         mapProperty.put("targetTable", selectedObject);
         mapProperty.put("instanceName", extractHost(resolvedMyDomain));
         mapProperty.put("orgType", "-");
-        mapProperty.put("isSandbox", String.valueOf(extractHost(resolvedMyDomain).contains("sandbox") || extractHost(resolvedMyDomain).contains("test")));
+        mapProperty.put("isSandbox", String.valueOf(isSandboxDomain(resolvedMyDomain)));
         mapProperty.put("objectLabel", selectedObject);
         mapProperty.put("actor", actor);
         return mapProperty;
@@ -779,6 +791,19 @@ public class ETLServiceImpl implements ETLService {
         return selectedEntity;
     }
 
+    private String resolveOrgKey(String orgKey, String myDomain) {
+        String normalizedOrgKey = normalizeOrgKey(orgKey);
+        if (!normalizedOrgKey.isBlank()) {
+            return normalizedOrgKey;
+        }
+        return normalizeOrgKey(extractHost(myDomain));
+    }
+
+    private boolean isSandboxDomain(String domainOrUrl) {
+        String host = extractHost(domainOrUrl).toLowerCase(Locale.ROOT);
+        return host.contains("sandbox") || host.contains("test");
+    }
+
     private String normalizeOrgKey(String raw) {
         if (raw == null) {
             return "";
@@ -862,7 +887,7 @@ public class ETLServiceImpl implements ETLService {
         summary.put("orgId", "-");
         summary.put("orgType", "-");
         summary.put("instanceName", extractHost(myDomain));
-        summary.put("sandbox", extractHost(myDomain).contains("sandbox") || extractHost(myDomain).contains("test"));
+        summary.put("sandbox", isSandboxDomain(myDomain));
         summary.put("myDomain", resolveSalesforceDomain(myDomain));
         return summary;
     }

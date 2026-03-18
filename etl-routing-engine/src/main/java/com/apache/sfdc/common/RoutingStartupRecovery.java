@@ -64,6 +64,7 @@ public class RoutingStartupRecovery {
         String selectedObject = text(route.get("objectName"));
         String protocol = text(route.get("protocol")).toUpperCase(Locale.ROOT);
         String actor = "routing-startup-recovery";
+        String endpoint = "CDC".equals(protocol) ? "/pubsub" : "/streaming";
 
         if (orgKey.isBlank() || selectedObject.isBlank() || protocol.isBlank()) {
             skippedCount.incrementAndGet();
@@ -90,16 +91,22 @@ public class RoutingStartupRecovery {
             salesforceOrgCredentialRepository.updateAccessToken(targetOrgKey, tokenResponse.accessToken());
 
             Map<String, String> mapProperty = buildMapProperty(route, credential, tokenResponse);
+            int initialLoadCount;
             if ("CDC".equals(protocol)) {
-                recoverCdcRoute(mapProperty, actor);
+                initialLoadCount = recoverCdcRoute(mapProperty, actor);
             } else {
-                recoverStreamingRoute(mapProperty, actor);
+                initialLoadCount = recoverStreamingRoute(mapProperty, actor);
             }
+            routingRegistrySupport.insertHistory(orgKey, selectedObject, protocol, "RECOVER", "SUCCESS", "STARTUP_RECOVERY", endpoint,
+                    "재기동 후 라우팅 복구 완료", "startup recovery succeeded", initialLoadCount, actor);
             successCount.incrementAndGet();
             log.info("[routing-recovery] recovered: orgKey={}, selectedObject={}, protocol={}", orgKey, selectedObject, protocol);
         } catch (Exception e) {
             failedCount.incrementAndGet();
             String failureMessage = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            routingRegistrySupport.markFailed(orgKey, selectedObject, protocol, "startup recovery failed: " + failureMessage, actor);
+            routingRegistrySupport.insertHistory(orgKey, selectedObject, protocol, "RECOVER", "FAILED", "STARTUP_RECOVERY", endpoint,
+                    "재기동 복구 실패", failureMessage, 0, actor);
             log.error("[routing-recovery] failed: orgKey={}, selectedObject={}, protocol={}, message={}", orgKey, selectedObject, protocol, failureMessage, e);
         }
     }
@@ -111,26 +118,30 @@ public class RoutingStartupRecovery {
                 : streamingService.isRouteActive(normalizedOrgKey, selectedObject);
     }
 
-    private void recoverStreamingRoute(Map<String, String> mapProperty, String actor) throws Exception {
+    private int recoverStreamingRoute(Map<String, String> mapProperty, String actor) throws Exception {
         String accessToken = mapProperty.get("accessToken");
+        mapProperty.put("skipInitialLoad", "true");
 
         Map<String, Object> mapReturn = streamingService.setTable(mapProperty, accessToken);
         streamingService.setPushTopic(mapProperty, mapReturn, accessToken);
         streamingService.subscribePushTopic(mapProperty, accessToken, castMap(mapReturn.get("mapType")));
         log.info("[routing-recovery] streaming route revived without registry rewrite. orgKey={}, selectedObject={}",
                 mapProperty.get("orgKey"), mapProperty.get("selectedObject"));
+        return asInt(mapReturn.get("initialLoadCount"));
     }
 
-    private void recoverCdcRoute(Map<String, String> mapProperty, String actor) throws Exception {
+    private int recoverCdcRoute(Map<String, String> mapProperty, String actor) throws Exception {
         String selectedObject = mapProperty.get("selectedObject");
         String orgKey = mapProperty.get("orgKey");
         String accessToken = mapProperty.get("accessToken");
 
+        mapProperty.put("skipInitialLoad", "true");
         pubSubService.createCdcChannel(mapProperty, accessToken);
         Map<String, Object> mapReturn = pubSubService.setTable(mapProperty, accessToken);
         pubSubService.subscribeCDC(mapProperty, castMap(mapReturn.get("mapType")));
         pubSubService.markSlotActive(selectedObject, "CDC", orgKey, null);
         log.info("[routing-recovery] cdc route revived without registry rewrite. orgKey={}, selectedObject={}", orgKey, selectedObject);
+        return asInt(mapReturn.get("initialLoadCount"));
     }
 
     private SalesforceClientCredentialsClient.TokenResponse refreshOrgToken(SalesforceOrgCredential credential) throws Exception {
@@ -161,7 +172,7 @@ public class RoutingStartupRecovery {
         mapProperty.put("clientId", credential.getClientId());
         mapProperty.put("clientSecret", credential.getClientSecret());
         mapProperty.put("instanceUrl", instanceUrl);
-        mapProperty.put("orgKey", orgKey);
+        mapProperty.put("orgKey", RoutingRuntimeKeyUtils.normalizeOrgKey(orgKey));
         mapProperty.put("orgName", orgName);
         mapProperty.put("targetSchema", targetSchema);
         mapProperty.put("targetTable", targetTable);

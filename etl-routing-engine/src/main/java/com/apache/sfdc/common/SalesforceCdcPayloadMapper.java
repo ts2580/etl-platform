@@ -177,19 +177,26 @@ public class SalesforceCdcPayloadMapper {
     }
 
     private Set<String> resolveTargetFields(JsonNode payload, JsonNode header, Map<String, Object> mapType) {
-        Set<String> targetFields = new LinkedHashSet<>();
-        addFieldArray(header.get("changedFields"), targetFields);
-        addFieldArray(header.get("nulledFields"), targetFields);
+        Set<String> candidateFields = new LinkedHashSet<>();
+        addFieldArray(header.get("changedFields"), candidateFields);
+        addFieldArray(header.get("nulledFields"), candidateFields);
 
-        if (targetFields.isEmpty()) {
+        if (candidateFields.isEmpty()) {
             payload.fieldNames().forEachRemaining(fieldName -> {
                 if (isDataField(fieldName)) {
-                    targetFields.add(fieldName);
+                    candidateFields.add(fieldName);
                 }
             });
         }
 
-        targetFields.removeIf(field -> !mapType.containsKey(field));
+        Set<String> targetFields = new LinkedHashSet<>(candidateFields);
+        targetFields.removeIf(field -> mapType == null || !mapType.containsKey(field));
+
+        log.warn("[CDC-FIELDS] mapTypeSize={}, mapTypeKeys={}, candidateFields={}, filteredTargetFields={}",
+                mapType == null ? 0 : mapType.size(),
+                summarizeKeys(mapType),
+                candidateFields,
+                targetFields);
         return targetFields;
     }
 
@@ -220,6 +227,21 @@ public class SalesforceCdcPayloadMapper {
                 && !"ChangeEventHeader".equals(fieldName)
                 && !"Id".equals(fieldName)
                 && !"schema".equals(fieldName);
+    }
+
+    private Set<String> payloadFieldNames(JsonNode payload) {
+        Set<String> names = new LinkedHashSet<>();
+        if (payload != null && payload.isObject()) {
+            payload.fieldNames().forEachRemaining(names::add);
+        }
+        return names;
+    }
+
+    private Object summarizeKeys(Map<String, Object> mapType) {
+        if (mapType == null || mapType.isEmpty()) {
+            return java.util.List.of();
+        }
+        return mapType.keySet().stream().sorted().limit(80).toList();
     }
 
     private String eventTimeLiteral(JsonNode header, String fallbackLiteral) {

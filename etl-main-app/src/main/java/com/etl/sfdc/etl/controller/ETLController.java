@@ -91,16 +91,29 @@ public class ETLController {
         int requestedPage = page == null ? 1 : page;
         final Map<String, String> statusMap = ingestionStatusByObject;
 
-        List<ObjectDefinition> allObjects = etlService.getObjects(context.accessToken, context.myDomain);
-        allObjects = allObjects == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(allObjects);
+        List<ObjectDefinition> allObjects = with401Retry(
+                context,
+                session,
+                response,
+                token -> etlService.getObjects(token, context.myDomain)
+        );
+        if (allObjects == null) {
+            return null;
+        }
+        allObjects = new java.util.ArrayList<>(allObjects);
 
-        List<ObjectDefinition> filteredObjects = allObjects;
+        List<ObjectDefinition> filteredObjects = allObjects.stream()
+                .filter(object -> matchesSearch(object, normalizedQuery))
+                .filter(object -> matchesStatusFilter(object, statusMap, normalizedStatusFilter))
+                .sorted(resolveSortComparator(normalizedSort, statusMap))
+                .toList();
 
         int totalObjectCount = filteredObjects.size();
         int totalPages = Math.max(1, (int) Math.ceil((double) Math.max(totalObjectCount, 1) / pageSize));
         int currentPage = Math.max(1, Math.min(requestedPage, totalPages));
-        int fromIndex = totalObjectCount == 0 ? 0 : Math.min((currentPage - 1) * pageSize, totalObjectCount - 1);
+        int fromIndex = totalObjectCount == 0 ? 0 : Math.min((currentPage - 1) * pageSize, totalObjectCount);
         int toIndex = totalObjectCount == 0 ? 0 : Math.min(fromIndex + pageSize, totalObjectCount);
+        List<ObjectDefinition> pagedObjects = new java.util.ArrayList<>(filteredObjects);
 
         boolean selectedObjectExists = normalizedSelectedObject != null
                 && filteredObjects.stream().anyMatch(object -> normalizedSelectedObject.equals(object.getName()));
@@ -115,7 +128,7 @@ public class ETLController {
 
         model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
         model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
-        model.addAttribute("objectDefinitions", filteredObjects);
+        model.addAttribute("objectDefinitions", pagedObjects);
         model.addAttribute("cdcSlotSummary", etlService.getCdcSlotSummary());
         model.addAttribute("ingestionStatusByObject", ingestionStatusByObject);
         model.addAttribute("selectedObject", defaultSelectedObject);

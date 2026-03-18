@@ -11,7 +11,8 @@ server:
 camel:
     component:
         salesforce:
-            # routing-engine Salesforce 연결 설정
+            # routing-engine direct REST / camel Salesforce 기본값
+            # 실제 org별 인증값은 요청 payload(mapProperty) / DB 값이 우선한다.
             client-id: ${SALESFORCE_CLIENT_ID:dummy-client-id}
             client-secret: ${SALESFORCE_CLIENT_SECRET:dummy-client-secret}
             login-url: ${SALESFORCE_LOGIN_URL:https://login.salesforce.com}

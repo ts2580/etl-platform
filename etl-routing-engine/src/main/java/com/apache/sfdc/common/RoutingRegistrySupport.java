@@ -25,7 +25,7 @@ public class RoutingRegistrySupport {
                                                   String lastErrorMessage,
                                                   String actor) {
         String instanceUrl = mapProperty.getOrDefault("instanceUrl", "");
-        String orgKey = firstNonBlank(mapProperty.get("orgKey"), instanceUrl, "default-org");
+        String orgKey = normalizeOrgKey(firstNonBlank(mapProperty.get("orgKey"), instanceUrl, "default-org"));
         String orgName = firstNonBlank(mapProperty.get("orgName"), extractHost(instanceUrl), orgKey);
         String selectedObject = mapProperty.getOrDefault("selectedObject", "");
         String objectLabel = firstNonBlank(mapProperty.get("objectLabel"), selectedObject);
@@ -115,6 +115,11 @@ public class RoutingRegistrySupport {
             return;
         }
         repository.markRoutingFailed(orgKey, selectedObject, routingProtocol, message, actor);
+    }
+
+    private String normalizeOrgKey(String value) {
+        String normalized = RoutingRuntimeKeyUtils.normalizeOrgKey(value);
+        return normalized.isBlank() ? "default-org" : normalized;
     }
 
     private String extractHost(String url) {

@@ -103,9 +103,16 @@ public class StreamingServiceImpl implements StreamingService {
         streamingRepository.setTable(schemaResult.ddl());
         returnMap.put("soqlForPushTopic", schemaResult.soqlForPushTopic());
 
+        boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
+        if (skipInitialLoad) {
+            log.info("Skipping initial load during startup recovery. selectedObject={}, orgKey={}", selectedObject, mapProperty.get("orgKey"));
+            returnMap.put("initialLoadCount", 0);
+            return returnMap;
+        }
+
         String query = SalesforceObjectSchemaBuilder.buildInitialQuery(selectedObject, schemaResult.fields());
         request = new Request.Builder()
-                .url(instanceUrl + "/services/data/v" + apiVersion + "/query/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8))
+                .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/query/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8))
                 .addHeader("Authorization", "Bearer " + token)
                 .addHeader("Content-Type", "application/json")
                 .build();
@@ -279,18 +286,7 @@ public class StreamingServiceImpl implements StreamingService {
             return result;
         }
 
-        if (mapProperty.get("accessToken") != null) {
-            state.mapProperty.put("accessToken", mapProperty.get("accessToken"));
-        }
-        if (mapProperty.get("clientId") != null) {
-            state.mapProperty.put("clientId", mapProperty.get("clientId"));
-        }
-        if (mapProperty.get("clientSecret") != null) {
-            state.mapProperty.put("clientSecret", mapProperty.get("clientSecret"));
-        }
-        if (mapProperty.get("instanceUrl") != null) {
-            state.mapProperty.put("instanceUrl", mapProperty.get("instanceUrl"));
-        }
+        mergeRefreshableProperties(state.mapProperty, mapProperty);
 
         try {
             state.camelContext.stop();
@@ -307,6 +303,31 @@ public class StreamingServiceImpl implements StreamingService {
         result.put("status", "SUCCESS");
         result.put("message", "Streaming routing credentials refresh가 완료되었어요.");
         return result;
+    }
+
+    private void mergeRefreshableProperties(Map<String, String> current, Map<String, String> updates) {
+        if (current == null || updates == null) {
+            return;
+        }
+        copyIfPresent(current, updates, "accessToken");
+        copyIfPresent(current, updates, "clientId");
+        copyIfPresent(current, updates, "clientSecret");
+        copyIfPresent(current, updates, "instanceUrl");
+        copyIfPresent(current, updates, "orgKey");
+        copyIfPresent(current, updates, "orgName");
+        copyIfPresent(current, updates, "targetSchema");
+        copyIfPresent(current, updates, "targetTable");
+        copyIfPresent(current, updates, "instanceName");
+        copyIfPresent(current, updates, "orgType");
+        copyIfPresent(current, updates, "isSandbox");
+        copyIfPresent(current, updates, "objectLabel");
+    }
+
+    private void copyIfPresent(Map<String, String> target, Map<String, String> source, String key) {
+        String value = source.get(key);
+        if (value != null && !value.isBlank()) {
+            target.put(key, value);
+        }
     }
 
     private void applySalesforceAuth(SalesforceComponent sfComponent, Map<String, String> mapProperty, AuthenticationType authType) {
