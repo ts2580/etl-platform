@@ -55,6 +55,8 @@ public class SalesforceRecordMutationProcessor {
             return new MutationResult(0, inserted, 0);
         }
 
+        log.warn("[CDC-APPLY] no-op mutation. type={}, sfid={}, targetFields={}, payloadKeys={}",
+                mutation.type(), mutation.sfid(), mutation.targetFields(), mutation.payload().properties().stream().map(java.util.Map.Entry::getKey).toList());
         return new MutationResult(0, 0, 0);
     }
 

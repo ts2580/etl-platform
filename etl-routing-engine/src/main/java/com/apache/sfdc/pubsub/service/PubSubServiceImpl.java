@@ -204,7 +204,18 @@ public class PubSubServiceImpl implements PubSubService {
         }
 
         returnMap.put("mapType", schemaResult.mapType());
+        log.warn("[CDC-SCHEMA] selectedObject={}, mapTypeSize={}, mapTypeKeys={}",
+                selectedObject,
+                schemaResult.mapType() == null ? 0 : schemaResult.mapType().size(),
+                schemaResult.mapType() == null ? java.util.List.of() : schemaResult.mapType().keySet().stream().sorted().limit(80).toList());
         pubSubRepository.setTable(schemaResult.ddl());
+
+        boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
+        if (skipInitialLoad) {
+            log.info("Skipping initial load during startup recovery. selectedObject={}, orgKey={}", selectedObject, mapProperty.get("orgKey"));
+            returnMap.put("initialLoadCount", 0);
+            return returnMap;
+        }
 
         String query = SalesforceObjectSchemaBuilder.buildInitialQuery(selectedObject, schemaResult.fields());
         request = new Request.Builder()
@@ -212,6 +223,12 @@ public class PubSubServiceImpl implements PubSubService {
                 .addHeader("Authorization", "Bearer " + token)
                 .addHeader("Content-Type", "application/json")
                 .build();
+
+        if (Boolean.parseBoolean(String.valueOf(mapProperty.getOrDefault("skipInitialLoad", "false")))) {
+            returnMap.put("initialLoadCount", 0);
+            log.info("CDC startup recovery mode: initial load skipped. selectedObject={}", selectedObject);
+            return returnMap;
+        }
 
         try (Response response = client.newCall(request).execute()) {
             JsonNode rootNode = objectMapper.readTree(response.body().string());
@@ -320,18 +337,7 @@ public class PubSubServiceImpl implements PubSubService {
             return result;
         }
 
-        if (mapProperty.get("accessToken") != null) {
-            state.mapProperty.put("accessToken", mapProperty.get("accessToken"));
-        }
-        if (mapProperty.get("clientId") != null) {
-            state.mapProperty.put("clientId", mapProperty.get("clientId"));
-        }
-        if (mapProperty.get("clientSecret") != null) {
-            state.mapProperty.put("clientSecret", mapProperty.get("clientSecret"));
-        }
-        if (mapProperty.get("instanceUrl") != null) {
-            state.mapProperty.put("instanceUrl", mapProperty.get("instanceUrl"));
-        }
+        mergeRefreshableProperties(state.mapProperty, mapProperty);
 
         try {
             state.camelContext.stop();
@@ -379,6 +385,31 @@ public class PubSubServiceImpl implements PubSubService {
         result.put("available", Math.max(limit - used, 0));
         result.put("remaining", Math.max(limit - used, 0));
         return result;
+    }
+
+    private void mergeRefreshableProperties(Map<String, String> current, Map<String, String> updates) {
+        if (current == null || updates == null) {
+            return;
+        }
+        copyIfPresent(current, updates, "accessToken");
+        copyIfPresent(current, updates, "clientId");
+        copyIfPresent(current, updates, "clientSecret");
+        copyIfPresent(current, updates, "instanceUrl");
+        copyIfPresent(current, updates, "orgKey");
+        copyIfPresent(current, updates, "orgName");
+        copyIfPresent(current, updates, "targetSchema");
+        copyIfPresent(current, updates, "targetTable");
+        copyIfPresent(current, updates, "instanceName");
+        copyIfPresent(current, updates, "orgType");
+        copyIfPresent(current, updates, "isSandbox");
+        copyIfPresent(current, updates, "objectLabel");
+    }
+
+    private void copyIfPresent(Map<String, String> target, Map<String, String> source, String key) {
+        String value = source.get(key);
+        if (value != null && !value.isBlank()) {
+            target.put(key, value);
+        }
     }
 
     private void applySalesforceAuth(SalesforceComponent sfEcology, Map<String, String> mapProperty, AuthenticationType authType) {
