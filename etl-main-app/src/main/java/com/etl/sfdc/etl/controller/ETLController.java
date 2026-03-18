@@ -55,38 +55,32 @@ public class ETLController {
         }
 
         String actor = currentActor();
-
-        Map<String, String> ingestionStatusByObject;
-        try {
-            ingestionStatusByObject = etlService.getIngestionStatusByObject(context.accessToken, context.myDomain);
-        } catch (AppException e) {
-            if (e.getMessage() != null && e.getMessage().contains("401")) {
-                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
-                if (refreshedAccessToken != null) {
-                    ingestionStatusByObject = etlService.getIngestionStatusByObject(refreshedAccessToken, context.myDomain);
-                } else {
-                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
-                    return null;
-                }
-            } else {
-                throw e;
-            }
+        String accessToken = ensureAccessToken(context, session, response);
+        if (accessToken == null) {
+            return null;
         }
 
-        try {
-            etlService.syncRoutingRegistryFromSalesforce(context.accessToken, actor, context.myDomain);
-        } catch (AppException e) {
-            if (e.getMessage() != null && e.getMessage().contains("401")) {
-                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
-                if (refreshedAccessToken != null) {
-                    etlService.syncRoutingRegistryFromSalesforce(refreshedAccessToken, actor, context.myDomain);
-                } else {
-                    response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
-                    return null;
+        Map<String, String> ingestionStatusByObject = with401Retry(
+                context,
+                session,
+                response,
+                token -> etlService.getIngestionStatusByObject(token, context.myDomain)
+        );
+        if (ingestionStatusByObject == null) {
+            return null;
+        }
+
+        Boolean syncResult = with401Retry(
+                context,
+                session,
+                response,
+                token -> {
+                    etlService.syncRoutingRegistryFromSalesforce(token, actor, context.myDomain);
+                    return Boolean.TRUE;
                 }
-            } else {
-                throw e;
-            }
+        );
+        if (syncResult == null) {
+            return null;
         }
 
         String normalizedQuery = normalizeQuery(searchQuery);
@@ -634,6 +628,47 @@ public class ETLController {
 
     private String currentActor() {
         return userSession.getUserAccount() != null ? userSession.getUserAccount().getMember().getUsername() : "system";
+    }
+
+    @FunctionalInterface
+    private interface TokenOperation<T> {
+        T apply(String accessToken) throws Exception;
+    }
+
+    private <T> T with401Retry(ExecutionContext context,
+                               HttpSession session,
+                               HttpServletResponse response,
+                               TokenOperation<T> operation) throws Exception {
+        String accessToken = ensureAccessToken(context, session, response);
+        if (accessToken == null) {
+            return null;
+        }
+
+        try {
+            return operation.apply(accessToken);
+        } catch (AppException e) {
+            if (e.getMessage() != null && e.getMessage().contains("401")) {
+                String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+                if (refreshedAccessToken != null) {
+                    return operation.apply(refreshedAccessToken);
+                }
+                response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+                return null;
+            }
+            throw e;
+        }
+    }
+
+    private String ensureAccessToken(ExecutionContext context, HttpSession session, HttpServletResponse response) throws Exception {
+        if (context.accessToken != null && !context.accessToken.isBlank()) {
+            return context.accessToken;
+        }
+        String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
+        if (refreshedAccessToken != null) {
+            return refreshedAccessToken;
+        }
+        response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() : ""));
+        return null;
     }
 
     private String normalizeQuery(String searchQuery) {

@@ -360,12 +360,12 @@ public class PubSubServiceImpl implements PubSubService {
     }
 
     @Override
-    public void deactivateSlot(String selectedObject, String ingestionProtocol) {
+    public void deactivateSlot(String orgKey, String selectedObject, String ingestionProtocol) {
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
         }
         SqlSanitizer.validateTableName(selectedObject);
-        pubSubRepository.deactivateSlot(ingestionProtocol, selectedObject);
+        pubSubRepository.deactivateSlot(orgKey, ingestionProtocol, selectedObject);
     }
 
     @Override

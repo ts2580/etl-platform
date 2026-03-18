@@ -13,7 +13,7 @@ public interface PubSubService {
 
     void markSlotActive(String selectedObject, String ingestionProtocol, String orgKey, Long routingRegistryId);
 
-    void deactivateSlot(String selectedObject, String ingestionProtocol);
+    void deactivateSlot(String orgKey, String selectedObject, String ingestionProtocol);
 
     Map<String, Object> getSlotSummary(String ingestionProtocol);
 

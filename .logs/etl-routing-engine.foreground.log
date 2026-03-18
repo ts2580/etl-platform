@@ -10,209 +10,135 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-17T02:40:02.310+09:00  INFO 140631 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 140631 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-17T02:40:02.317+09:00  INFO 140631 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
-2026-03-17T02:40:03.610+09:00  INFO 140631 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-03-17T02:40:03.613+09:00  INFO 140631 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-03-17T02:40:03.646+09:00  INFO 140631 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 16 ms. Found 0 Redis repository interfaces.
-2026-03-17T02:40:04.649+09:00  INFO 140631 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
-2026-03-17T02:40:04.669+09:00  INFO 140631 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-17T02:40:04.669+09:00  INFO 140631 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-17T02:40:04.709+09:00  INFO 140631 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-17T02:40:04.711+09:00  INFO 140631 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2262 ms
+2026-03-18T01:36:41.826+09:00  INFO 309891 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 309891 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-18T01:36:41.829+09:00  INFO 309891 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
+2026-03-18T01:36:43.201+09:00  INFO 309891 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-18T01:36:43.204+09:00  INFO 309891 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-18T01:36:43.246+09:00  INFO 309891 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 21 ms. Found 0 Redis repository interfaces.
+2026-03-18T01:36:44.248+09:00  INFO 309891 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
+2026-03-18T01:36:44.267+09:00  INFO 309891 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-18T01:36:44.268+09:00  INFO 309891 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-18T01:36:44.307+09:00  INFO 309891 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-18T01:36:44.308+09:00  INFO 309891 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2359 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-17T02:40:05.809+09:00  INFO 140631 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
-2026-03-17T02:40:06.489+09:00  INFO 140631 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
-2026-03-17T02:40:06.574+09:00  INFO 140631 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is starting
-2026-03-17T02:40:06.588+09:00  INFO 140631 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
-2026-03-17T02:40:06.588+09:00  INFO 140631 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) started in 11ms (build:0ms init:0ms start:11ms)
-2026-03-17T02:40:06.597+09:00  INFO 140631 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 5.283 seconds (process running for 6.106)
-2026-03-17T02:41:14.915+09:00  INFO 140631 --- [nio-3931-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-17T02:41:14.916+09:00  INFO 140631 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-17T02:41:14.917+09:00  INFO 140631 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2026-03-17T02:41:14.968+09:00  INFO 140631 --- [nio-3931-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-17T02:41:15.034+09:00  INFO 140631 --- [nio-3931-exec-1] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@241fa215
-2026-03-17T02:41:15.036+09:00  INFO 140631 --- [nio-3931-exec-1] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-17T02:41:33.223+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Starting pubsub pipeline. selectedObject=Account
-2026-03-17T02:41:33.812+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.pubsub.service.PubSubServiceImpl   : Creating CDC channel member. selectedObject=Account, selectedEntity=AccountChangeEvent, payload={FullName=ChangeEvents_AccountChangeEvent, Metadata={eventChannel=ChangeEvents, selectedEntity=AccountChangeEvent}}
-2026-03-17T02:41:35.034+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Pubsub stage success. selectedObject=Account, stage=CDC_CHANNEL, status=CREATED
-2026-03-17T02:41:36.842+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.pubsub.service.PubSubServiceImpl   : 테이블 : Account. 삽입된 데이터 수 : 12. 소요시간 : 0시간 0분 0초
-2026-03-17T02:41:36.843+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Pubsub stage success. selectedObject=Account, stage=INITIAL_LOAD, initialLoadCount=12
-2026-03-17T02:41:36.937+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) is starting
-2026-03-17T02:41:37.001+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:41:38.206+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.c.s.internal.SalesforceSession     : Login successful
-2026-03-17T02:41:38.207+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
-2026-03-17T02:41:38.210+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
-2026-03-17T02:41:38.210+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
-2026-03-17T02:41:38.337+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.c.s.i.client.PubSubApiClient       : Subscribing to topic: /data/AccountChangeEvent.
-2026-03-17T02:41:38.365+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.c.s.i.client.PubSubApiClient       : Subscribe successful.
-2026-03-17T02:41:38.368+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
-2026-03-17T02:41:38.368+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://pubSubSubscribe:/data/AccountChangeEvent)
-2026-03-17T02:41:38.368+09:00  INFO 140631 --- [nio-3931-exec-5] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) started in 1s431ms (build:0ms init:0ms start:1s431ms)
-2026-03-17T02:41:38.368+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Pubsub stage success. selectedObject=Account, stage=SUBSCRIBE
-2026-03-17T02:41:38.374+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Pubsub stage success. selectedObject=Account, stage=SLOT_REGISTRY
-2026-03-17T02:41:38.386+09:00  INFO 140631 --- [nio-3931-exec-5] c.a.s.p.controller.PubSubController      : Completed pubsub pipeline setup. selectedObject=Account
-2026-03-17T02:43:41.404+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : GRPC Exception
-
-io.grpc.StatusRuntimeException: UNAUTHENTICATED: An authentication exception occurred. Provide valid authentication via metadata headers. rpcId: beda4243-2280-4bd1-9bf2-9f013d285507
-	at io.grpc.Status.asRuntimeException(Status.java:533) ~[grpc-api-1.63.0.jar!/:1.63.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:43:41.406+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailers:
-2026-03-17T02:43:41.406+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailer: date, Value: Mon, 16 Mar 2026 17:43:40 GMT
-2026-03-17T02:43:41.406+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailer: content-type, Value: application/grpc
-2026-03-17T02:43:41.406+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailer: rpc-id, Value: beda4243-2280-4bd1-9bf2-9f013d285507
-2026-03-17T02:43:41.406+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailer: error-code, Value: sfdc.platform.eventbus.grpc.service.auth.error
-2026-03-17T02:43:41.407+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : Trailer: type, Value: Subscribe
-2026-03-17T02:43:41.407+09:00 ERROR 140631 --- [ault-executor-3] .c.PubSubApiClient$FetchResponseObserver : attempting login
-2026-03-17T02:43:41.752+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:43:42.233+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 1000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:43:43.234+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:43:44.153+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 2000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:43:46.154+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:43:47.069+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 3000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:43:50.070+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:43:50.974+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 4000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:43:54.975+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:43:55.872+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 5000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:44:00.873+09:00  INFO 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://login.salesforce.com/services/oauth2/token
-2026-03-17T02:44:01.807+09:00  WARN 140631 --- [ault-executor-3] o.a.c.c.s.internal.SalesforceSession     : Salesforce login failed. Pausing for 6000 milliseconds
-
-org.apache.camel.component.salesforce.api.SalesforceException: {errors:[{"errorCode":"invalid_grant","message":"Login error code:[invalid_grant] description:[expired access/refresh token]","fields":null}],statusCode:400}
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.parseLoginResponse(SalesforceSession.java:345) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.login(SalesforceSession.java:182) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.SalesforceSession.attemptLoginUntilSuccessful(SalesforceSession.java:138) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.apache.camel.component.salesforce.internal.client.PubSubApiClient$FetchResponseObserver.onError(PubSubApiClient.java:333) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at io.grpc.stub.ClientCalls$StreamObserverToCallListenerAdapter.onClose(ClientCalls.java:481) ~[grpc-stub-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener$3.run(DelayedClientCall.java:489) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.delayOrExecute(DelayedClientCall.java:453) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.DelayedClientCall$DelayedListener.onClose(DelayedClientCall.java:486) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.closeObserver(ClientCallImpl.java:564) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl.access$100(ClientCallImpl.java:72) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInternal(ClientCallImpl.java:729) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ClientCallImpl$ClientStreamListenerImpl$1StreamClosed.runInContext(ClientCallImpl.java:710) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133) ~[grpc-core-1.63.0.jar!/:1.63.0]
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-17T02:44:04.328+09:00  INFO 140631 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-17T02:44:04.330+09:00  INFO 140631 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-17T02:44:04.332+09:00  INFO 140631 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is shutting down (timeout:45s)
-2026-03-17T02:44:04.334+09:00  INFO 140631 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
-2026-03-17T02:44:04.336+09:00  INFO 140631 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) shutdown in 3ms (uptime:3m57s)
-2026-03-17T02:44:04.447+09:00  INFO 140631 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-17T02:44:04.456+09:00  INFO 140631 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-18T01:36:45.412+09:00  INFO 309891 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-03-18T01:36:46.094+09:00  INFO 309891 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
+2026-03-18T01:36:46.147+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is starting
+2026-03-18T01:36:46.160+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
+2026-03-18T01:36:46.161+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) started in 12ms (build:0ms init:0ms start:12ms)
+2026-03-18T01:36:46.171+09:00  INFO 309891 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 5.344 seconds (process running for 6.148)
+2026-03-18T01:36:46.189+09:00  INFO 309891 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-18T01:36:46.271+09:00  INFO 309891 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@687f62a5
+2026-03-18T01:36:46.273+09:00  INFO 309891 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-18T01:36:46.304+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup begin: targetRoutes=5
+2026-03-18T01:36:46.311+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=daeu-4c-dev-ed.my.salesforce.com
+2026-03-18T01:36:47.736+09:00  WARN 309891 --- [           main] c.a.s.s.service.StreamingServiceImpl     : 테이블에 데이터 없음
+2026-03-18T01:36:48.148+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) is starting
+2026-03-18T01:36:48.213+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://daeu-4c-dev-ed.my.salesforce.com/services/oauth2/token
+2026-03-18T01:36:48.518+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:36:48.520+09:00  INFO 309891 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:36:48.663+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:36:48.664+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:36:48.672+09:00  WARN 309891 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:36:48.672+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Account`
+2026-03-18T01:36:48.672+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
+2026-03-18T01:36:48.674+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:36:48.675+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://subscribe:Account)
+2026-03-18T01:36:48.675+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) started in 526ms (build:0ms init:0ms start:526ms)
+2026-03-18T01:36:48.688+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=daeu-4c-dev-ed.my.salesforce.com, selectedObject=Account, protocol=STREAMING
+2026-03-18T01:36:48.691+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-18T01:36:48.849+09:00  INFO 309891 --- [ent@7a689979-66] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
+2026-03-18T01:36:50.268+09:00  INFO 309891 --- [           main] c.a.s.s.service.StreamingServiceImpl     : 테이블 : Account. 삽입된 데이터 수 : 11. 소요시간 : 0시간 0분 0초
+2026-03-18T01:36:50.959+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-3) is starting
+2026-03-18T01:36:50.963+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-18T01:36:51.426+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:36:51.427+09:00  INFO 309891 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:36:52.035+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:36:52.036+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:36:52.036+09:00  WARN 309891 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:36:52.036+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Account`
+2026-03-18T01:36:52.036+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
+2026-03-18T01:36:52.037+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:36:52.037+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route2 (sf://subscribe:Account)
+2026-03-18T01:36:52.037+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-3) started in 1s77ms (build:0ms init:0ms start:1s77ms)
+2026-03-18T01:36:52.050+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account, protocol=STREAMING
+2026-03-18T01:36:52.052+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-18T01:36:52.368+09:00  INFO 309891 --- [ent@3ca5da54-81] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
+2026-03-18T01:36:53.143+09:00  WARN 309891 --- [           main] c.a.s.s.service.StreamingServiceImpl     : 테이블에 데이터 없음
+2026-03-18T01:36:53.566+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-4) is starting
+2026-03-18T01:36:53.571+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-18T01:36:53.937+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:36:53.937+09:00  INFO 309891 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:36:55.249+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:36:55.249+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:36:55.250+09:00  WARN 309891 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:36:55.250+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Address`
+2026-03-18T01:36:55.250+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Address...
+2026-03-18T01:36:55.250+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:36:55.250+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route3 (sf://subscribe:Address)
+2026-03-18T01:36:55.251+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-4) started in 1s684ms (build:0ms init:0ms start:1s684ms)
+2026-03-18T01:36:55.263+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Address, protocol=STREAMING
+2026-03-18T01:36:55.265+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-18T01:36:55.581+09:00  INFO 309891 --- [ent@4f579582-96] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Address
+2026-03-18T01:36:57.295+09:00  INFO 309891 --- [           main] c.a.s.s.service.StreamingServiceImpl     : 테이블 : Contact. 삽입된 데이터 수 : 2. 소요시간 : 0시간 0분 0초
+2026-03-18T01:36:57.704+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-5) is starting
+2026-03-18T01:36:57.708+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-18T01:36:58.133+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:36:58.134+09:00  INFO 309891 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:36:58.676+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:36:58.676+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:36:58.677+09:00  WARN 309891 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:36:58.677+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Contact`
+2026-03-18T01:36:58.677+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Contact...
+2026-03-18T01:36:58.677+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:36:58.677+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route4 (sf://subscribe:Contact)
+2026-03-18T01:36:58.677+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-5) started in 973ms (build:0ms init:0ms start:973ms)
+2026-03-18T01:36:58.690+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Contact, protocol=STREAMING
+2026-03-18T01:36:58.693+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-18T01:36:59.736+09:00  INFO 309891 --- [nt@5de14222-111] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Contact
+2026-03-18T01:37:00.704+09:00  INFO 309891 --- [           main] c.a.s.s.service.StreamingServiceImpl     : 테이블 : Opportunity. 삽입된 데이터 수 : 51. 소요시간 : 0시간 0분 0초
+2026-03-18T01:37:01.191+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-6) is starting
+2026-03-18T01:37:01.195+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-18T01:37:01.624+09:00  INFO 309891 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:37:01.625+09:00  INFO 309891 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:37:02.190+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:37:02.190+09:00  INFO 309891 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:37:02.190+09:00  WARN 309891 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:37:02.191+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Opportunity`
+2026-03-18T01:37:02.191+09:00  INFO 309891 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Opportunity...
+2026-03-18T01:37:02.191+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:37:02.191+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route5 (sf://subscribe:Opportunity)
+2026-03-18T01:37:02.191+09:00  INFO 309891 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-6) started in 1s0ms (build:0ms init:0ms start:1s0ms)
+2026-03-18T01:37:02.201+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Opportunity, protocol=STREAMING
+2026-03-18T01:37:02.202+09:00  INFO 309891 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup done: targetRoutes=5, recovered=5, skipped=0, failed=0
+2026-03-18T01:37:02.567+09:00  INFO 309891 --- [ent@186e254-126] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Opportunity
+2026-03-18T01:37:53.686+09:00  INFO 309891 --- [17 - Aggregator] .a.s.c.SalesforceRecordMutationProcessor : [STREAMING] deleted=1, sfid=003WU00001MJHw1YAH, took=7ms
+2026-03-18T01:37:53.687+09:00  INFO 309891 --- [17 - Aggregator] c.a.sfdc.common.SalesforceRouterBuilder  : [STREAMING] summary inserted=0, updated=0, deleted=1
+2026-03-18T01:38:22.480+09:00  INFO 309891 --- [nio-3931-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-18T01:38:22.480+09:00  INFO 309891 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-18T01:38:22.481+09:00  INFO 309891 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-18T01:38:24.761+09:00  INFO 309891 --- [nio-3931-exec-2] c.a.s.s.controller.StreamingController   : Starting streaming pipeline. selectedObject=Account
+2026-03-18T01:38:25.599+09:00  WARN 309891 --- [nio-3931-exec-2] c.a.s.s.service.StreamingServiceImpl     : 테이블에 데이터 없음
+2026-03-18T01:38:25.879+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-7) is starting
+2026-03-18T01:38:25.883+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://daeu-4c-dev-ed.my.salesforce.com/services/oauth2/token
+2026-03-18T01:38:26.065+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-18T01:38:26.065+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-18T01:38:26.178+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-18T01:38:26.178+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-18T01:38:26.179+09:00  WARN 309891 --- [nio-3931-exec-2] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-18T01:38:26.179+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Account`
+2026-03-18T01:38:26.179+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
+2026-03-18T01:38:26.180+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-18T01:38:26.180+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   :     Started route6 (sf://subscribe:Account)
+2026-03-18T01:38:26.180+09:00  INFO 309891 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-7) started in 300ms (build:0ms init:0ms start:300ms)
+2026-03-18T01:38:26.194+09:00  INFO 309891 --- [nio-3931-exec-2] c.a.s.s.controller.StreamingController   : Completed streaming pipeline setup. selectedObject=Account
+2026-03-18T01:38:26.374+09:00  INFO 309891 --- [nt@337a727a-153] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
+2026-03-18T01:39:06.191+09:00  INFO 309891 --- [26 - Aggregator] .a.s.c.SalesforceRecordMutationProcessor : [STREAMING] insert fallback inserted=1, took=8ms
+2026-03-18T01:39:06.191+09:00  INFO 309891 --- [26 - Aggregator] c.a.sfdc.common.SalesforceRouterBuilder  : [STREAMING] summary inserted=1, updated=0, deleted=0
+2026-03-18T01:39:26.071+09:00  INFO 309891 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-18T01:39:26.073+09:00  INFO 309891 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-18T01:39:26.077+09:00  INFO 309891 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is shutting down (timeout:45s)
+2026-03-18T01:39:26.079+09:00  INFO 309891 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
+2026-03-18T01:39:26.082+09:00  INFO 309891 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) shutdown in 4ms (uptime:2m39s)
+2026-03-18T01:39:26.207+09:00  INFO 309891 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-18T01:39:26.216+09:00  INFO 309891 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

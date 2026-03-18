@@ -56,9 +56,11 @@ public class PubSubController {
     }
 
     @PostMapping("/pubsub/slots/deactivate")
-    public Map<String, Object> deactivateCdcSlot(@RequestParam("selectedObject") String selectedObject) {
+    public Map<String, Object> deactivateCdcSlot(@RequestParam("orgKey") String orgKey,
+                                                  @RequestParam("selectedObject") String selectedObject) {
         String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
-        pubSubService.deactivateSlot(sanitizedObject, "CDC");
+        String sanitizedOrgKey = RequestValidationUtils.requireText(orgKey, "orgKey").trim();
+        pubSubService.deactivateSlot(sanitizedOrgKey, sanitizedObject, "CDC");
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("status", "SUCCESS");
         result.put("selectedObject", sanitizedObject);

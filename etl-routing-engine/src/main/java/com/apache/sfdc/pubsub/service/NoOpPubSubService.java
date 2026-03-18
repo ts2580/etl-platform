@@ -30,7 +30,7 @@ public class NoOpPubSubService implements PubSubService {
     }
 
     @Override
-    public void deactivateSlot(String selectedObject, String ingestionProtocol) {
+    public void deactivateSlot(String orgKey, String selectedObject, String ingestionProtocol) {
         throw new FeatureDisabledException("DB 비활성 모드에서는 슬롯 정보를 변경할 수 없습니다.");
     }
 

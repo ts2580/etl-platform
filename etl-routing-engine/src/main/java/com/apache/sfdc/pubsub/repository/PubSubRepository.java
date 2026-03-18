@@ -24,6 +24,8 @@ public interface PubSubRepository {
                          @Param("routingRegistryId") Long routingRegistryId,
                          @Param("note") String note);
 
-    void deactivateSlot(@Param("routingProtocol") String routingProtocol, @Param("selectedObject") String selectedObject);
+    void deactivateSlot(@Param("orgKey") String orgKey,
+                        @Param("routingProtocol") String routingProtocol,
+                        @Param("selectedObject") String selectedObject);
 
 }

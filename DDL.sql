@@ -143,7 +143,7 @@ CREATE TABLE routing.ingestion_slot_registry (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_ingestion_slot_registry_protocol_object (routing_protocol, selected_object),
+    UNIQUE KEY uk_ingestion_slot_registry_org_protocol_object (org_key, routing_protocol, selected_object),
     KEY idx_ingestion_slot_registry_is_active (is_active),
     KEY idx_ingestion_slot_registry_protocol (routing_protocol),
     KEY idx_ingestion_slot_registry_org_key (org_key),
