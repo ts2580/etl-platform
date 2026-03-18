@@ -35,7 +35,8 @@ public interface RoutingRegistryRepository {
 
     int countActiveSlots(@Param("routingProtocol") String routingProtocol);
 
-    void deactivateSlotsByObject(@Param("routingProtocol") String routingProtocol,
+    void deactivateSlotsByObject(@Param("orgKey") String orgKey,
+                                @Param("routingProtocol") String routingProtocol,
                                 @Param("selectedObject") String selectedObject);
 
     void insertSlot(@Param("orgKey") String orgKey,
@@ -44,5 +45,6 @@ public interface RoutingRegistryRepository {
                    @Param("routingRegistryId") Long routingRegistryId,
                    @Param("note") String note);
 
-    List<Map<String, Object>> findActiveSlots(@Param("routingProtocol") String routingProtocol);
+    List<Map<String, Object>> findActiveSlots(@Param("orgKey") String orgKey,
+                                              @Param("routingProtocol") String routingProtocol);
 }

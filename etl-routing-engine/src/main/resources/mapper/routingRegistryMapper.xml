@@ -278,6 +278,7 @@
         FROM routing.ingestion_slot_registry
         WHERE is_active = TRUE
           AND routing_protocol = #{routingProtocol}
+          AND org_key = #{orgKey}
     </select>
 
 </mapper>

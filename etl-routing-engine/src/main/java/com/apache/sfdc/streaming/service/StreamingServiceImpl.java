@@ -58,6 +58,7 @@ public class StreamingServiceImpl implements StreamingService {
     public Map<String, Object> setTable(Map<String, String> mapProperty, String token) {
         String selectedObject = mapProperty.get("selectedObject");
         String targetSchema = mapProperty.get("targetSchema");
+        String resolvedInstanceUrl = resolveInstanceUrl(mapProperty);
         if (targetSchema == null || targetSchema.isBlank()) {
             throw new AppException("targetSchema is required");
         }
@@ -74,13 +75,25 @@ public class StreamingServiceImpl implements StreamingService {
         SchemaResult schemaResult;
 
         Request request = new Request.Builder()
-                .url(instanceUrl + "/services/data/v" + apiVersion + "/sobjects/" + selectedObject + "/describe")
+                .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/sobjects/" + selectedObject + "/describe")
                 .addHeader("Authorization", "Bearer " + token)
                 .addHeader("Content-Type", "application/json")
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
-            JsonNode fields = objectMapper.readTree(response.body().string()).get("fields");
+            String responseBody = response.body() != null ? response.body().string() : "";
+            if (!response.isSuccessful()) {
+                log.error("Salesforce describe failed. selectedObject={}, status={}, body={}",
+                        selectedObject, response.code(), truncateForLog(responseBody));
+                throw new AppException("Failed to describe Salesforce object: HTTP " + response.code() + " body=" + truncateForLog(responseBody));
+            }
+
+            JsonNode describeNode = objectMapper.readTree(responseBody);
+            JsonNode fields = describeNode.get("fields");
+            if (fields == null || !fields.isArray()) {
+                log.error("Salesforce describe returned invalid fields. selectedObject={}, body={}",
+                        selectedObject, truncateForLog(responseBody));
+            }
             schemaResult = SalesforceObjectSchemaBuilder.buildSchema(targetSchema, selectedObject, fields, objectMapper);
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
@@ -128,6 +141,7 @@ public class StreamingServiceImpl implements StreamingService {
     public String setPushTopic(Map<String, String> mapProperty, Map<String, Object> mapReturn, String token) throws Exception {
         String selectedObject = mapProperty.get("selectedObject");
         String targetSchema = mapProperty.get("targetSchema");
+        String resolvedInstanceUrl = resolveInstanceUrl(mapProperty);
         if (targetSchema == null || targetSchema.isBlank()) {
             throw new AppException("targetSchema is required");
         }
@@ -151,7 +165,7 @@ public class StreamingServiceImpl implements StreamingService {
         RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
 
         Request request = new Request.Builder()
-                .url(instanceUrl + "/services/data/v" + apiVersion + "/sobjects/PushTopic")
+                .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/sobjects/PushTopic")
                 .addHeader("Authorization", "Bearer " + token)
                 .addHeader("Content-Type", "application/json")
                 .post(body)
@@ -310,6 +324,25 @@ public class StreamingServiceImpl implements StreamingService {
             listUnderQuery.add(SalesforceObjectSchemaBuilder.buildInsertValues(record, schemaResult.fields(), schemaResult.mapType()));
         }
         return listUnderQuery;
+    }
+
+    private String truncateForLog(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        String normalized = value.replaceAll("\n+", " ").trim();
+        return normalized.length() > 1000 ? normalized.substring(0, 1000) + "..." : normalized;
+    }
+
+    private String resolveInstanceUrl(Map<String, String> mapProperty) {
+        String configured = mapProperty != null ? mapProperty.get("instanceUrl") : null;
+        if (configured == null || configured.isBlank()) {
+            return instanceUrl;
+        }
+        if (configured.contains("/services/data")) {
+            return configured.substring(0, configured.indexOf("/services/data"));
+        }
+        return configured;
     }
 
     private String resolveLoginUrl(String instanceUrl) {

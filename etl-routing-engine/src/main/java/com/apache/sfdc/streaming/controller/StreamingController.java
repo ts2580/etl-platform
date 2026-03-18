@@ -103,7 +103,6 @@ public class StreamingController {
             log.info("Completed streaming pipeline setup. selectedObject={}", selectedObject);
             result.put("status", "SUCCESS");
             result.put("message", "Streaming 설정이 완료되었어요.");
-            result.put("pushTopicResponse", pushTopicResult);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             String failureMessage = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();

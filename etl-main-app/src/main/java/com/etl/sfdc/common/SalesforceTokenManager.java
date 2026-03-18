@@ -1,6 +1,7 @@
 package com.etl.sfdc.common;
 
 import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
+import com.etlplatform.common.error.AppException;
 import com.etlplatform.common.salesforce.SalesforceClientCredentialsClient;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -170,20 +171,22 @@ public class SalesforceTokenManager {
     private String resolveSalesforceBaseUrl(String myDomain) {
         String base = myDomain == null || myDomain.isBlank() ? null : myDomain.trim();
         String host;
-        String scheme = "https";
 
         if (base != null) {
             try {
-                if (base.startsWith("http://") || base.startsWith("https://")) {
+                if (base.startsWith("http://")) {
+                    throw new AppException("Insecure Salesforce myDomain is not allowed: http:// scheme is rejected");
+                }
+                if (base.startsWith("https://")) {
                     URI uri = URI.create(base);
                     host = uri.getHost();
-                    if (uri.getScheme() != null && !uri.getScheme().isBlank()) {
-                        scheme = uri.getScheme();
-                    }
                 } else {
                     host = base;
                 }
             } catch (Exception e) {
+                if (e instanceof AppException appException) {
+                    throw appException;
+                }
                 host = base;
             }
 
@@ -192,7 +195,7 @@ public class SalesforceTokenManager {
                 String withoutPath = normalizedHost.split("[/?]")[0];
                 String[] hostParts = withoutPath.split(":", 2);
                 if (hostParts.length > 0 && !hostParts[0].isBlank()) {
-                    return scheme + "://" + withoutPath;
+                    return "https://" + withoutPath;
                 }
             }
         }
