@@ -10,16 +10,16 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-18T17:24:27.904+09:00  INFO 430074 --- [           main] com.sfdcupload.SfdcuploadApplication     : Starting SfdcuploadApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 430074 (/home/trstyq/code/etl-platform/etl-file-engine/build/libs/etl-file-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-18T17:24:27.907+09:00  INFO 430074 --- [           main] com.sfdcupload.SfdcuploadApplication     : The following 1 profile is active: "local"
-2026-03-18T17:24:29.494+09:00  INFO 430074 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 9443 (http)
-2026-03-18T17:24:29.516+09:00  INFO 430074 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-18T17:24:29.516+09:00  INFO 430074 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-18T17:24:29.558+09:00  INFO 430074 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-18T17:24:29.561+09:00  INFO 430074 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1601 ms
+2026-03-19T11:56:29.812+09:00  INFO 24458 --- [           main] com.sfdcupload.SfdcuploadApplication     : Starting SfdcuploadApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 24458 (/home/trstyq/code/etl-platform/etl-file-engine/build/libs/etl-file-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-19T11:56:29.816+09:00  INFO 24458 --- [           main] com.sfdcupload.SfdcuploadApplication     : The following 1 profile is active: "local"
+2026-03-19T11:56:31.772+09:00  INFO 24458 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 9443 (http)
+2026-03-19T11:56:31.806+09:00  INFO 24458 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-19T11:56:31.807+09:00  INFO 24458 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-19T11:56:31.864+09:00  INFO 24458 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-19T11:56:31.867+09:00  INFO 24458 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1966 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-18T17:24:30.261+09:00  INFO 430074 --- [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
-2026-03-18T17:24:30.758+09:00  INFO 430074 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 9443 (http) with context path '/'
-2026-03-18T17:24:30.785+09:00  INFO 430074 --- [           main] com.sfdcupload.SfdcuploadApplication     : Started SfdcuploadApplication in 3.446 seconds (process running for 4.122)
-2026-03-18T17:25:45.977+09:00  INFO 430074 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-18T17:25:45.981+09:00  INFO 430074 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-19T11:56:32.718+09:00  INFO 24458 --- [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-03-19T11:56:33.249+09:00  INFO 24458 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 9443 (http) with context path '/'
+2026-03-19T11:56:33.270+09:00  INFO 24458 --- [           main] com.sfdcupload.SfdcuploadApplication     : Started SfdcuploadApplication in 4.211 seconds (process running for 4.94)
+2026-03-19T11:57:43.799+09:00  INFO 24458 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-19T11:57:43.806+09:00  INFO 24458 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete

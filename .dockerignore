@@ -1,0 +1,15 @@
+.git
+.gitignore
+.gradle
+.gradle-local
+.idea
+.logs
+.pids
+build
+**/build
+.env
+env/*.env
+tmp
+*.iml
+Dockerfile*
+docker-compose*.yml

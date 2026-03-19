@@ -33,6 +33,8 @@ import java.util.Map;
 @Slf4j
 public class ETLController {
 
+
+
     private final UserSession userSession;
     private final SalesforceTokenManager tokenManager;
     private final ETLService etlService;
@@ -120,11 +122,7 @@ public class ETLController {
 
         String defaultSelectedObject = selectedObjectExists
                 ? normalizedSelectedObject
-                : filteredObjects.stream()
-                    .map(ObjectDefinition::getName)
-                    .filter(ingestionStatusByObject::containsKey)
-                    .findFirst()
-                    .orElseGet(() -> filteredObjects.stream().findFirst().map(ObjectDefinition::getName).orElse(null));
+                : null;
 
         model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
         model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);

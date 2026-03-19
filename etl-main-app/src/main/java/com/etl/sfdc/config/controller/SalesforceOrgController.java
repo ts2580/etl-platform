@@ -4,6 +4,7 @@ import com.etl.sfdc.config.model.service.SalesforceOrgService;
 import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
 import com.etl.sfdc.common.SalesforceTokenManager;
 import com.etl.sfdc.common.UserSession;
+import com.etl.sfdc.etl.service.ETLService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +23,18 @@ public class SalesforceOrgController {
     public static final String ACTIVE_ORG_SESSION_KEY = "ACTIVE_SALESFORCE_ORG_KEY";
     private final SalesforceOrgService salesforceOrgService;
     private final SalesforceTokenManager tokenManager;
+    private final ETLService etlService;
     private final UserSession userSession;
 
     @GetMapping("/etl/orgs")
-    public String orgManagement(Model model, HttpSession session) {
+    public String orgManagement(@RequestParam(value = "editOrgKey", required = false) String editOrgKey,
+                               Model model,
+                               HttpSession session) {
         model.addAttribute("orgs", salesforceOrgService.getActiveOrgs());
         model.addAttribute("activeOrgKey", session.getAttribute(ACTIVE_ORG_SESSION_KEY));
+        if (editOrgKey != null && !editOrgKey.isBlank()) {
+            model.addAttribute("editOrg", salesforceOrgService.getOrg(editOrgKey));
+        }
         if (userSession.getUserAccount() != null) {
             model.addAttribute(userSession.getUserAccount().getMember());
         }
@@ -110,6 +117,7 @@ public class SalesforceOrgController {
 
     @PostMapping(value = "/etl/orgs/refresh")
     public String refreshOrgToken(@RequestParam("orgKey") String orgKey, HttpSession session) {
+
         if (orgKey == null || orgKey.isBlank()) {
             return "redirect:/etl/orgs?message=token_refresh_failed";
         }
@@ -136,6 +144,35 @@ public class SalesforceOrgController {
 
         // client credentials 기반 access token 발급 실패
         return "redirect:/etl/orgs?message=token_refresh_failed&reason=client_credentials_failed&orgKey=" + orgKey;
+    }
+
+    @PostMapping(value = "/etl/orgs/update-credentials")
+    public String updateOrgClientCredentials(@RequestParam("orgKey") String orgKey,
+                                            @RequestParam("clientId") String clientId,
+                                            @RequestParam("clientSecret") String clientSecret,
+                                            HttpSession session) {
+        if (orgKey == null || orgKey.isBlank() || clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+            return "redirect:/etl/orgs?message=need_org_login_inputs&orgKey=" + (orgKey == null ? "" : orgKey);
+        }
+
+        SalesforceOrgCredential updatedOrg = salesforceOrgService.updateClientCredentials(orgKey, clientId, clientSecret);
+        if (updatedOrg == null) {
+            return "redirect:/etl/orgs?message=org_credentials_update_failed&orgKey=" + orgKey;
+        }
+
+        SalesforceTokenManager.RefreshResult refreshResult = tokenManager.refreshClientCredentialsToken(session, updatedOrg);
+        if (refreshResult != null && refreshResult.accessToken() != null && !refreshResult.accessToken().isBlank()) {
+            salesforceOrgService.persistTokens(orgKey, refreshResult.accessToken());
+            tokenManager.setActiveOrg(session, orgKey);
+            try {
+                etlService.refreshRoutingModuleCredentials(refreshResult.accessToken(), updatedOrg.getMyDomain(), orgKey);
+            } catch (Exception e) {
+                return "redirect:/etl/orgs?message=org_credentials_updated_routing_failed&orgKey=" + orgKey;
+            }
+            return "redirect:/etl/orgs?message=org_credentials_updated&orgKey=" + orgKey;
+        }
+
+        return "redirect:/etl/orgs?message=org_credentials_updated_token_failed&orgKey=" + orgKey;
     }
 
     @PostMapping(value = "/etl/orgs/deactivate")

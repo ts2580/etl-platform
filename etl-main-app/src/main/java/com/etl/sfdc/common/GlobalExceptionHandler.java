@@ -11,10 +11,18 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        log.debug("No static resource found: {}", uri);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
 
     @ExceptionHandler(FeatureDisabledException.class)
     public ResponseEntity<?> handleFeatureDisabled(FeatureDisabledException ex, HttpServletRequest request) {

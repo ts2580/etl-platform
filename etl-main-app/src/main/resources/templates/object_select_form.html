@@ -243,7 +243,7 @@
                                             class="object-selector h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                                             th:attr="name=${ingestionStatusByObject[object.name] == null ? 'selectedObject' : null}"
                                             th:value="${object.name}"
-                                            th:checked="${selectedObject == object.name or ingestionStatusByObject[object.name] != null}"
+                                            th:checked="${selectedObject == object.name}"
                                             th:disabled="${ingestionStatusByObject[object.name] != null}" />
                                     </td>
                                     <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" data-label="라벨명"

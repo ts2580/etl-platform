@@ -49,6 +49,7 @@ public class SalesforceRouterBuilder extends RouteBuilder {
                 .aggregate(constant(true), new ArrayListAggregationStrategy())
                 .completionInterval(5000)
                 .process((exchange) -> {
+
                     Map<String, List<Object>> messageBodies = exchange.getIn().getBody(Map.class);
                     if (messageBodies == null || messageBodies.isEmpty()) {
                         return;

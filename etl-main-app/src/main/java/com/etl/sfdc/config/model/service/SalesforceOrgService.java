@@ -102,6 +102,21 @@ public class SalesforceOrgService {
         return repository.findByOrgKey(existing.getOrgKey());
     }
 
+    public SalesforceOrgCredential updateClientCredentials(String orgKey,
+                                                       String clientId,
+                                                       String clientSecret) {
+        SalesforceOrgCredential existing = repository.findByOrgKey(orgKey);
+        if (existing == null) {
+            throw new AppException("존재하지 않는 Org입니다.");
+        }
+
+        existing.setClientId(clientId);
+        existing.setClientSecret(clientSecret);
+        existing.setIsActive(true);
+        repository.upsertSalesforceOrg(existing);
+        return repository.findByOrgKey(existing.getOrgKey());
+    }
+
     public SalesforceOrgCredential setDefaultOrg(String orgKey) {
         repository.unsetDefaultOrgs();
         repository.setDefaultOrg(orgKey);
