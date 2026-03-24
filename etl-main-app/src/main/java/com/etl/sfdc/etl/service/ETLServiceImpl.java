@@ -2,6 +2,7 @@ package com.etl.sfdc.etl.service;
 
 import com.etl.sfdc.config.model.repository.RoutingDashboardRepository;
 import com.etl.sfdc.config.model.service.SalesforceOrgService;
+import com.etl.sfdc.storage.service.DatabaseStorageQueryService;
 import com.etl.sfdc.etl.dto.ObjectDefinition;
 import com.etl.sfdc.etl.dto.ObjectSearchResult;
 import com.etlplatform.common.error.AppException;
@@ -28,8 +29,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ETLServiceImpl implements ETLService {
 
+
+
     private final RoutingDashboardRepository routingDashboardRepository;
     private final SalesforceOrgService salesforceOrgService;
+    private final DatabaseStorageQueryService databaseStorageQueryService;
 
     @org.springframework.beans.factory.annotation.Value("${routing.engine.base-url:https://localhost:${ROUTING_APP_PORT:3931}}")
     private String routingEngineBaseUrl;
@@ -387,7 +391,7 @@ public class ETLServiceImpl implements ETLService {
     }
 
     @Override
-    public Map<String, Object> setObjects(String selectedObject, String ingestionMode, String accessToken, String actor, String myDomain, String orgKey, String orgName) throws Exception {
+    public Map<String, Object> setObjects(String selectedObject, String ingestionMode, Long targetStorageId, String accessToken, String actor, String myDomain, String orgKey, String orgName) throws Exception {
         String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
         String sanitizedMode = RequestValidationUtils.requireText(ingestionMode, "ingestionMode").trim().toUpperCase(Locale.ROOT);
         ObjectMapper objectMapper = new ObjectMapper();
@@ -413,11 +417,61 @@ public class ETLServiceImpl implements ETLService {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
         String resolvedOrgKey = resolveOrgKey(orgKey, resolvedMyDomain);
         String resolvedOrgName = orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName;
-        String targetSchema = salesforceOrgService.resolveSchemaName(resolvedOrgKey);
+        if (targetStorageId == null) {
+            throw new AppException("라우팅 대상 외부 DB 저장소를 선택해 주세요.");
+        }
+        var targetStorage = databaseStorageQueryService.getRoutingTargetOptions().stream()
+                .filter(option -> targetStorageId.equals(option.getId()))
+                .findFirst()
+                .orElseThrow(() -> new AppException("선택한 라우팅 대상 DB 저장소를 찾을 수 없어요."));
+        String targetSchema = targetStorage.getSchemaName();
+        if (targetStorage.getVendor() == com.etlplatform.common.storage.database.DatabaseVendor.ORACLE) {
+            String serviceName = targetStorage.getServiceName();
+            String username = targetStorage.getUsername();
+            String normalizedSchema = com.etlplatform.common.storage.database.OracleStorageSupport.normalizeSchemaName(
+                    targetSchema,
+                    username,
+                    serviceName,
+                    targetStorage.getSid()
+            );
+
+            if (normalizedSchema != null && !normalizedSchema.equals(targetSchema)) {
+                log.info("Oracle 라우팅 대상 schemaName을 정규화합니다. targetStorageId={}, storageName={}, originalSchemaName={}, username={}, serviceName={}, normalizedSchemaName={}",
+                        targetStorageId, targetStorage.getName(), targetSchema, username, serviceName, normalizedSchema);
+            }
+            targetSchema = normalizedSchema;
+        }
+
+        if ((targetSchema == null || targetSchema.isBlank())
+                && targetStorage.getVendor() == com.etlplatform.common.storage.database.DatabaseVendor.ORACLE) {
+            try {
+                var targetStorageDetail = databaseStorageQueryService.getDetail(targetStorageId);
+                String detailSchema = targetStorageDetail.getSchemaName();
+                String detailUsername = targetStorageDetail.getUsername();
+                String normalizedDetailSchema = com.etlplatform.common.storage.database.OracleStorageSupport.normalizeSchemaName(
+                        detailSchema,
+                        detailUsername,
+                        targetStorageDetail.getServiceName(),
+                        targetStorageDetail.getSid()
+                );
+                if (normalizedDetailSchema != null && !normalizedDetailSchema.isBlank()) {
+                    targetSchema = normalizedDetailSchema;
+                    log.info("Oracle 라우팅 대상 schemaName을 상세 조회값으로 보정합니다. targetStorageId={}, schemaName={}",
+                            targetStorageId, normalizedDetailSchema);
+                }
+            } catch (Exception detailError) {
+                log.warn("Oracle 라우팅 대상 schemaName 보정용 상세 조회에 실패했습니다. targetStorageId={}", targetStorageId, detailError);
+            }
+        }
+
+        if (targetSchema == null || targetSchema.isBlank()) {
+            throw new AppException("선택한 라우팅 대상 DB 저장소에 schemaName이 없어요.");
+        }
+        String targetStorageName = targetStorage.getName();
         com.etl.sfdc.config.model.dto.SalesforceOrgCredential orgCredential = salesforceOrgService.getOrg(resolvedOrgKey);
         String clientId = orgCredential != null ? orgCredential.getClientId() : null;
         String clientSecret = orgCredential != null ? orgCredential.getClientSecret() : null;
-        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema));
+        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema, targetStorageId, targetStorageName));
         String endpoint = "CDC".equals(sanitizedMode) ? "/pubsub" : "/streaming";
         String modeLabel = "CDC".equals(sanitizedMode) ? "CDC" : "Streaming";
         String routingBase = resolveRoutingBaseUrl();
@@ -455,6 +509,11 @@ public class ETLServiceImpl implements ETLService {
             );
             result.put("cdcCreationMessage", String.valueOf(engineResult.getOrDefault("cdcCreationMessage", "-")));
             result.put("engineMessage", String.valueOf(engineResult.getOrDefault("message", modeLabel + " 설정이 완료되었어요.")));
+            result.put("sourceOrgKey", resolvedOrgKey);
+            result.put("sourceOrgName", resolvedOrgName);
+            result.put("targetStorageId", targetStorageId);
+            result.put("targetStorageName", targetStorageName);
+            result.put("targetSchema", targetSchema);
             return result;
         } catch (AppException e) {
             throw e;
@@ -515,12 +574,16 @@ public class ETLServiceImpl implements ETLService {
             String routeInstanceUrl = resolveSalesforceDomain(String.valueOf(route.getOrDefault("myDomain", resolvedMyDomain)));
             String routeOrgName = String.valueOf(route.getOrDefault("orgName", extractHost(routeInstanceUrl)));
             String routeTargetSchema = String.valueOf(route.getOrDefault("targetSchema", salesforceOrgService.resolveSchemaName(routeOrgKey)));
+            String routeTargetStorageId = String.valueOf(route.getOrDefault("targetStorageId", ""));
+            String routeTargetStorageName = String.valueOf(route.getOrDefault("targetStorageName", ""));
             String routeObjectLabel = String.valueOf(route.getOrDefault("objectLabel", selectedObject));
             payload.put("instanceUrl", routeInstanceUrl);
             payload.put("orgKey", routeOrgKey);
             payload.put("orgName", routeOrgName);
             payload.put("targetSchema", routeTargetSchema);
             payload.put("targetTable", String.valueOf(route.getOrDefault("targetTable", selectedObject)));
+            if (routeTargetStorageId != null && !routeTargetStorageId.isBlank()) { payload.put("targetStorageId", routeTargetStorageId); }
+            if (routeTargetStorageName != null && !routeTargetStorageName.isBlank()) { payload.put("targetStorageName", routeTargetStorageName); }
             payload.put("instanceName", String.valueOf(route.getOrDefault("instanceName", extractHost(routeInstanceUrl))));
             payload.put("orgType", String.valueOf(route.getOrDefault("orgType", "-")));
             payload.put("isSandbox", String.valueOf(route.getOrDefault("sandbox", route.getOrDefault("isSandbox", String.valueOf(isSandboxDomain(routeInstanceUrl))))));
@@ -576,8 +639,17 @@ public class ETLServiceImpl implements ETLService {
                 : releaseCdc(client, objectMapper, sanitizedObject, accessToken, myDomain);
 
         String resolvedOrgKey = normalizeOrgKey(orgKey != null ? orgKey : extractHost(resolveSalesforceDomain(myDomain)));
-        String targetSchema = salesforceOrgService.resolveSchemaName(resolvedOrgKey);
-        boolean tableDropped = dropRoutingTableFromEngine(sanitizedMode, targetSchema, sanitizedObject);
+        List<Map<String, Object>> activeRoutes = routingDashboardRepository.findActiveRoutesByOrg(resolvedOrgKey);
+        Map<String, Object> matchedRoute = activeRoutes.stream()
+                .filter(route -> sanitizedObject.equals(String.valueOf(route.getOrDefault("objectName", route.getOrDefault("selectedObject", "")))))
+                .filter(route -> sanitizedMode.equalsIgnoreCase(String.valueOf(route.getOrDefault("protocol", route.getOrDefault("routingProtocol", "")))))
+                .findFirst()
+                .orElse(null);
+        String targetSchema = matchedRoute != null
+                ? String.valueOf(matchedRoute.getOrDefault("targetSchema", salesforceOrgService.resolveSchemaName(resolvedOrgKey)))
+                : salesforceOrgService.resolveSchemaName(resolvedOrgKey);
+        Long targetStorageId = asLongOrNull(matchedRoute == null ? null : matchedRoute.get("targetStorageId"));
+        boolean tableDropped = dropRoutingTableFromEngine(sanitizedMode, targetSchema, sanitizedObject, targetStorageId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("selectedObject", sanitizedObject);
@@ -663,7 +735,9 @@ public class ETLServiceImpl implements ETLService {
                                             String myDomain,
                                             String orgName,
                                             String orgKey,
-                                            String targetSchema) {
+                                            String targetSchema,
+                                            Long targetStorageId,
+                                            String targetStorageName) {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
         Map<String, String> mapProperty = new HashMap<>();
         mapProperty.put("selectedObject", selectedObject);
@@ -679,6 +753,12 @@ public class ETLServiceImpl implements ETLService {
         mapProperty.put("orgName", orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName);
         mapProperty.put("targetSchema", targetSchema);
         mapProperty.put("targetTable", selectedObject);
+        if (targetStorageId != null) {
+            mapProperty.put("targetStorageId", String.valueOf(targetStorageId));
+        }
+        if (targetStorageName != null && !targetStorageName.isBlank()) {
+            mapProperty.put("targetStorageName", targetStorageName);
+        }
         mapProperty.put("instanceName", extractHost(resolvedMyDomain));
         mapProperty.put("orgType", "-");
         mapProperty.put("isSandbox", String.valueOf(isSandboxDomain(resolvedMyDomain)));
@@ -949,6 +1029,21 @@ public class ETLServiceImpl implements ETLService {
         }
     }
 
+    private static Long asLongOrNull(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            String text = String.valueOf(value);
+            return text == null || text.isBlank() ? null : Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private static int asInt(Object value) {
         if (value instanceof Number number) {
             return number.intValue();
@@ -963,7 +1058,7 @@ public class ETLServiceImpl implements ETLService {
         }
     }
 
-    private boolean dropRoutingTableFromEngine(String ingestionMode, String targetSchema, String selectedObject) {
+    private boolean dropRoutingTableFromEngine(String ingestionMode, String targetSchema, String selectedObject, Long targetStorageId) {
         String endpoint = "CDC".equalsIgnoreCase(ingestionMode) ? "/pubsub/drop" : "/streaming/drop";
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
@@ -971,10 +1066,13 @@ public class ETLServiceImpl implements ETLService {
                 .writeTimeout(5, TimeUnit.SECONDS)
                 .build();
 
-        RequestBody formBody = new FormBody.Builder()
+        FormBody.Builder formBuilder = new FormBody.Builder()
                 .add("selectedObject", selectedObject)
-                .add("targetSchema", targetSchema == null ? "" : targetSchema)
-                .build();
+                .add("targetSchema", targetSchema == null ? "" : targetSchema);
+        if (targetStorageId != null) {
+            formBuilder.add("targetStorageId", String.valueOf(targetStorageId));
+        }
+        RequestBody formBody = formBuilder.build();
 
         String url = resolveRoutingBaseUrl() + endpoint;
         Request request = new Request.Builder()

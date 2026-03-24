@@ -13,7 +13,11 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -27,9 +31,12 @@ public class UserController {
     private boolean dbEnabled;
 
     @GetMapping("/login")
-    public String loginPage(Model model) {
-        model.addAttribute("dbEnabled", dbEnabled);
-        return "login_form";
+    public String loginPage(@RequestParam Map<String, String> params) {
+        UriComponentsBuilder redirect = UriComponentsBuilder.fromPath("/");
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            redirect.queryParam(entry.getKey(), entry.getValue());
+        }
+        return "redirect:" + redirect.toUriString();
     }
 
     @GetMapping("/signup")
@@ -61,7 +68,7 @@ public class UserController {
         try {
             userService.create(userCreateForm.getName(), userCreateForm.getId(),
                     userCreateForm.getEmail(), userCreateForm.getPassword1(), userCreateForm.getDescription());
-            return "redirect:/user/login";
+            return "redirect:/?signup=success";
         } catch (AppException e) {
             log.warn("Signup failed: id={}, email={}, reason={}", userCreateForm.getId(), userCreateForm.getEmail(), e.getMessage());
             model.addAttribute("signupError", e.getMessage());

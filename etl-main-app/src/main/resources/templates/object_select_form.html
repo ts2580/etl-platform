@@ -14,7 +14,7 @@
 <body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
     <div id="top-progress-bar" aria-hidden="true"></div>
 
-    <div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div class="mx-auto flex min-h-screen w-full max-w-[1600px] items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <main
             class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
             <div class="flex items-start gap-3">
@@ -39,10 +39,58 @@
                 </div>
             </div>
 
+            <div th:if="${param.message != null and param.message[0] == 'ddl_direct_access'}"
+                class="mt-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm sm:mt-6">
+                <div class="flex items-start gap-3">
+                    <span
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">ℹ️</span>
+                    <div>
+                        <h3 class="text-base font-bold text-indigo-700 sm:text-lg">설정 실행 페이지로 바로 열 수는 없어요</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-700">먼저 오브젝트와 적재 방식을 선택한 뒤 설정 실행을 진행해 주세요.</p>
+                    </div>
+                </div>
+            </div>
+
             <form th:action="@{/etl/ddl}" method="post" class="mt-5 space-y-5 sm:mt-6 sm:space-y-6"
                 id="objectSelectForm">
-                <input type="hidden" name="orgKey" th:value="${activeOrgKey}" />
                 <input type="hidden" id="selectedObjectHidden" th:value="${selectedObject}" />
+                <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                    <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 라우팅 소스/타깃</p>
+                        <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">Salesforce org와 외부 DB 저장소 선택</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">이 라우팅이 어느 Salesforce org에서 읽고 어떤 외부 DB 저장소로 적재할지 먼저 고정해요.</p>
+                    </div>
+                    <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                        <label class="flex flex-col gap-2 text-sm font-semibold text-slate-600">
+                            소스 Salesforce org
+                            <select id="sourceOrgSelect" name="orgKey"
+                                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                                th:disabled="${#lists.isEmpty(activeOrgs)}">
+                                <option th:if="${#lists.isEmpty(activeOrgs)}" value="">선택 가능한 org가 없어요</option>
+                                <option th:each="org : ${activeOrgs}"
+                                    th:value="${org.orgKey}"
+                                    th:selected="${org.orgKey == activeOrgKey}"
+                                    th:text="${org.orgName + ' (' + org.myDomain + ')'}">org</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-2 text-sm font-semibold text-slate-600">
+                            타깃 외부 DB 저장소
+                            <select id="targetStorageSelect" name="targetStorageId" required
+                                class="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                                th:disabled="${#lists.isEmpty(routingTargetStorages)}">
+                                <option value="" th:if="${#lists.isEmpty(routingTargetStorages)}">선택 가능한 저장소가 없어요</option>
+                                <option th:if="${!#lists.isEmpty(routingTargetStorages)}" value="">저장소를 선택해주세요</option>
+                                <option th:each="storage : ${routingTargetStorages}"
+                                    th:value="${storage.id}"
+                                    th:selected="${storage.id == selectedTargetStorageId}"
+                                    th:text="${storage.name + ' / ' + storage.vendor + ' / schema=' + storage.schemaName + ' / status=' + storage.connectionStatus}">storage</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div th:if="${#lists.isEmpty(routingTargetStorages)}" class="border-t border-amber-100 bg-amber-50 px-4 py-4 text-sm text-amber-800 sm:px-5">
+                        라우팅 대상 외부 DB 저장소가 아직 없어요. 먼저 저장소를 등록한 뒤 라우팅을 생성해주세요.
+                    </div>
+                </section>
                 <section
                     class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
                     <div class="flex flex-col gap-4">
@@ -243,7 +291,7 @@
                                             class="object-selector h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                                             th:attr="name=${ingestionStatusByObject[object.name] == null ? 'selectedObject' : null}"
                                             th:value="${object.name}"
-                                            th:checked="${selectedObject == object.name or ingestionStatusByObject[object.name] != null}"
+                                            th:checked="${selectedObject == object.name}"
                                             th:disabled="${ingestionStatusByObject[object.name] != null}" />
                                     </td>
                                     <td class="px-4 py-3 font-medium text-slate-800 sm:px-5" data-label="라벨명"
@@ -340,6 +388,8 @@
         const modalAvailableCount = document.getElementById('modalAvailableCount');
         const available = Number(cdcWarningBox?.dataset.available || 0);
         const objectSearchInput = document.getElementById('objectSearchInput');
+        const sourceOrgSelect = document.getElementById('sourceOrgSelect');
+        const targetStorageSelect = document.getElementById('targetStorageSelect');
         const objectStatusFilter = document.getElementById('objectStatusFilter');
         const objectSort = document.getElementById('objectSort');
         const objectPageSize = document.getElementById('objectPageSize');
@@ -359,6 +409,20 @@
         const pageNumberList = document.getElementById('pageNumberList');
         const paginationSummary = document.getElementById('paginationSummary');
         let currentPage = Number(/*[[${currentPage}]]*/ 1);
+
+        function navigateWithSelections(overrides = {}) {
+            const params = new URLSearchParams();
+            const orgKey = overrides.orgKey ?? sourceOrgSelect?.value ?? '';
+            const targetStorageId = overrides.targetStorageId ?? targetStorageSelect?.value ?? '';
+            if (orgKey) {
+                params.set('orgKey', orgKey);
+            }
+            if (targetStorageId) {
+                params.set('targetStorageId', targetStorageId);
+            }
+            const nextUrl = `/etl/objects${params.toString() ? `?${params.toString()}` : ''}`;
+            window.location.assign(nextUrl);
+        }
 
         function getSelectedObjectName() {
             return selectedObjectHidden?.value || getSelectedObjectRadio()?.value || '';
@@ -543,6 +607,14 @@
                 confirmedCdc = false;
                 updateCdcUi();
             });
+        });
+
+        sourceOrgSelect?.addEventListener('change', () => {
+            navigateWithSelections({orgKey: sourceOrgSelect.value});
+        });
+
+        targetStorageSelect?.addEventListener('change', () => {
+            navigateWithSelections({targetStorageId: targetStorageSelect.value});
         });
 
         function normalizeStatus(value) {
@@ -740,6 +812,18 @@
             if (!selectedObject) {
                 event.preventDefault();
                 alert('오브젝트를 하나 선택해주세요.');
+                return;
+            }
+
+            if (!sourceOrgSelect?.value) {
+                event.preventDefault();
+                alert('소스 Salesforce org를 선택해주세요.');
+                return;
+            }
+
+            if (!targetStorageSelect?.value) {
+                event.preventDefault();
+                alert('타깃 외부 DB 저장소를 선택해주세요.');
                 return;
             }
 

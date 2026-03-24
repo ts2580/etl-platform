@@ -15,7 +15,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
-@MapperScan({"com.sfdcupload.file.repository", "com.sfdcupload.common"})
+@MapperScan({"com.sfdcupload.file.repository", "com.sfdcupload.common", "com.sfdcupload.storage.model.repository"})
 public class DbEnabledMybatisConfig {
 
     @Bean
@@ -34,10 +34,21 @@ public class DbEnabledMybatisConfig {
     }
 
     @Bean
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+    public SqlSessionFactory sqlSessionFactory(
+            DataSource dataSource,
+            @Value("${mybatis.type-aliases-package:}") String typeAliasesPackage
+    ) throws Exception {
         SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
-        factoryBean.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath:mapper/**/*.xml"));
+
+        org.springframework.core.io.Resource[] mapperResources =
+                new PathMatchingResourcePatternResolver().getResources("classpath*:mapper/**/*.xml");
+        if (mapperResources.length > 0) {
+            factoryBean.setMapperLocations(mapperResources);
+        }
+        if (!typeAliasesPackage.isBlank()) {
+            factoryBean.setTypeAliasesPackage(typeAliasesPackage);
+        }
         return factoryBean.getObject();
     }
 

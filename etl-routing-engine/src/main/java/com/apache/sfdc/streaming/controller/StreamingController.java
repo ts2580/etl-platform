@@ -24,7 +24,9 @@ public class StreamingController {
     private final RoutingRegistrySupport routingRegistrySupport;
 
     @PostMapping("/streaming/drop")
-    public ResponseEntity<Map<String, Object>> dropTable(@RequestParam("selectedObject") String selectedObject, @RequestParam("targetSchema") String targetSchema) {
+    public ResponseEntity<Map<String, Object>> dropTable(@RequestParam("selectedObject") String selectedObject,
+                                                         @RequestParam("targetSchema") String targetSchema,
+                                                         @RequestParam(value = "targetStorageId", required = false) Long targetStorageId) {
         String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
         String resolvedSchema = RequestValidationUtils.requireText(targetSchema, "targetSchema").trim();
 
@@ -33,6 +35,9 @@ public class StreamingController {
             Map<String, String> mapProperty = new java.util.HashMap<>();
             mapProperty.put("selectedObject", sanitizedObject);
             mapProperty.put("targetSchema", resolvedSchema);
+            if (targetStorageId != null) {
+                mapProperty.put("targetStorageId", String.valueOf(targetStorageId));
+            }
             routerService.dropTable(mapProperty);
             result.put("status", "SUCCESS");
             result.put("selectedObject", sanitizedObject);

@@ -10,6 +10,8 @@ public record SalesforceRecordMutation(
         ObjectNode payload,
         Set<String> targetFields,
         Set<String> nulledFields,
+        Object incomingLastModifiedValue,
+        Object incomingEventValue,
         String incomingLastModifiedLiteral,
         String incomingEventLiteral
 ) {

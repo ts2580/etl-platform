@@ -12,7 +12,7 @@
 <body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
 <div id="top-progress-bar" aria-hidden="true"></div>
 
-<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+<div class="mx-auto flex min-h-screen w-full max-w-[1600px] items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
     <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex items-start gap-3">
@@ -46,6 +46,19 @@
             </div>
         </section>
 
+        <section class="mt-5 grid gap-3 sm:grid-cols-2 sm:mt-6">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">소스 Salesforce org</p>
+                <p class="mt-3 text-base font-bold text-slate-800 sm:text-lg" th:text="${routeDetail.orgName}">org</p>
+                <p class="mt-2 break-all text-xs leading-5 text-slate-500" th:text="${routeDetail.myDomain}">domain</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">타깃 외부 DB 저장소</p>
+                <p class="mt-3 text-base font-bold text-slate-800 sm:text-lg" th:text="${routeDetail.targetStorageName != null ? routeDetail.targetStorageName : '-'}">storage</p>
+                <p class="mt-2 text-xs leading-5 text-slate-500">schema <span th:text="${routeDetail.targetSchema}">schema</span> / table <span th:text="${routeDetail.targetTable}">table</span></p>
+            </div>
+        </section>
+
         <section class="mt-5 rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:mt-6 sm:p-5">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -58,6 +71,7 @@
                         <input type="hidden" name="orgKey" th:value="${routeDetail.orgKey}">
                         <input type="hidden" name="selectedObject" th:value="${routeDetail.objectName}">
                         <input type="hidden" name="ingestionMode" th:value="${routeDetail.protocol}">
+                        <input type="hidden" name="targetStorageId" th:value="${routeDetail.targetStorageId}">
                         <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">재처리</button>
                     </form>
                     <form th:action="@{/etl/release}" method="post" onsubmit="return confirm('정말 해지할까요?');">

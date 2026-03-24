@@ -10,18 +10,28 @@
 <body class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 text-slate-800">
 <div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-8 sm:px-6 lg:px-8">
     <main class="w-full rounded-2xl border border-indigo-100 bg-white/95 p-5 shadow-xl shadow-indigo-100 sm:p-8">
-        <h1 class="text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">Salesforce 파일 업로드</h1>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-wide text-indigo-500">External Storage</p>
+                <h1 class="mt-1 text-2xl font-bold tracking-tight text-indigo-700 sm:text-3xl">파일 업로드 / 외부 DB 저장소 관리</h1>
+                <p class="mt-2 text-sm leading-6 text-slate-500">저장소 등록과 상세 조회는 메인 앱의 공통 저장소 관리 화면으로 연결돼요. 파일 엔진에서는 같은 흐름과 같은 용어를 그대로 따라갑니다.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/storages/databases#storage-registration" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700">외부 DB 저장소 등록</a>
+                <a href="/storages/databases" class="inline-flex items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">저장소 목록/상세 보기</a>
+            </div>
+        </div>
 
-        <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <label for="cycle-count" class="text-sm font-medium text-slate-600">업로드 사이클 수</label>
-            <input type="number" id="cycle-count" value="1" min="1" class="h-11 w-full rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100 sm:w-32">
+        <div class="mt-5 flex flex-col gap-3 lg:max-w-2xl">
+            <label for="upload-directory" class="text-sm font-medium text-slate-600">업로드 대상 디렉터리</label>
+            <input type="text" id="upload-directory" placeholder="기본값: /mnt/efs/sfdc" class="h-11 w-full rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
 
         <div class="mt-4 grid grid-cols-1 gap-2 lg:max-w-md">
-            <button class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" data-id="cafe" onclick="upload(this)">파일</button>
+            <button class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:from-indigo-700 hover:to-violet-700" onclick="upload()">파일 업로드 시작</button>
         </div>
 
-        <div class="mt-5">\
+        <div class="mt-5">
             <div id="progress-label" class="text-sm text-slate-600">진행률: 0%</div>
             <div class="mt-2 h-4 overflow-hidden rounded-full border border-indigo-100 bg-indigo-50">
                 <div id="progress-bar" class="h-full w-0 bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"></div>
@@ -35,6 +45,24 @@
     </main>
 </div>
 
+<script>
+    (function () {
+        const orgKey = new URLSearchParams(window.location.search).get('orgKey');
+        const applyLink = (id, hash = '') => {
+            const link = document.getElementById(id);
+            if (!link) return;
+            const url = new URL(link.getAttribute('href'), window.location.origin);
+            if (orgKey) {
+                url.searchParams.set('orgKey', orgKey);
+            }
+            url.hash = hash;
+            link.href = url.toString();
+        };
+
+        applyLink('storage-register-link', 'storage-registration');
+        applyLink('storage-list-link');
+    })();
+</script>
 <script src="/js/file-index.js" defer></script>
 
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ETL 로그인</title>
+    <title>세일즈포스 ETL 워크스페이스</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/css/top-progress.css">
@@ -12,28 +12,24 @@
 <body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-[#2b2f5a]">
 <div id="top-progress-bar" aria-hidden="true"></div>
 
-<div class="mx-auto flex min-h-screen w-full max-w-[780px] items-start justify-center px-5 py-16 sm:px-8">
-    <main class="w-full max-w-[460px]">
-        <div class="mb-8 text-center">
-            <a href="/" class="inline-flex items-center justify-center text-4xl font-extrabold tracking-tight text-[#4f46e5] sm:text-5xl">ETL</a>
-            <p class="mt-3 text-sm text-[#7c83ad]">ETL 플랫폼 로그인</p>
+<div class="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-4 py-8 sm:px-6">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-white/95 p-6 shadow-xl shadow-[#c7d2fe]/60 sm:p-8">
+        <div class="text-center">
+            <div class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-xl">🌿</div>
+            <h1 class="mt-3 text-xl font-bold tracking-tight text-[#312e81]">세일즈포스 ETL 워크스페이스</h1>
+            <p class="mt-2 text-sm text-[#7c83ad]">Salesforce ETL 워크스페이스에 오신 걸 환영해요.</p>
         </div>
 
-        <div th:if="${!dbEnabled}" class="mb-5 rounded-md border border-[#d9ddfb] bg-[#eef2ff] px-4 py-3 text-sm text-[#312e81]">
+        <div th:if="${!dbEnabled}" class="mt-6 rounded-md border border-[#d9ddfb] bg-[#eef2ff] px-4 py-3 text-sm text-[#312e81]">
             DB 비활성 모드라서 로그인은 잠시 꺼져 있어요. 지금은 화면 확인용으로만 사용할 수 있습니다.
         </div>
 
-        <div th:if="${param.error}" class="mb-5 rounded-md border border-[#f9a8d4] bg-[#fdf2f8] px-4 py-3 text-sm text-[#be185d]">
+        <div th:if="${param.error}" class="mt-6 rounded-md border border-[#f9a8d4] bg-[#fdf2f8] px-4 py-3 text-sm text-[#be185d]">
             <div th:if="${param.error.contains('login')}">아이디 또는 비밀번호를 확인해 주세요.</div>
             <div th:if="${param.error.contains('session')}">중복 로그인이 감지되어 세션이 만료되었습니다.</div>
         </div>
 
-        <form method="post" id="login-form" th:action="@{/user/login}" class="space-y-4 rounded-xl border border-[#e5e5e5] bg-[#f8faff] px-5 py-6 shadow-sm sm:px-7 sm:py-8" th:if="${dbEnabled}">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-[#2b2f5a]">로그인</h1>
-                <p class="mt-2 text-sm text-[#7c83ad]">아이디로 로그인하고 ETL 작업을 시작하세요.</p>
-            </div>
-
+        <form method="post" id="login-form" th:action="@{/user/login}" class="mt-6 space-y-4" th:if="${dbEnabled}">
             <div>
                 <label for="id" class="mb-2 block text-sm font-semibold text-[#2b2f5a]">아이디</label>
                 <div class="rounded-md border border-[#d4d9ff] bg-[#f8faff] px-4 focus-within:border-[#6366f1] focus-within:ring-1 focus-within:ring-[#6366f1]">
@@ -52,16 +48,15 @@
 
             <p class="text-center text-sm text-slate-500">
                 계정이 없으신가요?
-                <a th:if="${dbEnabled}" href="/user/signup" class="font-semibold text-[#4f46e5] hover:underline">회원가입</a>
-                <span th:if="${!dbEnabled}" class="font-semibold text-[#9ca3af]">회원가입 비활성</span>
+                <a href="/user/signup" class="font-semibold text-[#4f46e5] hover:underline">회원가입</a>
             </p>
         </form>
 
-        <div th:if="${!dbEnabled}" class="space-y-4 rounded-xl border border-[#e5e5e5] bg-[#f8faff] px-5 py-6 shadow-sm sm:px-7 sm:py-8">
-            <h1 class="text-2xl font-bold tracking-tight text-[#2b2f5a]">로그인</h1>
-            <p class="text-sm text-[#7c83ad]">DB 연결 전에는 디자인만 확인할 수 있습니다.</p>
-            <input type="text" placeholder="아이디 (비활성)" class="h-14 w-full rounded-md border border-[#efefef] bg-[#f4f6ff] px-4 text-base text-[#9ca3af]" disabled>
-            <input type="password" placeholder="비밀번호 (비활성)" class="h-14 w-full rounded-md border border-[#efefef] bg-[#f4f6ff] px-4 text-base text-[#9ca3af]" disabled>
+        <div th:if="${!dbEnabled}" class="mt-6 space-y-4">
+            <label class="mb-2 block text-sm font-semibold text-[#2b2f5a]">아이디</label>
+            <input type="text" placeholder="아이디 (비활성)" class="h-14 w-full rounded-md border border-[#e5e5e5] bg-[#f4f6ff] px-4 text-base text-[#9ca3af]" disabled>
+            <label class="mb-2 block text-sm font-semibold text-[#2b2f5a]">비밀번호</label>
+            <input type="password" placeholder="비밀번호 (비활성)" class="h-14 w-full rounded-md border border-[#e5e5e5] bg-[#f4f6ff] px-4 text-base text-[#9ca3af]" disabled>
             <button type="button" disabled class="inline-flex h-14 w-full items-center justify-center rounded-md bg-[#d4d9ff] px-4 text-lg font-semibold text-white">로그인 비활성</button>
         </div>
     </main>

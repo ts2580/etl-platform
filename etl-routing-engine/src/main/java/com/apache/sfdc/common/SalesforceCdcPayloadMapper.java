@@ -5,11 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.Schema;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -17,8 +20,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-@Slf4j
 public class SalesforceCdcPayloadMapper {
+
+    private static final Logger log = LoggerFactory.getLogger(SalesforceCdcPayloadMapper.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -48,7 +52,9 @@ public class SalesforceCdcPayloadMapper {
 
         Set<String> targetFields = resolveTargetFields(payload, header, mapType);
         Set<String> nulledFields = extractFieldSet(header.get("nulledFields"));
+        Object incomingLastModifiedValue = SalesforceObjectSchemaBuilder.lastModifiedValue(payload);
         String incomingLastModifiedLiteral = SalesforceObjectSchemaBuilder.lastModifiedLiteral(payload);
+        Object incomingEventValue = eventTimeValue(header, mutationType.isDelete() ? LocalDateTime.now(ZoneOffset.UTC) : incomingLastModifiedValue);
         String incomingEventLiteral = eventTimeLiteral(header, mutationType.isDelete() ? "CURRENT_TIMESTAMP" : incomingLastModifiedLiteral);
 
         return Optional.of(new SalesforceRecordMutation(
@@ -57,6 +63,8 @@ public class SalesforceCdcPayloadMapper {
                 (ObjectNode) payload,
                 targetFields,
                 nulledFields,
+                incomingLastModifiedValue,
+                incomingEventValue,
                 incomingLastModifiedLiteral,
                 incomingEventLiteral
         ));
@@ -180,24 +188,48 @@ public class SalesforceCdcPayloadMapper {
         Set<String> candidateFields = new LinkedHashSet<>();
         addFieldArray(header.get("changedFields"), candidateFields);
         addFieldArray(header.get("nulledFields"), candidateFields);
+        augmentCompoundNameFields(payload, mapType, candidateFields);
+        augmentCompoundAddressFields(payload, mapType, candidateFields);
+
+        Set<String> targetFields = mapToSupportedFields(candidateFields, mapType);
+
+        // Quick hotfix: CDC changedFields can be bitmap/hex (ex: 0x06000100) in some payload formats,
+        // so if header-derived names are unmapped, fallback to payload keys that are actually present.
+        if (targetFields.isEmpty() && hasBitmapLikeCandidate(candidateFields)) {
+            targetFields = mapToSupportedFields(payloadFieldNames(payload), mapType);
+        }
 
         if (candidateFields.isEmpty()) {
+            targetFields = mapToSupportedFields(payloadFieldNames(payload), mapType);
+        }
+
+        if (targetFields.isEmpty()) {
             payload.fieldNames().forEachRemaining(fieldName -> {
                 if (isDataField(fieldName)) {
                     candidateFields.add(fieldName);
                 }
             });
+            targetFields = mapToSupportedFields(candidateFields, mapType);
         }
 
-        Set<String> targetFields = new LinkedHashSet<>(candidateFields);
-        targetFields.removeIf(field -> mapType == null || !mapType.containsKey(field));
-
-        log.warn("[CDC-FIELDS] mapTypeSize={}, mapTypeKeys={}, candidateFields={}, filteredTargetFields={}",
-                mapType == null ? 0 : mapType.size(),
-                summarizeKeys(mapType),
-                candidateFields,
-                targetFields);
         return targetFields;
+    }
+
+    private Set<String> mapToSupportedFields(Set<String> sourceFields, Map<String, Object> mapType) {
+        Set<String> output = new LinkedHashSet<>(sourceFields);
+        output.removeIf(field -> mapType == null || !mapType.containsKey(field));
+        return output;
+    }
+
+    private boolean hasBitmapLikeCandidate(Set<String> candidateFields) {
+        if (candidateFields == null || candidateFields.isEmpty()) {
+            return false;
+        }
+        return candidateFields.stream().allMatch(field -> isBitmapLikeField(field));
+    }
+
+    private boolean isBitmapLikeField(String field) {
+        return field != null && field.matches("(?i)^0x[0-9a-f]+$");
     }
 
     private Set<String> extractFieldSet(JsonNode arrayNode) {
@@ -229,6 +261,55 @@ public class SalesforceCdcPayloadMapper {
                 && !"schema".equals(fieldName);
     }
 
+    private void augmentCompoundNameFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields) {
+        if (payload == null || !payload.isObject() || candidateFields == null) {
+            return;
+        }
+        JsonNode nameNode = payload.get("Name");
+        if (nameNode == null || !nameNode.isObject()) {
+            return;
+        }
+        if (mapType != null && mapType.containsKey("Name")) {
+            candidateFields.add("Name");
+        }
+        if (mapType != null && mapType.containsKey("FirstName")) {
+            candidateFields.add("FirstName");
+        }
+        if (mapType != null && mapType.containsKey("LastName")) {
+            candidateFields.add("LastName");
+        }
+    }
+
+    private void augmentCompoundAddressFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields) {
+        if (payload == null || !payload.isObject() || candidateFields == null || mapType == null || mapType.isEmpty()) {
+            return;
+        }
+        String[][] mappings = {
+                {"Other", "OtherAddress"},
+                {"Mailing", "MailingAddress"},
+                {"Billing", "BillingAddress"},
+                {"Shipping", "ShippingAddress"}
+        };
+        String[] suffixes = {"Street", "City", "State", "PostalCode", "Country", "Latitude", "Longitude", "GeocodeAccuracy"};
+        for (String[] mapping : mappings) {
+            String prefix = mapping[0];
+            String parentName = mapping[1];
+            JsonNode addressNode = payload.get(parentName);
+            if (addressNode == null || !addressNode.isObject()) {
+                continue;
+            }
+            if (mapType.containsKey(parentName)) {
+                candidateFields.add(parentName);
+            }
+            for (String suffix : suffixes) {
+                String fieldName = prefix + suffix;
+                if (mapType.containsKey(fieldName)) {
+                    candidateFields.add(fieldName);
+                }
+            }
+        }
+    }
+
     private Set<String> payloadFieldNames(JsonNode payload) {
         Set<String> names = new LinkedHashSet<>();
         if (payload != null && payload.isObject()) {
@@ -249,9 +330,17 @@ public class SalesforceCdcPayloadMapper {
         if (commitTimestamp == null || commitTimestamp.isBlank()) {
             return fallbackLiteral;
         }
-        if (commitTimestamp.matches("^\\d+$")) {
-            return "FROM_UNIXTIME(" + commitTimestamp + " / 1000)";
+        return SqlSanitizer.sanitizeValue(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode(commitTimestamp), "datetime");
+    }
+
+    private Object eventTimeValue(JsonNode header, Object fallbackValue) {
+        String commitTimestamp = textOf(header, "commitTimestamp");
+        if (commitTimestamp == null || commitTimestamp.isBlank()) {
+            return fallbackValue;
         }
-        return SqlSanitizer.quoteString(commitTimestamp.replace("T", " ").replace("Z", ""));
+        if (commitTimestamp.matches("^\\d+$")) {
+            return Long.parseLong(commitTimestamp);
+        }
+        return commitTimestamp;
     }
 }

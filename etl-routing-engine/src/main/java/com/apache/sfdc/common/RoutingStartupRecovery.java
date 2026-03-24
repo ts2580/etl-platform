@@ -166,6 +166,8 @@ public class RoutingStartupRecovery {
         String orgName = firstNonBlank(credential.getOrgName(), text(route.get("orgName")));
         String targetSchema = firstNonBlank(text(route.get("targetSchema")), credential.getSchemaName(), "config");
         String targetTable = firstNonBlank(text(route.get("targetTable")), selectedObject);
+        String targetStorageId = text(route.get("targetStorageId"));
+        String targetStorageName = text(route.get("targetStorageName"));
 
         mapProperty.put("selectedObject", selectedObject);
         mapProperty.put("accessToken", tokenResponse.accessToken());
@@ -176,6 +178,8 @@ public class RoutingStartupRecovery {
         mapProperty.put("orgName", orgName);
         mapProperty.put("targetSchema", targetSchema);
         mapProperty.put("targetTable", targetTable);
+        if (!targetStorageId.isBlank()) { mapProperty.put("targetStorageId", targetStorageId); }
+        if (!targetStorageName.isBlank()) { mapProperty.put("targetStorageName", targetStorageName); }
         mapProperty.put("instanceName", extractHost(instanceUrl));
         mapProperty.put("orgType", firstNonBlank(text(route.get("orgType")), "-"));
         mapProperty.put("isSandbox", String.valueOf(Boolean.parseBoolean(text(route.get("isSandbox")))));

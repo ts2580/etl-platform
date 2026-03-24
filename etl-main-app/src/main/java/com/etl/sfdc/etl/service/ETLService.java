@@ -22,7 +22,7 @@ public interface ETLService {
 
     Map<String, Object> getRouteDetail(String accessToken, String myDomain, String orgKey, String selectedObject, String routingProtocol) throws Exception;
 
-    Map<String, Object> setObjects(String selectedObject, String ingestionMode, String accessToken, String actor, String myDomain, String orgKey, String orgName) throws Exception;
+    Map<String, Object> setObjects(String selectedObject, String ingestionMode, Long targetStorageId, String accessToken, String actor, String myDomain, String orgKey, String orgName) throws Exception;
 
     Map<String, Object> releaseObject(String selectedObject, String ingestionMode, String accessToken, String actor, String myDomain, String orgKey) throws Exception;
 

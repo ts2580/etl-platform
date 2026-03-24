@@ -10,27 +10,21 @@ if (msg === 'token_refreshed') {
 
 let startTime = null;
 
-function upload(button) {
+function upload() {
     startTime = new Date();
-    const dataId = button.getAttribute('data-id');
-    const cycleCount = parseInt(document.getElementById("cycle-count").value || "1");
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = "";
 
-    const orgKey = params.get('orgKey');
-    const uploadParams = new URLSearchParams({
-        dataId,
-        cycle: String(cycleCount),
-    });
-    if (orgKey) {
-        uploadParams.set('orgKey', orgKey);
+    const directory = document.getElementById("upload-directory").value.trim();
+    const uploadParams = new URLSearchParams();
+    if (directory) {
+        uploadParams.set('directory', directory);
     }
 
     const source = new EventSource(`/upload?${uploadParams.toString()}`);
 
     source.onmessage = function(event) {
         if (event.data.startsWith("progress:")) {
-
             const progressPayload = event.data.split(":")[1];
             const [percentStr, processedStr, totalStr] = progressPayload.split(",");
 
@@ -40,33 +34,41 @@ function upload(button) {
 
             updateProgressBar(percent, processed, total);
         } else {
-            const line = document.createElement('div');
-            line.textContent = event.data;
-            resultDiv.appendChild(line);
-            resultDiv.scrollTop = resultDiv.scrollHeight;
-
-            const MAX_LINES = 1000;
-            while (resultDiv.children.length > MAX_LINES) {
-                resultDiv.removeChild(resultDiv.firstChild);
-            }
-
-            if (event.data.includes("✅ 더 이상 처리할 항목이 없습니다")) {
-                const endTime = new Date();
-                const totalSeconds = Math.round((endTime - startTime) / 1000);
-                const formatted = formatSeconds(totalSeconds);
-                const timeDiv = document.createElement('div');
-                timeDiv.textContent = `⏱ 총 소요 시간: ${formatted}`;
-                resultDiv.appendChild(timeDiv);
-            }
+            appendLine(event.data);
         }
     };
 
-    source.onerror = function(event) {
+    source.addEventListener("summary", function(event) {
+        const summary = JSON.parse(event.data);
+        appendLine(`🧾 JSON 이력 저장: ${summary.historyFile}`);
+        appendLine(`📦 성공 ${summary.successCount}건 / 실패 ${summary.failureCount}건`);
+    });
+
+    source.onerror = function() {
         source.close();
-        const errorLine = document.createElement('div');
-        errorLine.textContent = '❌ 연결 종료';
-        resultDiv.appendChild(errorLine);
+        appendLine('❌ 연결 종료');
     };
+
+    function appendLine(text) {
+        const line = document.createElement('div');
+        line.textContent = text;
+        resultDiv.appendChild(line);
+        resultDiv.scrollTop = resultDiv.scrollHeight;
+
+        const MAX_LINES = 1000;
+        while (resultDiv.children.length > MAX_LINES) {
+            resultDiv.removeChild(resultDiv.firstChild);
+        }
+
+        if (text.includes("🎉 전체 완료") || text.includes("✅ 업로드할 파일이 없습니다")) {
+            const endTime = new Date();
+            const totalSeconds = Math.round((endTime - startTime) / 1000);
+            const formatted = formatSeconds(totalSeconds);
+            const timeDiv = document.createElement('div');
+            timeDiv.textContent = `⏱ 총 소요 시간: ${formatted}`;
+            resultDiv.appendChild(timeDiv);
+        }
+    }
 }
 
 function updateProgressBar(percent, processed, total) {

@@ -2,6 +2,10 @@ dependencies {
     // Shared util/helpers across modules
 
     // Used by shared Salesforce OAuth client
-    api 'com.squareup.okhttp3:okhttp:4.12.0'
-    api 'com.fasterxml.jackson.core:jackson-databind'
+    api libs.okhttp
+    api libs.jacksonDatabind
+    api 'jakarta.validation:jakarta.validation-api'
+
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 }

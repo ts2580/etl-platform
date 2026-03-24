@@ -9,12 +9,22 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> handleNoResourceFound(NoResourceFoundException ex, HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        log.debug("No static resource found: {}", uri);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
 
     @ExceptionHandler(FeatureDisabledException.class)
     public ResponseEntity<?> handleFeatureDisabled(FeatureDisabledException ex, HttpServletRequest request) {
@@ -24,6 +34,17 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ApiErrorResponse("FEATURE_DISABLED", "Feature is unavailable in current mode", ex.getMessage()));
+    }
+
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class, IllegalArgumentException.class})
+    public ResponseEntity<?> handleValidationException(Exception ex, HttpServletRequest request) {
+        String message = extractValidationMessage(ex);
+        log.warn("Validation exception: {}", message);
+        if (wantsHtml(request)) {
+            return htmlError(HttpStatus.BAD_REQUEST, "BAD_REQUEST", "입력값을 다시 확인해 주세요", message, "/storages/databases");
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ApiErrorResponse("BAD_REQUEST", "Invalid request", message));
     }
 
     @ExceptionHandler(AppException.class)
@@ -47,8 +68,25 @@ public class GlobalExceptionHandler {
     }
 
     private boolean wantsHtml(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/api/")) {
+            return false;
+        }
         String accept = request.getHeader(HttpHeaders.ACCEPT);
         return accept != null && accept.contains(MediaType.TEXT_HTML_VALUE);
+    }
+
+    private String extractValidationMessage(Exception ex) {
+        if (ex instanceof MethodArgumentNotValidException methodArgumentNotValidException
+                && methodArgumentNotValidException.getBindingResult().getFieldError() != null) {
+            return methodArgumentNotValidException.getBindingResult().getFieldError().getDefaultMessage();
+        }
+        if (ex instanceof BindException bindException && bindException.getBindingResult().getFieldError() != null) {
+            return bindException.getBindingResult().getFieldError().getDefaultMessage();
+        }
+        return ex.getMessage() == null || ex.getMessage().isBlank()
+                ? "입력값이 올바르지 않아요. 다시 확인해 주세요."
+                : ex.getMessage();
     }
 
     private ResponseEntity<String> htmlError(HttpStatus status, String code, String title, String message, String retryUrl) {

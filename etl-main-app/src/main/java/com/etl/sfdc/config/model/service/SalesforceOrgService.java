@@ -54,6 +54,7 @@ public class SalesforceOrgService {
                                                                       String clientSecret,
                                                                       boolean isDefault) {
         String myDomain = normalizeMyDomain(myDomainInput);
+        // orgKey는 Salesforce orgId가 아니라, 현재 시스템에서 org를 식별하기 위한 myDomain 기반 natural key입니다.
         String resolvedOrgKey = normalizeMyDomain(myDomain);
 
         String sourceOrgName = (orgNameInput == null || orgNameInput.isBlank()) ? resolvedOrgKey : orgNameInput;
@@ -99,6 +100,21 @@ public class SalesforceOrgService {
 
         repository.upsertSalesforceOrg(existing);
         ensureOrgSchemaExists(schemaName);
+        return repository.findByOrgKey(existing.getOrgKey());
+    }
+
+    public SalesforceOrgCredential updateClientCredentials(String orgKey,
+                                                       String clientId,
+                                                       String clientSecret) {
+        SalesforceOrgCredential existing = repository.findByOrgKey(orgKey);
+        if (existing == null) {
+            throw new AppException("존재하지 않는 Org입니다.");
+        }
+
+        existing.setClientId(clientId);
+        existing.setClientSecret(clientSecret);
+        existing.setIsActive(true);
+        repository.upsertSalesforceOrg(existing);
         return repository.findByOrgKey(existing.getOrgKey());
     }
 

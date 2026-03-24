@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'io.spring.dependency-management' version "${springDependencyManagementVersion}" apply false
-    id 'org.springframework.boot' version "${springBootVersion}" apply false
+    alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.spring.boot) apply false
 }
 
 allprojects {
@@ -30,7 +30,7 @@ subprojects {
     plugins.withId('io.spring.dependency-management') {
         dependencyManagement {
             imports {
-                mavenBom "org.springframework.boot:spring-boot-dependencies:${springBootVersion}"
+                mavenBom "org.springframework.boot:spring-boot-dependencies:${libs.versions.spring.boot.get()}"
             }
         }
     }
@@ -47,7 +47,8 @@ configure([
     apply plugin: 'io.spring.dependency-management'
 
     dependencies {
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+        testImplementation libs.junitJupiter
+        testRuntimeOnly libs.junitPlatformLauncher
     }
 }
 
@@ -61,7 +62,7 @@ configure([
     apply plugin: 'io.spring.dependency-management'
 
     dependencies {
-        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testImplementation libs.springBootStarterTest
     }
 
     // For app modules: jar disabled, bootJar enabled (default in Boot)

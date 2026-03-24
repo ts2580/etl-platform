@@ -1,9 +1,15 @@
 app:
-  # DB optional mode.
-  # false: 파일 엔진 화면/CSS 및 기본 엔드포인트만 확인 가능
-  # true : DB 조회/업데이트 기능 활성화
   db:
     enabled: ${APP_DB_ENABLED:false}
+  main:
+    base-url: ${MAIN_APP_BASE_URL:http://localhost:8080}
+
+spring:
+  datasource:
+    url: ${DB_URL:}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.mariadb.jdbc.Driver
 
 salesforce:
   # 파일 엔진은 메인 모듈이 저장한 org/myDomain/accessToken 정보를 조회해 사용합니다.
@@ -12,20 +18,3 @@ salesforce:
 
 server:
   port: ${FILE_APP_PORT:9443}
-
-spring:
-  datasource:
-    # APP_DB_ENABLED=true 일 때만 실제 값 필요
-    url: ${DB_URL:}
-    username: ${DB_USERNAME:}
-    password: ${DB_PASSWORD:}
-    driver-class-name: org.mariadb.jdbc.Driver
-
-mybatis:
-  mapper-locations: classpath:mapper/**/*.xml
-  configuration:
-    mapUnderscoreToCamelCase: true
-
-logging:
-  level:
-    com.sfdcupload.mapper.ExcelMapper: OFF

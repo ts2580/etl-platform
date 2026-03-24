@@ -7,6 +7,7 @@ import com.etl.sfdc.common.UserSession;
 import com.etl.sfdc.etl.dto.ObjectDefinition;
 import com.etl.sfdc.etl.dto.ObjectSearchResult;
 import com.etl.sfdc.etl.service.ETLService;
+import com.etl.sfdc.storage.service.DatabaseStorageQueryService;
 import com.etlplatform.common.error.AppException;
 import com.etlplatform.common.validation.RequestValidationUtils;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,14 +34,18 @@ import java.util.Map;
 @Slf4j
 public class ETLController {
 
+
+
     private final UserSession userSession;
     private final SalesforceTokenManager tokenManager;
     private final ETLService etlService;
+    private final DatabaseStorageQueryService databaseStorageQueryService;
     private final SalesforceOrgService salesforceOrgService;
 
     @GetMapping("/objects")
     public String getObjects(Model model, HttpSession session, HttpServletResponse response,
                             @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
+                            @RequestParam(value = "targetStorageId", required = false) Long requestedTargetStorageId,
                             @RequestParam(value = "q", required = false) String searchQuery,
                             @RequestParam(value = "selectedObject", required = false) String selectedObject,
                             @RequestParam(value = "status", required = false, defaultValue = "ALL") String statusFilter,
@@ -120,14 +125,18 @@ public class ETLController {
 
         String defaultSelectedObject = selectedObjectExists
                 ? normalizedSelectedObject
-                : filteredObjects.stream()
-                    .map(ObjectDefinition::getName)
-                    .filter(ingestionStatusByObject::containsKey)
-                    .findFirst()
-                    .orElseGet(() -> filteredObjects.stream().findFirst().map(ObjectDefinition::getName).orElse(null));
+                : null;
+
+        var routingTargetStorages = databaseStorageQueryService.getRoutingTargetOptions();
+        Long selectedTargetStorageId = requestedTargetStorageId;
+        if (selectedTargetStorageId == null && !routingTargetStorages.isEmpty()) {
+            selectedTargetStorageId = routingTargetStorages.get(0).getId();
+        }
 
         model.addAttribute("activeOrgs", salesforceOrgService.getActiveOrgs());
         model.addAttribute("activeOrgKey", context.org != null ? context.org.getOrgKey() : null);
+        model.addAttribute("routingTargetStorages", routingTargetStorages);
+        model.addAttribute("selectedTargetStorageId", selectedTargetStorageId);
         model.addAttribute("objectDefinitions", pagedObjects);
         model.addAttribute("cdcSlotSummary", etlService.getCdcSlotSummary());
         model.addAttribute("ingestionStatusByObject", ingestionStatusByObject);
@@ -199,12 +208,15 @@ public class ETLController {
     }
 
     @GetMapping("/routes/detail")
-    public String getRouteDetail(@RequestParam("selectedObject") String selectedObject,
-                                 @RequestParam("routingProtocol") String routingProtocol,
+    public String getRouteDetail(@RequestParam(value = "selectedObject", required = false) String selectedObject,
+                                 @RequestParam(value = "routingProtocol", required = false) String routingProtocol,
                                  @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
                                  Model model,
                                  HttpSession session,
                                  HttpServletResponse response) throws Exception {
+        if (selectedObject == null || selectedObject.isBlank() || routingProtocol == null || routingProtocol.isBlank()) {
+            return redirectToDashboardWithMessage("route_detail_direct_access", requestedOrgKey);
+        }
         ExecutionContext context = resolveExecutionContext(session, requestedOrgKey);
         if (context.accessToken == null) {
             response.sendRedirect("/etl/orgs?message=need_org_auth" + (context.org != null ? "&orgKey=" + context.org.getOrgKey() + "&reason=refresh_failed" : ""));
@@ -271,11 +283,12 @@ public class ETLController {
     @PostMapping("/reprocess")
     public String reprocessObject(@RequestParam("selectedObject") String selectedObject,
                                   @RequestParam("ingestionMode") String ingestionMode,
+                                  @RequestParam(value = "targetStorageId", required = false) Long targetStorageId,
                                   @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
                                   Model model,
                                   HttpSession session,
                                   HttpServletResponse response) throws Exception {
-        return setObjects(selectedObject, ingestionMode, requestedOrgKey, model, session, response);
+        return setObjects(selectedObject, ingestionMode, targetStorageId, requestedOrgKey, model, session, response);
     }
 
     @PostMapping("/release")
@@ -334,7 +347,15 @@ public class ETLController {
                 return "redirect:/etl/dashboard" + (context.org != null ? "?orgKey=" + context.org.getOrgKey() : "");
             }
 
-            model.addAttribute("resultSummary", resultSummary);
+            model.addAttribute("resultSummary", ensureResultSummary(
+                    resultSummary,
+                    sanitizedObject,
+                    sanitizedMode,
+                    null,
+                    context.org == null ? null : context.org.getOrgKey(),
+                    context.org == null ? null : context.org.getOrgName(),
+                    "라우팅 엔진 응답이 비어있어요."
+            ));
             return "etl_result_summary";
         } catch (AppException e) {
             if (e.getMessage() != null && e.getMessage().contains("401") && context.org != null) {
@@ -354,7 +375,15 @@ public class ETLController {
                         return "redirect:/etl/dashboard" + (context.org != null ? "?orgKey=" + context.org.getOrgKey() : "");
                     }
 
-                    model.addAttribute("resultSummary", retrySummary);
+                    model.addAttribute("resultSummary", ensureResultSummary(
+                            retrySummary,
+                            sanitizedObject,
+                            sanitizedMode,
+                            null,
+                            context.org.getOrgKey(),
+                            context.org == null ? null : context.org.getOrgName(),
+                            "재시도 결과가 비어있어요."
+                    ));
                     return "etl_result_summary";
                 }
             }
@@ -365,6 +394,7 @@ public class ETLController {
     @PostMapping("/ddl")
     public String setObjects(@RequestParam("selectedObject") String selectedObject,
                              @RequestParam("ingestionMode") String ingestionMode,
+                             @RequestParam(value = "targetStorageId", required = false) Long targetStorageId,
                              @RequestParam(value = "orgKey", required = false) String requestedOrgKey,
                              Model model,
                              HttpSession session,
@@ -393,13 +423,22 @@ public class ETLController {
             Map<String, Object> resultSummary = etlService.setObjects(
                     sanitizedObject,
                     sanitizedMode,
+                    targetStorageId,
                     accessToken,
                     actor,
                     context.myDomain,
                     context.org == null ? null : context.org.getOrgKey(),
                     context.org == null ? "default" : context.org.getOrgName()
             );
-            model.addAttribute("resultSummary", resultSummary);
+            model.addAttribute("resultSummary", ensureResultSummary(
+                    resultSummary,
+                    sanitizedObject,
+                    sanitizedMode,
+                    targetStorageId,
+                    context.org == null ? null : context.org.getOrgKey(),
+                    context.org == null ? null : context.org.getOrgName(),
+                    "라우팅 엔진 응답이 비어있어요."
+            ));
             return "etl_result_summary";
         } catch (AppException e) {
             if (e.getMessage() != null && e.getMessage().contains("401") && context.org != null) {
@@ -409,13 +448,22 @@ public class ETLController {
                     Map<String, Object> resultSummary = etlService.setObjects(
                             sanitizedObject,
                             sanitizedMode,
+                            targetStorageId,
                             refreshedAccessToken,
                             actor,
                             context.myDomain,
                             context.org.getOrgKey(),
                             context.org.getOrgName()
                     );
-                    model.addAttribute("resultSummary", resultSummary);
+                    model.addAttribute("resultSummary", ensureResultSummary(
+                            resultSummary,
+                            sanitizedObject,
+                            sanitizedMode,
+                            targetStorageId,
+                            context.org.getOrgKey(),
+                            context.org == null ? null : context.org.getOrgName(),
+                            "재시도 결과가 비어있어요."
+                    ));
                     return "etl_result_summary";
                 }
                 response.sendRedirect("/etl/orgs?message=need_org_auth&reason=refresh_failed&orgKey=" + context.org.getOrgKey());
@@ -439,9 +487,67 @@ public class ETLController {
             failureSummary.put("failureStage", "UNKNOWN");
             failureSummary.put("failureDetail", e.getMessage());
             failureSummary.put("slotRegistryStatus", "NOT_STARTED");
+            failureSummary.put("sourceOrgKey", context.org == null ? null : context.org.getOrgKey());
+            failureSummary.put("sourceOrgName", context.org == null ? null : context.org.getOrgName());
+            failureSummary.put("targetStorageId", targetStorageId);
             model.addAttribute("resultSummary", failureSummary);
             return "etl_result_summary";
         }
+    }
+
+    @GetMapping("/ddl")
+    public String redirectDirectDdlAccess(@RequestParam(value = "orgKey", required = false) String requestedOrgKey) {
+        return redirectToObjectsWithMessage("ddl_direct_access", requestedOrgKey);
+    }
+
+    private String redirectToObjectsWithMessage(String messageKey, String requestedOrgKey) {
+        StringBuilder redirect = new StringBuilder("redirect:/etl/objects?message=").append(messageKey);
+        if (requestedOrgKey != null && !requestedOrgKey.isBlank()) {
+            redirect.append("&orgKey=").append(requestedOrgKey);
+        }
+        return redirect.toString();
+    }
+
+    private String redirectToDashboardWithMessage(String messageKey, String requestedOrgKey) {
+        StringBuilder redirect = new StringBuilder("redirect:/etl/dashboard?message=").append(messageKey);
+        if (requestedOrgKey != null && !requestedOrgKey.isBlank()) {
+            redirect.append("&orgKey=").append(requestedOrgKey);
+        }
+        return redirect.toString();
+    }
+
+    private Map<String, Object> ensureResultSummary(Map<String, Object> resultSummary,
+                                                   String selectedObject,
+                                                   String ingestionMode,
+                                                   Long targetStorageId,
+                                                   String sourceOrgKey,
+                                                   String sourceOrgName,
+                                                   String fallbackMessage) {
+        if (resultSummary != null) {
+            return resultSummary;
+        }
+
+        Map<String, Object> fallback = new HashMap<>();
+        fallback.put("selectedObject", selectedObject);
+        fallback.put("ingestionMode", ingestionMode);
+        fallback.put("endpoint", "CDC".equalsIgnoreCase(ingestionMode) ? "/pubsub" : "/streaming");
+        fallback.put("status", "FAILED");
+        fallback.put("message", "라우팅 응답이 비어 있었어요.");
+        fallback.put("engineMessage", fallbackMessage);
+        fallback.put("responseBody", fallbackMessage);
+        fallback.put("initialLoadCount", 0);
+        fallback.put("subscribeStatus", "NOT_STARTED");
+        fallback.put("pushTopicStatus", "NOT_STARTED");
+        fallback.put("cdcCreationStatus", "NOT_STARTED");
+        fallback.put("cdcCreationMessage", "실패로 인해 CDC 생성 단계가 완료되지 않았어요.");
+        fallback.put("failureStage", "UNKNOWN");
+        fallback.put("failureDetail", fallbackMessage);
+        fallback.put("slotRegistryStatus", "NOT_STARTED");
+        fallback.put("sourceOrgKey", sourceOrgKey);
+        fallback.put("sourceOrgName", sourceOrgName);
+        fallback.put("targetStorageId", targetStorageId);
+
+        return fallback;
     }
 
     private ExecutionContext resolveExecutionContext(HttpSession session, String requestedOrgKey) throws Exception {

@@ -6,6 +6,7 @@ import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
 import com.apache.sfdc.common.SalesforceRouterBuilderCDC;
 import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.pubsub.repository.PubSubRepository;
+import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
 import com.etlplatform.common.error.AppException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -47,6 +48,7 @@ public class PubSubServiceImpl implements PubSubService {
     private static final Logger log = LoggerFactory.getLogger(PubSubServiceImpl.class);
 
     private final PubSubRepository pubSubRepository;
+    private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Map<String, PubSubRuntimeState> runtimeStates = new ConcurrentHashMap<>();
 
     @Value("${camel.component.salesforce.instance-url}")
@@ -163,8 +165,13 @@ public class PubSubServiceImpl implements PubSubService {
         }
         SqlSanitizer.validateTableName(selectedObject);
 
-        String ddl = "DROP TABLE IF EXISTS `" + targetSchema + "`." + "`" + selectedObject + "`";
-        pubSubRepository.setTable(ddl);
+        Long targetStorageId = resolveTargetStorageId(mapProperty);
+        String ddl = SalesforceObjectSchemaBuilder.buildDropTableSql(
+                targetSchema,
+                selectedObject,
+                routingJdbcExecutor.resolveStrategy(targetStorageId)
+        );
+        routingJdbcExecutor.executeDdl("CDC", ddl, targetStorageId);
     }
 
     @Override
@@ -195,10 +202,17 @@ public class PubSubServiceImpl implements PubSubService {
                 .build();
 
         SchemaResult schemaResult;
+        Long targetStorageId = resolveTargetStorageId(mapProperty);
 
         try (Response response = client.newCall(request).execute()) {
             JsonNode responseBody = objectMapper.readTree(response.body().string());
-            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(targetSchema, selectedObject, responseBody.get("fields"), objectMapper);
+            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(
+                    targetSchema,
+                    selectedObject,
+                    responseBody.get("fields"),
+                    objectMapper,
+                    routingJdbcExecutor.resolveStrategy(targetStorageId)
+            );
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
         }
@@ -208,7 +222,7 @@ public class PubSubServiceImpl implements PubSubService {
                 selectedObject,
                 schemaResult.mapType() == null ? 0 : schemaResult.mapType().size(),
                 schemaResult.mapType() == null ? java.util.List.of() : schemaResult.mapType().keySet().stream().sorted().limit(80).toList());
-        pubSubRepository.setTable(schemaResult.ddl());
+        routingJdbcExecutor.executeDdl("CDC", schemaResult.ddl(), targetStorageId);
 
         boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
         if (skipInitialLoad) {
@@ -235,12 +249,25 @@ public class PubSubServiceImpl implements PubSubService {
             JsonNode records = rootNode.get("records");
 
             if (records != null && !records.isEmpty()) {
-                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
-                String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
-                List<String> listUnderQuery = collectInsertRows(records, schemaResult);
-
                 Instant start = Instant.now();
-                int insertedData = pubSubRepository.insertObject(upperQuery, listUnderQuery, tailQuery);
+                int insertedData;
+                if (routingJdbcExecutor.usesExternalStorage(targetStorageId)) {
+                    insertedData = routingJdbcExecutor.insert(
+                            SalesforceObjectSchemaBuilder.buildPreparedInsertBatch(
+                                    targetSchema,
+                                    selectedObject,
+                                    schemaResult,
+                                    records,
+                                    routingJdbcExecutor.resolveStrategy(targetStorageId)
+                            ),
+                            targetStorageId
+                    );
+                } else {
+                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
+                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
+                    List<String> listUnderQuery = collectInsertRows(records, schemaResult);
+                    insertedData = routingJdbcExecutor.insert("CDC", upperQuery, listUnderQuery, tailQuery, targetStorageId);
+                }
                 Instant end = Instant.now();
                 Duration interval = Duration.between(start, end);
 
@@ -294,7 +321,7 @@ public class PubSubServiceImpl implements PubSubService {
         applySalesforceAuth(sfEcology, mapProperty, authType);
         sfEcology.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(targetSchema, selectedObject, mapType, pubSubRepository);
+        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(targetSchema, selectedObject, mapType, routingJdbcExecutor, resolveTargetStorageId(mapProperty));
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfEcology);
@@ -399,6 +426,8 @@ public class PubSubServiceImpl implements PubSubService {
         copyIfPresent(current, updates, "orgName");
         copyIfPresent(current, updates, "targetSchema");
         copyIfPresent(current, updates, "targetTable");
+        copyIfPresent(current, updates, "targetStorageId");
+        copyIfPresent(current, updates, "targetStorageName");
         copyIfPresent(current, updates, "instanceName");
         copyIfPresent(current, updates, "orgType");
         copyIfPresent(current, updates, "isSandbox");
@@ -432,6 +461,21 @@ public class PubSubServiceImpl implements PubSubService {
             listUnderQuery.add(SalesforceObjectSchemaBuilder.buildInsertValues(record, schemaResult.fields(), schemaResult.mapType()));
         }
         return listUnderQuery;
+    }
+
+    private Long resolveTargetStorageId(Map<String, String> mapProperty) {
+        if (mapProperty == null) {
+            return null;
+        }
+        String raw = mapProperty.get("targetStorageId");
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new AppException("targetStorageId 값이 올바르지 않습니다: " + raw, e);
+        }
     }
 
     private String resolveLoginUrl(String instanceUrl) {

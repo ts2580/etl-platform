@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ETL 서버</title>
+    <title>세일즈포스 ETL 워크스페이스</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/css/top-progress.css">
@@ -15,16 +15,8 @@
 <div id="top-progress-bar" aria-hidden="true"></div>
 
 <div class="mx-auto flex min-h-screen w-full max-w-5xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
-        <div class="flex items-start gap-3">
-            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🌿</span>
-            <div>
-                <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">세일즈포스 ETL 워크스페이스</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">연결, 오브젝트 선택, 적재 실행까지 한 흐름으로 진행할 수 있어요.</p>
-            </div>
-        </div>
-
-        <div th:if="${!dbEnabled}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6 sm:p-5">
+    <main class="w-full sm:p-2" th:classappend="${#authorization.expression('isAuthenticated()')} ? ' rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8' : ''">
+        <div th:if="${!dbEnabled}" class="mx-auto mt-5 w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6 sm:p-5">
             <div class="flex items-start gap-3">
                 <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
                 <div>
@@ -34,19 +26,44 @@
             </div>
         </div>
 
-        <div sec:authorize="isAnonymous()" class="mt-5 space-y-3 text-sm sm:mt-6 sm:text-base">
-            <div th:if="${dbEnabled}" class="grid gap-3 sm:grid-cols-2">
-                <a class="rounded-2xl border border-[#d9ddfb] bg-indigo-50/60 p-4 shadow-sm transition hover:bg-indigo-100/70" th:href="@{/user/login}">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 인증</p>
-                    <p class="mt-2 text-base font-bold text-[#312e81]">로그인</p>
-                    <p class="mt-1 text-sm leading-6 text-slate-500">기존 계정으로 접속해 ETL 작업을 이어갈 수 있어요.</p>
-                </a>
-                <a class="rounded-2xl border border-violet-100 bg-violet-50/60 p-4 shadow-sm transition hover:bg-violet-100/70" th:href="@{/user/signup}">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-violet-500 sm:text-xs">ℹ️ 시작하기</p>
-                    <p class="mt-2 text-base font-bold text-[#4f46e5]">회원가입</p>
-                    <p class="mt-1 text-sm leading-6 text-slate-500">새 계정을 만들어 작업 환경을 준비할 수 있어요.</p>
-                </a>
+        <div sec:authorize="isAnonymous()" class="mx-auto mt-5 w-full max-w-2xl space-y-4 text-sm sm:mt-6 sm:text-base">
+            <div th:if="${param.error}" class="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+                <p class="text-sm font-semibold text-rose-700" th:if="${param.error.contains('login')}">아이디 또는 비밀번호를 확인해 주세요.</p>
+                <p class="text-sm font-semibold text-rose-700" th:if="${param.error.contains('session')}">중복 로그인이 감지되어 세션이 만료되었어요. 다시 로그인해 주세요.</p>
             </div>
+
+            <div th:if="${param.signup}" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                <p class="text-sm font-semibold text-emerald-700">회원가입이 완료되었어요. 방금 만든 계정으로 바로 로그인해 주세요.</p>
+            </div>
+
+            <div th:if="${dbEnabled}">
+                <form method="post" id="login-form" th:action="@{/user/login}" class="space-y-4 rounded-[24px] border border-[#d9ddfb] bg-white p-5 shadow-xl shadow-[#c7d2fe]/30 sm:p-6">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 인증</p>
+                            <h3 class="mt-2 text-xl font-bold tracking-tight text-[#312e81]">로그인</h3>
+                        </div>
+                        <a class="inline-flex h-11 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 text-sm font-semibold text-violet-700 transition hover:bg-violet-100" th:href="@{/user/signup}">회원가입</a>
+                    </div>
+
+                    <div>
+                        <label for="id" class="mb-2 block text-sm font-semibold text-[#2b2f5a]">아이디</label>
+                        <div class="rounded-md border border-[#d4d9ff] bg-[#f8faff] px-4 focus-within:border-[#6366f1] focus-within:ring-1 focus-within:ring-[#6366f1]">
+                            <input type="text" name="id" id="id" placeholder="아이디" autocomplete="username" class="h-14 w-full border-0 bg-transparent text-base outline-none placeholder:text-[#bfbfbf]">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="password" class="mb-2 block text-sm font-semibold text-[#2b2f5a]">비밀번호</label>
+                        <div class="rounded-md border border-[#d4d9ff] bg-[#f8faff] px-4 focus-within:border-[#6366f1] focus-within:ring-1 focus-within:ring-[#6366f1]">
+                            <input type="password" name="password" id="password" placeholder="비밀번호" autocomplete="current-password" class="h-14 w-full border-0 bg-transparent text-base outline-none placeholder:text-[#bfbfbf]">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="inline-flex h-14 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 text-lg font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">로그인</button>
+                </form>
+            </div>
+
             <div th:if="${!dbEnabled}" class="grid gap-3 sm:grid-cols-2">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-500 shadow-sm">
                     <p class="text-base font-bold">로그인 비활성</p>
@@ -61,62 +78,137 @@
 
         <div sec:authorize="isAuthenticated()" class="mt-5 sm:mt-6">
             <div class="rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:p-5">
-                <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ 현재 사용자</p>
-                <p class="mt-2 text-base font-bold text-slate-800 sm:text-lg"><strong>[[${displayName}]]</strong>님</p>
-                <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
-                <p class="mt-2 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
-
-                <div class="mt-4 rounded-2xl border border-emerald-200 bg-white/80 p-4 shadow-sm" th:if="${activeOrg != null}">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-600 sm:text-xs">✅ 현재 선택된 Salesforce Org</p>
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700"
-                              th:text="${activeOrg.orgName}">Org Name</span>
-                        <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
-                              th:text="${activeOrg.orgKey}">orgKey</span>
-                    </div>
-                    <p class="mt-2 text-sm text-slate-500" th:text="${activeOrg.myDomain}">myDomain</p>
-                </div>
-
-                <div class="mt-4 rounded-2xl border border-amber-200 bg-white/80 p-4 shadow-sm" th:if="${activeOrg == null}">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-600 sm:text-xs">⚠️ 현재 선택된 Salesforce Org 없음</p>
-                    <p class="mt-2 text-sm text-slate-500">아직 선택된 org가 없어요. 아래에서 Salesforce Org 관리를 열어 선택해 주세요.</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">🌿 Salesforce ETL 워크스페이스</p>
+                <p class="mt-2 text-lg font-bold text-slate-800 sm:text-xl"><strong>[[${displayName}]]</strong>님</p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <p class="text-sm text-slate-600" sec:authorize="hasAuthority('ROLE_ADMIN')">권한: 관리자</p>
+                    <p class="text-sm text-slate-600" sec:authorize="hasAuthority('ROLE_USER')">권한: 사용자</p>
                 </div>
             </div>
 
-            <div class="mt-4 rounded-2xl border border-[#d9ddfb] bg-white p-4 sm:p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-semibold text-slate-700">등록된 Salesforce Org</p>
-                        <p class="mt-1 text-xs text-slate-500">현재 등록된 오그를 빠르게 확인해 주세요.</p>
-                    </div>
-                    <a class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white" th:href="@{/etl/orgs}">관리로 이동</a>
+            <div class="mt-4 rounded-2xl border border-[#d9ddfb] bg-white">
+                <div class="grid grid-cols-3 overflow-hidden rounded-t-2xl border-b text-sm" role="tablist" aria-label="메인 메뉴 탭">
+                    <button
+                        type="button"
+                        data-tab-button="summary"
+                        class="tab-btn border-r border-slate-100 px-3 py-3 text-left font-semibold text-slate-600 transition hover:bg-slate-50"
+                        aria-selected="true">
+                        <span class="inline-flex items-center gap-1.5"><span>📌</span><span>요약</span></span>
+                    </button>
+                    <button
+                        type="button"
+                        data-tab-button="orgs"
+                        class="tab-btn border-r border-slate-100 px-3 py-3 text-left font-semibold text-slate-600 transition hover:bg-slate-50"
+                        aria-selected="false">
+                        <span class="inline-flex items-center gap-1.5"><span>🗂</span><span>Org 관리</span></span>
+                    </button>
+                    <button
+                        type="button"
+                        data-tab-button="quick"
+                        class="tab-btn px-3 py-3 text-left font-semibold text-slate-600 transition hover:bg-slate-50"
+                        aria-selected="false">
+                        <span class="inline-flex items-center gap-1.5"><span>⚡</span><span>빠른 작업</span></span>
+                    </button>
                 </div>
-                <div class="mt-3 overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <tbody>
-                        <tr th:if="${orgs == null || #lists.isEmpty(orgs)}">
-                            <td colspan="2" class="py-3 text-slate-500">등록된 Org이 없습니다.</td>
-                        </tr>
-                        <tr th:each="org : ${orgs}" class="border-t">
-                            <td class="py-2" th:text="${org.orgName}"></td>
-                            <td class="py-2 text-right text-slate-500" th:text="${org.myDomain}"></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            <div class="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-2 lg:grid-cols-5">
-                <form th:action="@{/user/logout}" method="post" class="inline">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100">로그아웃</button>
-                </form>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/orgs}">Salesforce Org 관리</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects}">오브젝트 선택</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/dashboard}">라우팅 대시보드</a>
-                <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="${activeOrg != null} ? @{'http://192.168.0.62:9443/file'(orgKey=${activeOrg.orgKey})} : @{'http://192.168.0.62:9443/file'}">파일 엔진</a>
+                <div class="p-4 sm:p-5">
+                    <section data-tab-panel="summary" class="tab-panel space-y-4">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm" th:if="${activeOrg != null}">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-600 sm:text-xs">✅ 현재 선택된 Salesforce Org</p>
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700" th:text="${activeOrg.orgName}">Org Name</span>
+                                <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600" th:text="${activeOrg.orgKey}">orgKey</span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm" th:if="${activeOrg == null}">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-600 sm:text-xs">⚠️ 현재 선택된 Salesforce Org 없음</p>
+                            <p class="mt-2 text-sm text-slate-700">아직 선택된 Org가 없어요. Org 관리를 열고 하나 선택해 주세요.</p>
+                        </div>
+
+                        <div class="rounded-2xl border border-[#d9ddfb] bg-slate-50 p-4">
+                            <p class="text-sm font-semibold text-slate-700">오늘의 상태</p>
+                            <p class="mt-1 text-sm text-slate-500">오브젝트 선택, 라우팅 설정, 적재 실행을 한 곳에서 빠르게 이동할 수 있어요.</p>
+                        </div>
+                    </section>
+
+                    <section data-tab-panel="orgs" class="tab-panel hidden space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-700">등록된 Salesforce Org</p>
+                                <p class="mt-1 text-xs text-slate-500">현재 등록된 Org를 빠르게 확인해 주세요.</p>
+                            </div>
+                            <a class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white" th:href="@{/etl/orgs}">관리로 이동</a>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                            <table class="w-full text-sm">
+                                <tbody>
+                                <tr th:if="${orgs == null || #lists.isEmpty(orgs)}">
+                                    <td colspan="2" class="py-3 px-3 text-slate-500">등록된 Org이 없습니다.</td>
+                                </tr>
+                                <tr th:each="org : ${orgs}" class="border-t">
+                                    <td class="py-2 px-3" th:text="${org.orgName}">Org Name</td>
+                                    <td class="py-2 px-3 text-right text-slate-500" th:text="${org.myDomain}">https://example.my.salesforce.com</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section data-tab-panel="quick" class="tab-panel hidden space-y-3">
+                        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/objects}">오브젝트 선택</a>
+                            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/etl/dashboard}">라우팅 대시보드</a>
+                            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="@{/storages/databases}">외부 DB 저장소 관리</a>
+                            <a class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]" th:href="${activeOrg != null} ? ${fileEngineBaseUrl + '/file?orgKey=' + activeOrg.orgKey} : ${fileEngineBaseUrl + '/file'}">파일 엔진</a>
+                            <a class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-[#312e81] transition hover:bg-indigo-100" th:href="@{/etl/orgs}">Salesforce Org 관리</a>
+                            <form th:action="@{/user/logout}" method="post" class="inline">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">로그아웃</button>
+                            </form>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
+
+        <script>
+            (function () {
+                const buttons = Array.from(document.querySelectorAll('[data-tab-button]'));
+                const panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+
+                if (!buttons.length || !panels.length) {
+                    return;
+                }
+
+                const setActiveTab = (tab) => {
+                    buttons.forEach((btn) => {
+                        const isActive = btn.dataset.tabButton === tab;
+                        btn.setAttribute('aria-selected', String(isActive));
+                        btn.classList.toggle('bg-white', isActive);
+                        btn.classList.toggle('text-indigo-700', isActive);
+                        btn.classList.toggle('font-bold', isActive);
+                        btn.classList.toggle('text-slate-600', !isActive);
+                        btn.classList.toggle('font-semibold', !isActive);
+                    });
+                    panels.forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.tabPanel !== tab);
+                    });
+                    localStorage.setItem('home_tab', tab);
+                };
+
+                const defaultTab = buttons.find((btn) => btn.dataset.tabButton)?.dataset.tabButton || 'summary';
+                const savedTab = localStorage.getItem('home_tab');
+                const validSaved = buttons.some((btn) => btn.dataset.tabButton === savedTab) ? savedTab : defaultTab;
+                setActiveTab(validSaved);
+
+                buttons.forEach((btn) => {
+                    btn.addEventListener('click', () => setActiveTab(btn.dataset.tabButton));
+                });
+            })();
+        </script>
+
     </main>
 </div>
 </body>

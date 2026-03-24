@@ -10,116 +10,54 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-18T17:24:28.399+09:00  INFO 429971 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 429971 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-18T17:24:28.403+09:00  INFO 429971 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
-2026-03-18T17:24:29.686+09:00  INFO 429971 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-03-18T17:24:29.689+09:00  INFO 429971 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-03-18T17:24:29.728+09:00  INFO 429971 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 18 ms. Found 0 Redis repository interfaces.
-2026-03-18T17:24:30.578+09:00  INFO 429971 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
-2026-03-18T17:24:30.602+09:00  INFO 429971 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-18T17:24:30.602+09:00  INFO 429971 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-18T17:24:30.646+09:00  INFO 429971 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-18T17:24:30.648+09:00  INFO 429971 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2133 ms
+2026-03-24T11:48:06.442+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 274285 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-24T11:48:06.448+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
+2026-03-24T11:48:07.946+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-24T11:48:07.950+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-24T11:48:07.992+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 20 ms. Found 0 Redis repository interfaces.
+2026-03-24T11:48:08.996+09:00  INFO 274285 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
+2026-03-24T11:48:09.019+09:00  INFO 274285 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-24T11:48:09.020+09:00  INFO 274285 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-24T11:48:09.054+09:00  INFO 274285 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-24T11:48:09.055+09:00  INFO 274285 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2438 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-18T17:24:31.701+09:00  INFO 429971 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
-2026-03-18T17:24:32.332+09:00  INFO 429971 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
-2026-03-18T17:24:32.383+09:00  INFO 429971 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is starting
-2026-03-18T17:24:32.393+09:00  INFO 429971 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
-2026-03-18T17:24:32.394+09:00  INFO 429971 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) started in 9ms (build:0ms init:0ms start:9ms)
-2026-03-18T17:24:32.402+09:00  INFO 429971 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 4.932 seconds (process running for 5.792)
-2026-03-18T17:24:32.420+09:00  INFO 429971 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-18T17:24:32.494+09:00  INFO 429971 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@7857cb1d
-2026-03-18T17:24:32.496+09:00  INFO 429971 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-18T17:24:32.518+09:00  INFO 429971 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup skip: no ACTIVE routes found in routing_registry
-2026-03-18T17:25:23.602+09:00  INFO 429971 --- [nio-3931-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-18T17:25:23.602+09:00  INFO 429971 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-18T17:25:23.603+09:00  INFO 429971 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2026-03-18T17:25:27.811+09:00  INFO 429971 --- [nio-3931-exec-2] c.a.s.s.controller.StreamingController   : Starting streaming pipeline. selectedObject=AccountCleanInfo
-2026-03-18T17:25:29.010+09:00  WARN 429971 --- [nio-3931-exec-2] c.a.s.s.service.StreamingServiceImpl     : 테이블에 데이터 없음
-2026-03-18T17:25:29.515+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) is starting
-2026-03-18T17:25:29.572+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
-2026-03-18T17:25:30.039+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.c.s.internal.SalesforceSession     : Login successful
-2026-03-18T17:25:30.040+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
-2026-03-18T17:25:30.663+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
-2026-03-18T17:25:30.663+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
-2026-03-18T17:25:30.669+09:00  WARN 429971 --- [nio-3931-exec-2] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
-2026-03-18T17:25:30.670+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/AccountCleanInfo`
-2026-03-18T17:25:30.670+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/AccountCleanInfo...
-2026-03-18T17:25:30.672+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
-2026-03-18T17:25:30.672+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://subscribe:AccountCleanInfo)
-2026-03-18T17:25:30.672+09:00  INFO 429971 --- [nio-3931-exec-2] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-2) started in 1s156ms (build:0ms init:0ms start:1s156ms)
-2026-03-18T17:25:30.687+09:00  INFO 429971 --- [nio-3931-exec-2] c.a.s.s.controller.StreamingController   : Completed streaming pipeline setup. selectedObject=AccountCleanInfo
-2026-03-18T17:25:31.016+09:00  WARN 429971 --- [ent@4465a6fb-65] o.a.c.c.salesforce.StreamingApiConsumer  : Error subscribing to AccountCleanInfo: 400::The channel you requested to subscribe to does not exist {/topic/AccountCleanInfo}. Caused by: [org.apache.camel.component.salesforce.api.SalesforceException - Error subscribing to AccountCleanInfo: 400::The channel you requested to subscribe to does not exist {/topic/AccountCleanInfo}]
-
-org.apache.camel.component.salesforce.api.SalesforceException: Error subscribing to AccountCleanInfo: 400::The channel you requested to subscribe to does not exist {/topic/AccountCleanInfo}
-	at org.apache.camel.component.salesforce.internal.streaming.SubscriptionHelper$5.onMessage(SubscriptionHelper.java:520) ~[camel-salesforce-4.6.0.jar!/:4.6.0]
-	at org.cometd.common.AbstractClientSession$AbstractSessionChannel.notifyOnMessage(AbstractClientSession.java:599) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AbstractClientSession$AbstractSessionChannel.notifyMessageListeners(AbstractClientSession.java:586) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AbstractClientSession.notifyListeners(AbstractClientSession.java:311) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AbstractClientSession.lambda$receive$4(AbstractClientSession.java:268) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.bayeux.Promise$2.succeed(Promise.java:97) ~[cometd-java-api-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AsyncFoldLeft$AbstractLoop.run(AsyncFoldLeft.java:236) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AsyncFoldLeft.run(AsyncFoldLeft.java:107) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AbstractClientSession.extendIncoming(AbstractClientSession.java:99) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.common.AbstractClientSession.receive(AbstractClientSession.java:262) ~[cometd-java-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.BayeuxClient.processMessage(BayeuxClient.java:813) ~[cometd-java-client-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.BayeuxClient.processMessages(BayeuxClient.java:635) ~[cometd-java-client-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.BayeuxClient$MessageTransportListener.onMessages(BayeuxClient.java:1228) ~[cometd-java-client-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.http.common.AbstractHttpClientTransport.processResponseMessages(AbstractHttpClientTransport.java:179) ~[cometd-java-client-http-common-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.http.jetty.JettyHttpClientTransport.access$200(JettyHttpClientTransport.java:52) ~[cometd-java-client-http-jetty-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.cometd.client.http.jetty.JettyHttpClientTransport$ResponseListener.onComplete(JettyHttpClientTransport.java:286) ~[cometd-java-client-http-jetty-8.0.0.beta3.jar!/:8.0.0.beta3]
-	at org.eclipse.jetty.client.transport.ResponseListeners.notifyComplete(ResponseListeners.java:353) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.ResponseListeners.lambda$addCompleteListener$7(ResponseListeners.java:338) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.ResponseListeners.notifyComplete(ResponseListeners.java:353) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.ResponseListeners.notifyComplete(ResponseListeners.java:345) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.HttpReceiver.terminateResponse(HttpReceiver.java:441) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.HttpReceiver.terminateResponse(HttpReceiver.java:423) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.HttpReceiver.lambda$responseSuccess$4(HttpReceiver.java:381) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.SerializedInvoker$Link.run(SerializedInvoker.java:268) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.SerializedInvoker.run(SerializedInvoker.java:168) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.HttpReceiver.responseHeaders(HttpReceiver.java:246) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.internal.HttpReceiverOverHTTP.parse(HttpReceiverOverHTTP.java:333) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.internal.HttpReceiverOverHTTP.parseAndFill(HttpReceiverOverHTTP.java:250) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.internal.HttpReceiverOverHTTP.receive(HttpReceiverOverHTTP.java:77) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.internal.HttpChannelOverHTTP.receive(HttpChannelOverHTTP.java:97) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.client.transport.internal.HttpConnectionOverHTTP.onFillable(HttpConnectionOverHTTP.java:251) ~[jetty-client-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.AbstractConnection$ReadCallback.succeeded(AbstractConnection.java:322) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:105) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.ssl.SslConnection$SslEndPoint.onFillable(SslConnection.java:612) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.ssl.SslConnection.onFillable(SslConnection.java:413) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.ssl.SslConnection$2.succeeded(SslConnection.java:155) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.FillInterest.fillable(FillInterest.java:105) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.io.SelectableChannelEndPoint$1.run(SelectableChannelEndPoint.java:53) ~[jetty-io-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.runTask(AdaptiveExecutionStrategy.java:480) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.consumeTask(AdaptiveExecutionStrategy.java:443) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.tryProduce(AdaptiveExecutionStrategy.java:293) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.strategy.AdaptiveExecutionStrategy.run(AdaptiveExecutionStrategy.java:201) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.ReservedThreadExecutor$ReservedThread.run(ReservedThreadExecutor.java:311) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.QueuedThreadPool.runJob(QueuedThreadPool.java:981) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.doRunJob(QueuedThreadPool.java:1211) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at org.eclipse.jetty.util.thread.QueuedThreadPool$Runner.run(QueuedThreadPool.java:1166) ~[jetty-util-12.0.27.jar!/:12.0.27]
-	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
-
-2026-03-18T17:25:36.727+09:00  INFO 429971 --- [nio-3931-exec-4] c.a.s.s.controller.StreamingController   : Starting streaming pipeline. selectedObject=Account
-2026-03-18T17:25:38.183+09:00  INFO 429971 --- [nio-3931-exec-4] c.a.s.s.service.StreamingServiceImpl     : 테이블 : Account. 삽입된 데이터 수 : 11. 소요시간 : 0시간 0분 0초
-2026-03-18T17:25:38.661+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-3) is starting
-2026-03-18T17:25:38.666+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
-2026-03-18T17:25:39.029+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.c.s.internal.SalesforceSession     : Login successful
-2026-03-18T17:25:39.029+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
-2026-03-18T17:25:39.628+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
-2026-03-18T17:25:39.628+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
-2026-03-18T17:25:39.629+09:00  WARN 429971 --- [nio-3931-exec-4] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
-2026-03-18T17:25:39.629+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.c.s.i.s.SubscriptionHelper         : Set Replay extension to replay from `-1` for channel `/topic/Account`
-2026-03-18T17:25:39.629+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
-2026-03-18T17:25:39.629+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
-2026-03-18T17:25:39.629+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.impl.engine.AbstractCamelContext   :     Started route2 (sf://subscribe:Account)
-2026-03-18T17:25:39.629+09:00  INFO 429971 --- [nio-3931-exec-4] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-3) started in 967ms (build:0ms init:0ms start:967ms)
-2026-03-18T17:25:39.644+09:00  INFO 429971 --- [nio-3931-exec-4] c.a.s.s.controller.StreamingController   : Completed streaming pipeline setup. selectedObject=Account
-2026-03-18T17:25:40.044+09:00  INFO 429971 --- [ent@1c3a57ff-80] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
-2026-03-18T17:25:45.977+09:00  INFO 429971 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-18T17:25:45.979+09:00  INFO 429971 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-18T17:25:45.982+09:00  INFO 429971 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) is shutting down (timeout:45s)
-2026-03-18T17:25:45.983+09:00  INFO 429971 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
-2026-03-18T17:25:45.985+09:00  INFO 429971 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.6.0 (camel-1) shutdown in 2ms (uptime:1m13s)
-2026-03-18T17:25:46.098+09:00  INFO 429971 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-18T17:25:46.107+09:00  INFO 429971 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-24T11:48:10.160+09:00  INFO 274285 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-03-24T11:48:10.862+09:00  INFO 274285 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
+2026-03-24T11:48:10.888+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is starting
+2026-03-24T11:48:10.899+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
+2026-03-24T11:48:10.900+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) started in 10ms (build:0ms init:0ms start:10ms boot:502ms)
+2026-03-24T11:48:10.907+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 5.509 seconds (process running for 6.316)
+2026-03-24T11:48:10.924+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-24T11:48:11.114+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@61b76a7d
+2026-03-24T11:48:11.115+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-24T11:48:11.156+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup begin: targetRoutes=1
+2026-03-24T11:48:11.162+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T11:48:12.573+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Starting...
+2026-03-24T11:48:12.927+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Start completed.
+2026-03-24T11:48:12.930+09:00  INFO 274285 --- [           main] s.s.s.ExternalStorageRoutingJdbcExecutor : Created routed datasource. storageId=3, name=ETL Oracle, vendor=ORACLE, status=VERIFIED
+2026-03-24T11:48:13.357+09:00  INFO 274285 --- [           main] c.a.s.s.service.StreamingServiceImpl     : Skipping initial load during startup recovery. selectedObject=Account, orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T11:48:14.614+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) is starting
+2026-03-24T11:48:14.677+09:00  INFO 274285 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-24T11:48:15.394+09:00  INFO 274285 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-24T11:48:15.395+09:00  INFO 274285 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-24T11:48:16.050+09:00  INFO 274285 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-24T11:48:16.051+09:00  INFO 274285 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-24T11:48:16.053+09:00  WARN 274285 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-24T11:48:16.053+09:00  INFO 274285 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
+2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://subscribe:Account)
+2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) started in 1s440ms (build:0ms init:0ms start:1s440ms)
+2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] streaming route revived without registry rewrite. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account
+2026-03-24T11:48:16.064+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account, protocol=STREAMING
+2026-03-24T11:48:16.064+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup done: targetRoutes=1, recovered=1, skipped=0, failed=0
+2026-03-24T11:48:16.530+09:00  INFO 274285 --- [forceHttpClient] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
+2026-03-24T11:49:32.249+09:00  INFO 274285 --- [nio-3931-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-24T11:49:32.249+09:00  INFO 274285 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-24T11:49:32.250+09:00  INFO 274285 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-24T11:49:49.881+09:00  INFO 274285 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-24T11:49:49.884+09:00  INFO 274285 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-24T11:49:49.886+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is shutting down (timeout:45s)
+2026-03-24T11:49:49.887+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
+2026-03-24T11:49:49.890+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) shutdown in 4ms (uptime:1m39s)
+2026-03-24T11:49:50.007+09:00  INFO 274285 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-24T11:49:50.017+09:00  INFO 274285 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

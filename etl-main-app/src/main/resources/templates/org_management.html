@@ -12,7 +12,7 @@
 <body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
 <div id="top-progress-bar" aria-hidden="true"></div>
 
-<div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+<div class="mx-auto flex min-h-screen w-full max-w-[1600px] items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
     <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex items-start gap-3">
@@ -53,6 +53,36 @@
                 <div>
                     <h3 class="text-base font-bold text-rose-700 sm:text-lg">토큰 갱신 실패</h3>
                     <p class="mt-2 text-sm leading-6 text-slate-700">토큰 갱신에 실패했어요. 접근 토큰 만료일 수 있어요. 로그인 재인증이 필요할 수 있습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_credentials_updated_token_failed'}" class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-amber-700 sm:text-lg">CID/CPW는 수정됐지만 토큰 재갱신 실패</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">새 인증정보로 access token이 발급되지 않았어요. 토큰/라우팅 재시도가 필요합니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_credentials_updated_routing_failed'}" class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-lg sm:h-10 sm:w-10 sm:text-xl">⚠️</span>
+                <div>
+                    <h3 class="text-base font-bold text-rose-700 sm:text-lg">CID/CPW 수정 완료, 라우팅 갱신 실패</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">세션 토큰은 갱신됐지만 라우팅 모듈 자격 증명 갱신이 실패했습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${param.message != null and param.message[0] == 'org_credentials_updated'}" class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:mt-6">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🔑</span>
+                <div>
+                    <h3 class="text-base font-bold text-emerald-700 sm:text-lg">CID/CPW 변경 및 토큰 갱신 완료</h3>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">선택한 Org의 Client ID / Client Secret이 갱신되었고, 세션/라우팅 토큰까지 재설정했어요.</p>
                 </div>
             </div>
         </div>
@@ -175,6 +205,36 @@
             </form>
         </section>
 
+
+        <div th:if="${editOrg != null}" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <a th:href="@{/etl/orgs}" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></a>
+            <div class="relative z-10 w-[92vw] max-w-4xl rounded-2xl border border-indigo-200 bg-white p-5 shadow-2xl sm:p-6">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-600 sm:text-xs">✏️ CID / CPW 변경</p>
+                        <h3 class="mt-1 text-base font-bold text-slate-800">선택 Org의 자격 증명 수정</h3>
+                        <p class="mt-1 text-sm text-slate-600" th:text="|Org: ${editOrg.orgName} (${editOrg.orgKey})|"></p>
+                    </div>
+                    <a th:href="@{/etl/orgs}" class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">닫기</a>
+                </div>
+
+                <form th:action="@{/etl/orgs/update-credentials}" method="post" class="grid gap-3 md:grid-cols-2">
+                    <input type="hidden" name="orgKey" th:value="${editOrg.orgKey}"/>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">Client ID (CID)</label>
+                        <input name="clientId" class="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200" required th:value="${editOrg.clientId}"/>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">Client Secret (CPW)</label>
+                        <input name="clientSecret" type="password" class="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200" required placeholder="새로운 Client Secret"/>
+                    </div>
+                    <div class="md:col-span-2">
+                        <button class="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">CID/CPW 변경 적용</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <section class="mt-5 rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm sm:mt-6">
             <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
                 <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 등록 org 목록</p>
@@ -214,6 +274,7 @@
                                     <input type="hidden" name="returnTo" value="/"/>
                                     <button class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700">선택</button>
                                 </form>
+                                <a th:href="@{/etl/orgs(editOrgKey=${org.orgKey})}" class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-100">CID/CPW 수정</a>
                                 <form th:action="@{/etl/orgs/refresh}" method="post">
                                     <input type="hidden" name="orgKey" th:value="${org.orgKey}"/>
                                     <button class="inline-flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100">토큰 갱신</button>

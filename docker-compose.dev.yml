@@ -1,0 +1,18 @@
+services:
+  etl-all-in-one:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: etl-platform:dev
+    ports:
+      - "8080:8080"
+      - "3931:3931"
+      - "9443:9443"
+    env_file:
+      - .env
+    environment:
+      APP_DB_ENABLED: ${APP_DB_ENABLED:-false}
+      MAIN_APP_PORT: ${MAIN_APP_PORT:-8080}
+      ROUTING_APP_PORT: ${ROUTING_APP_PORT:-3931}
+      FILE_APP_PORT: ${FILE_APP_PORT:-9443}
+      ROUTING_ENGINE_BASE_URL: ${ROUTING_ENGINE_BASE_URL:-http://localhost:3931}

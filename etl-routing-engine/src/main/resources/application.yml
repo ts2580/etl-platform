@@ -2,6 +2,8 @@ app:
   # DB optional mode.
   # false: health/basic endpoint만 확인 가능, streaming/pubsub/redis 적재 기능은 비활성화
   # true : DB/MyBatis/Redis 기반 적재 기능 활성화
+  # external storage 자격증명 복호화는 APP_DB_CREDENTIAL_KEY를 우선 사용하고,
+  # 없을 때만 레거시 app.routing.external-storage.user-key 로 fallback 해요.
   db:
     enabled: ${APP_DB_ENABLED:false}
 

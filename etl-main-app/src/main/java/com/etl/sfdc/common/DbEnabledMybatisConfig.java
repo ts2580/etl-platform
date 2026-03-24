@@ -15,7 +15,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
-@MapperScan({"com.etl.sfdc.config.model.repository", "com.etl.sfdc.user.model.repository"})
+@MapperScan({"com.etl.sfdc.config.model.repository", "com.etl.sfdc.user.model.repository", "com.etl.sfdc.storage.model.repository"})
 public class DbEnabledMybatisConfig {
 
     @Bean
