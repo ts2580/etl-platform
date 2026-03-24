@@ -108,21 +108,21 @@ class SalesforceCompoundAddressMappingTest {
         assertEquals(1, result.updated());
         String sql = repository.lastUpdateSql;
         assertNotNull(sql);
-        assertTrue(sql.contains("Name = '님 유리유리 이'"), sql);
-        assertTrue(sql.contains("FirstName = '이'"), sql);
-        assertTrue(sql.contains("LastName = '유리유리'"), sql);
-        assertTrue(sql.contains("OtherAddress = '한국 남한 서울 용마산로 252 02252'"), sql);
-        assertTrue(sql.contains("OtherStreet = '용마산로 252'"), sql);
-        assertTrue(sql.contains("OtherCity = '서울'"), sql);
-        assertTrue(sql.contains("OtherState = '남한'"), sql);
-        assertTrue(sql.contains("OtherPostalCode = '02252'"), sql);
-        assertTrue(sql.contains("OtherCountry = '한국'"), sql);
-        assertTrue(sql.contains("MailingAddress = '한국 남한 서울 용마산로 252 02252'"), sql);
-        assertTrue(sql.contains("MailingStreet = '용마산로 252'"), sql);
-        assertTrue(sql.contains("MailingCity = '서울'"), sql);
-        assertTrue(sql.contains("MailingState = '남한'"), sql);
-        assertTrue(sql.contains("MailingPostalCode = '02252'"), sql);
-        assertTrue(sql.contains("MailingCountry = '한국'"), sql);
+        assertTrue(sql.contains("`Name` = '님 유리유리 이'"), sql);
+        assertTrue(sql.contains("`FirstName` = '이'"), sql);
+        assertTrue(sql.contains("`LastName` = '유리유리'"), sql);
+        assertTrue(sql.contains("`OtherAddress` = '한국 남한 서울 용마산로 252 02252'"), sql);
+        assertTrue(sql.contains("`OtherStreet` = '용마산로 252'"), sql);
+        assertTrue(sql.contains("`OtherCity` = '서울'"), sql);
+        assertTrue(sql.contains("`OtherState` = '남한'"), sql);
+        assertTrue(sql.contains("`OtherPostalCode` = '02252'"), sql);
+        assertTrue(sql.contains("`OtherCountry` = '한국'"), sql);
+        assertTrue(sql.contains("`MailingAddress` = '한국 남한 서울 용마산로 252 02252'"), sql);
+        assertTrue(sql.contains("`MailingStreet` = '용마산로 252'"), sql);
+        assertTrue(sql.contains("`MailingCity` = '서울'"), sql);
+        assertTrue(sql.contains("`MailingState` = '남한'"), sql);
+        assertTrue(sql.contains("`MailingPostalCode` = '02252'"), sql);
+        assertTrue(sql.contains("`MailingCountry` = '한국'"), sql);
     }
 
     @Test
@@ -204,18 +204,18 @@ class SalesforceCompoundAddressMappingTest {
         assertEquals(1, result.updated());
         String sql = repository.lastUpdateSql;
         assertNotNull(sql);
-        assertTrue(sql.contains("BillingAddress = '5 1 2 3 4'"), sql);
-        assertTrue(sql.contains("BillingStreet = '3'"), sql);
-        assertTrue(sql.contains("BillingCity = '2'"), sql);
-        assertTrue(sql.contains("BillingState = '1'"), sql);
-        assertTrue(sql.contains("BillingPostalCode = '4'"), sql);
-        assertTrue(sql.contains("BillingCountry = '5'"), sql);
-        assertTrue(sql.contains("ShippingAddress = '10 6 7 8 9'"), sql);
-        assertTrue(sql.contains("ShippingStreet = '8'"), sql);
-        assertTrue(sql.contains("ShippingCity = '7'"), sql);
-        assertTrue(sql.contains("ShippingState = '6'"), sql);
-        assertTrue(sql.contains("ShippingPostalCode = '9'"), sql);
-        assertTrue(sql.contains("ShippingCountry = '10'"), sql);
+        assertTrue(sql.contains("`BillingAddress` = '5 1 2 3 4'"), sql);
+        assertTrue(sql.contains("`BillingStreet` = '3'"), sql);
+        assertTrue(sql.contains("`BillingCity` = '2'"), sql);
+        assertTrue(sql.contains("`BillingState` = '1'"), sql);
+        assertTrue(sql.contains("`BillingPostalCode` = '4'"), sql);
+        assertTrue(sql.contains("`BillingCountry` = '5'"), sql);
+        assertTrue(sql.contains("`ShippingAddress` = '10 6 7 8 9'"), sql);
+        assertTrue(sql.contains("`ShippingStreet` = '8'"), sql);
+        assertTrue(sql.contains("`ShippingCity` = '7'"), sql);
+        assertTrue(sql.contains("`ShippingState` = '6'"), sql);
+        assertTrue(sql.contains("`ShippingPostalCode` = '9'"), sql);
+        assertTrue(sql.contains("`ShippingCountry` = '10'"), sql);
     }
 
     private static class CapturingRepository implements SalesforceMutationRepositoryPort {

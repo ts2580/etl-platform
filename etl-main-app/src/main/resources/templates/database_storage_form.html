@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DB 저장소 등록</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/top-progress.css">
+    <script defer src="/js/top-progress.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
+<div id="top-progress-bar" aria-hidden="true"></div>
+
+<div class="mx-auto flex min-h-screen w-full max-w-[1600px] items-center px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-lg sm:h-10 sm:w-10 sm:text-xl">🗄️</span>
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">ℹ️ External Storage</p>
+                    <h2 class="text-xl font-bold tracking-tight text-[#312e81] sm:text-2xl lg:text-3xl">DB 저장소 등록</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">메인 모듈에서 관리하는 외부 DB 저장소를 등록하고, 연결 테스트를 통과한 뒤 저장할 수 있어요.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/storages/databases" class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100">목록 보기</a>
+                <a href="/" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">홈으로</a>
+            </div>
+        </div>
+
+        <section class="mt-5 rounded-2xl border border-[#d9ddfb] bg-gradient-to-r from-[#eef2ff] to-[#f3ecff] p-4 sm:mt-6 sm:p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">🔐 암호화 정책</p>
+                    <h3 class="mt-2 text-base font-bold text-[#312e81] sm:text-lg">사용자 키 기반 AES-256-GCM</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">현재 단계에서는 외부 KMS 대신 사용자가 입력한 키로 자격증명을 암호화해 저장해요. 연결 테스트를 먼저 통과해야 등록 버튼이 활성화됩니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <div id="result" class="mt-5 hidden rounded-2xl border p-4 text-sm leading-6 sm:mt-6"></div>
+
+        <form id="db-storage-form" class="mt-5 space-y-5 sm:mt-6">
+            <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 기본 정보</p>
+                    <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">저장소 식별 정보</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">운영에서 알아보기 쉬운 이름과 설명, 암호화 키를 먼저 입력해 주세요.</p>
+                </div>
+                <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">저장소 이름</label>
+                        <input type="text" id="name" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: 고객사 운영 DB">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">설명</label>
+                        <input type="text" id="description" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="선택 사항">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-sm font-semibold text-slate-700">사용자 암호화 키</label>
+                        <input type="password" id="encryptionKey" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="AES-256-GCM 암호화에 사용할 키">
+                        <p class="mt-2 text-xs leading-5 text-slate-500">이 키는 서버에 저장하지 않고, 자격증명 암호화/복호화 시점에만 사용해요.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">ℹ️ 연결 설정</p>
+                    <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">DB 접속 정보</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">DB 종류는 콤보박스로 직접 선택하고, URL은 그대로 입력하는 방식입니다.</p>
+                </div>
+                <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-3">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">DB 종류</label>
+                        <select id="vendor" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            <option value="">선택해 주세요</option>
+                            <option th:each="vendor : ${vendors}" th:value="${vendor}" th:text="${vendor}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">인증 방식</label>
+                        <select id="authMethod" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            <option value="PASSWORD">PASSWORD</option>
+                            <option value="CERTIFICATE">CERTIFICATE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700" id="schemaLabel">스키마명 / 서비스명</label>
+                        <input type="text" id="schemaName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: public">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700" id="databaseLabel">데이터베이스명</label>
+                        <input type="text" id="databaseName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: postgres_db">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-sm font-semibold text-slate-700">DB URL</label>
+                        <input type="text" id="jdbcUrl" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: postgres.example.com/mydb">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">포트</label>
+                        <input type="number" id="port" min="1" max="65535" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: 5432">
+                    </div>
+                </div>
+            </section>
+
+            <section id="password-auth-fields" class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">🔑 Password 인증</p>
+                    <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">계정 기반 로그인 정보</h3>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">현재 실제 연결 테스트와 등록은 PASSWORD 방식이 바로 동작합니다.</p>
+                </div>
+                <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">사용자명</label>
+                        <input type="text" id="username" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">비밀번호</label>
+                        <input type="password" id="password" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    </div>
+                </div>
+            </section>
+
+            <section id="certificate-auth-fields" class="hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm">
+                <div class="border-b border-amber-100 px-4 py-4 sm:px-5">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-600 sm:text-xs">🪪 Certificate 인증</p>
+                            <h3 class="mt-2 text-base font-bold text-amber-900 sm:text-lg">TrustStore / KeyStore 메타 입력</h3>
+                            <p class="mt-1 text-sm leading-6 text-amber-800/80">경로와 SSL 옵션은 메타 JSON으로 저장하고, 민감한 비밀번호 값은 사용자 키로 암호화해 저장합니다.</p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-700">확장 준비</span>
+                    </div>
+                </div>
+                <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">TrustStore 경로</label>
+                        <input type="text" id="trustStorePath" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: /secure/truststore.jks">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">TrustStore 비밀번호</label>
+                        <input type="password" id="trustStorePassword" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">KeyStore 경로</label>
+                        <input type="text" id="keyStorePath" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: /secure/client-keystore.p12">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">KeyStore 비밀번호</label>
+                        <input type="password" id="keyStorePassword" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">Key Alias</label>
+                        <input type="text" id="keyAlias" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">SSL Mode</label>
+                        <input type="text" id="sslMode" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: verify-full 또는 REQUIRED">
+                    </div>
+                </div>
+            </section>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button type="button" id="test-button" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">연결 테스트</button>
+                <button type="button" id="register-button" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">등록</button>
+            </div>
+        </form>
+    </main>
+</div>
+<script src="/js/database-storage-form.js" defer></script>
+</body>
+</html>

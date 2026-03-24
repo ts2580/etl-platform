@@ -6,7 +6,7 @@ import com.apache.sfdc.common.SalesforceObjectSchemaBuilder;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
 import com.apache.sfdc.common.SalesforceRouterBuilder;
 import com.apache.sfdc.common.SqlSanitizer;
-import com.apache.sfdc.streaming.repository.StreamingRepository;
+import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StreamingServiceImpl implements StreamingService {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingServiceImpl.class);
-    private final StreamingRepository streamingRepository;
+    private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Map<String, StreamingRuntimeState> runtimeStates = new ConcurrentHashMap<>();
 
     @Value("${camel.component.salesforce.instance-url}")
@@ -73,6 +73,7 @@ public class StreamingServiceImpl implements StreamingService {
         OkHttpClient client = new OkHttpClient();
         ObjectMapper objectMapper = new ObjectMapper();
         SchemaResult schemaResult;
+        Long targetStorageId = resolveTargetStorageId(mapProperty);
 
         Request request = new Request.Builder()
                 .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/sobjects/" + selectedObject + "/describe")
@@ -94,13 +95,19 @@ public class StreamingServiceImpl implements StreamingService {
                 log.error("Salesforce describe returned invalid fields. selectedObject={}, body={}",
                         selectedObject, truncateForLog(responseBody));
             }
-            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(targetSchema, selectedObject, fields, objectMapper);
+            schemaResult = SalesforceObjectSchemaBuilder.buildSchema(
+                    targetSchema,
+                    selectedObject,
+                    fields,
+                    objectMapper,
+                    routingJdbcExecutor.resolveStrategy(targetStorageId)
+            );
         } catch (IOException e) {
             throw new AppException("Failed to describe Salesforce object", e);
         }
 
         returnMap.put("mapType", schemaResult.mapType());
-        streamingRepository.setTable(schemaResult.ddl());
+        routingJdbcExecutor.executeDdl("STREAMING", schemaResult.ddl(), targetStorageId);
         returnMap.put("soqlForPushTopic", schemaResult.soqlForPushTopic());
 
         boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
@@ -121,12 +128,25 @@ public class StreamingServiceImpl implements StreamingService {
             JsonNode records = objectMapper.readTree(response.body().string()).get("records");
 
             if (records != null && !records.isEmpty()) {
-                String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
-                String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
-                List<String> listUnderQuery = collectInsertRows(records, schemaResult);
-
                 Instant start = Instant.now();
-                int insertedData = streamingRepository.insertObject(upperQuery, listUnderQuery, tailQuery);
+                int insertedData;
+                if (routingJdbcExecutor.usesExternalStorage(targetStorageId)) {
+                    insertedData = routingJdbcExecutor.insert(
+                            SalesforceObjectSchemaBuilder.buildPreparedInsertBatch(
+                                    targetSchema,
+                                    selectedObject,
+                                    schemaResult,
+                                    records,
+                                    routingJdbcExecutor.resolveStrategy(targetStorageId)
+                            ),
+                            targetStorageId
+                    );
+                } else {
+                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
+                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
+                    List<String> listUnderQuery = collectInsertRows(records, schemaResult);
+                    insertedData = routingJdbcExecutor.insert("STREAMING", upperQuery, listUnderQuery, tailQuery, targetStorageId);
+                }
                 Instant end = Instant.now();
                 Duration interval = Duration.between(start, end);
 
@@ -202,8 +222,13 @@ public class StreamingServiceImpl implements StreamingService {
         }
         SqlSanitizer.validateTableName(selectedObject);
 
-        String ddl = "DROP TABLE IF EXISTS `" + targetSchema + "`." + "`" + selectedObject + "`";
-        streamingRepository.setTable(ddl);
+        Long targetStorageId = resolveTargetStorageId(mapProperty);
+        String ddl = SalesforceObjectSchemaBuilder.buildDropTableSql(
+                targetSchema,
+                selectedObject,
+                routingJdbcExecutor.resolveStrategy(targetStorageId)
+        );
+        routingJdbcExecutor.executeDdl("STREAMING", ddl, targetStorageId);
     }
 
     @Override
@@ -243,7 +268,7 @@ public class StreamingServiceImpl implements StreamingService {
         applySalesforceAuth(sfComponent, mapProperty, authType);
         sfComponent.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilder(targetSchema, selectedObject, mapType, streamingRepository);
+        RouteBuilder routeBuilder = new SalesforceRouterBuilder(targetSchema, selectedObject, mapType, routingJdbcExecutor, resolveTargetStorageId(mapProperty));
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfComponent);
@@ -317,6 +342,8 @@ public class StreamingServiceImpl implements StreamingService {
         copyIfPresent(current, updates, "orgName");
         copyIfPresent(current, updates, "targetSchema");
         copyIfPresent(current, updates, "targetTable");
+        copyIfPresent(current, updates, "targetStorageId");
+        copyIfPresent(current, updates, "targetStorageName");
         copyIfPresent(current, updates, "instanceName");
         copyIfPresent(current, updates, "orgType");
         copyIfPresent(current, updates, "isSandbox");
@@ -364,6 +391,21 @@ public class StreamingServiceImpl implements StreamingService {
             return configured.substring(0, configured.indexOf("/services/data"));
         }
         return configured;
+    }
+
+    private Long resolveTargetStorageId(Map<String, String> mapProperty) {
+        if (mapProperty == null) {
+            return null;
+        }
+        String raw = mapProperty.get("targetStorageId");
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException e) {
+            throw new AppException("targetStorageId 값이 올바르지 않습니다: " + raw, e);
+        }
     }
 
     private String resolveLoginUrl(String instanceUrl) {

@@ -25,6 +25,16 @@ salesforce:
 
 
 
+logging:
+  level:
+    root: INFO
+    com.etl.sfdc: INFO
+    com.etlplatform: INFO
+
 routing:
   engine:
     base-url: ${ROUTING_ENGINE_BASE_URL:http://localhost:${ROUTING_APP_PORT:3931}}
+
+file:
+  engine:
+    base-url: ${FILE_ENGINE_BASE_URL:http://localhost:9443}

@@ -1,11 +1,13 @@
 package com.apache.sfdc.common;
 
+import com.etlplatform.common.storage.database.sql.BoundBatchSql;
+import com.etlplatform.common.storage.database.sql.BoundSql;
+import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy;
+import com.etlplatform.common.storage.database.sql.SqlParameter;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,44 +29,55 @@ public class SalesforceRecordMutationProcessor {
             return new MutationResult(0, 0, deleted);
         }
 
-        StringBuilder strUpdate = new StringBuilder();
-        strUpdate.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject)).append(" SET ");
-
-        int assignmentCount = appendAssignments(strUpdate, mapType, mutation.payload(), mutation.targetFields(), mutation.nulledFields());
-        if (assignmentCount > 0) {
-            SalesforceObjectSchemaBuilder.appendFreshnessAssignments(
-                    strUpdate,
-                    mutation.incomingLastModifiedLiteral(),
-                    mutation.incomingEventLiteral()
-            );
-            strUpdate.deleteCharAt(strUpdate.length() - 1);
-            SalesforceObjectSchemaBuilder.appendFreshnessWhere(
-                    strUpdate,
-                    SqlSanitizer.quoteString(mutation.sfid()),
-                    mutation.incomingLastModifiedLiteral()
-            );
-
-            log.warn("""
-                    [CDC-UPDATE-SQL]
-                      sfid: {}
-                      sql:
-                    {}
-                    """, mutation.sfid(), formatIndentedBlock(strUpdate.toString()));
-            int updated = repository.updateObject(strUpdate);
-            if (updated == 0 && mutation.type().isCreateLike()) {
-                int inserted = insertFallback(targetSchema, selectedObject, mapType, mutation, repository, sourceLabel);
-                return new MutationResult(updated, inserted, 0);
+        if (repository.supportsBoundStatements()) {
+            BoundSql boundUpdate = buildBoundUpdate(targetSchema, selectedObject, mapType, mutation, repository.vendorStrategy());
+            if (boundUpdate != null) {
+                int updated = repository.updateObject(boundUpdate);
+                if (updated == 0 && mutation.type().isCreateLike()) {
+                    int inserted = repository.insertObject(buildBoundInsertFallback(targetSchema, selectedObject, mapType, mutation, repository.vendorStrategy()));
+                    return new MutationResult(updated, inserted, 0);
+                }
+                return new MutationResult(updated, 0, 0);
             }
-            return new MutationResult(updated, 0, 0);
+        } else {
+            StringBuilder strUpdate = new StringBuilder();
+            strUpdate.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject)).append(" SET ");
+
+            int assignmentCount = appendAssignments(strUpdate, mapType, mutation.payload(), mutation.targetFields(), mutation.nulledFields());
+            if (assignmentCount > 0) {
+                SalesforceObjectSchemaBuilder.appendFreshnessAssignments(
+                        strUpdate,
+                        mutation.incomingLastModifiedLiteral(),
+                        mutation.incomingEventLiteral()
+                );
+                strUpdate.deleteCharAt(strUpdate.length() - 1);
+                SalesforceObjectSchemaBuilder.appendFreshnessWhere(
+                        strUpdate,
+                        SqlSanitizer.quoteString(mutation.sfid()),
+                        mutation.incomingLastModifiedLiteral()
+                );
+
+                log.warn("[CDC-UPDATE-SQL]\n  sfid: {}\n  sql:\n{}", mutation.sfid(), formatIndentedBlock(strUpdate.toString()));
+                int updated = repository.updateObject(strUpdate);
+                if (updated == 0 && mutation.type().isCreateLike()) {
+                    int inserted = insertFallback(targetSchema, selectedObject, mapType, mutation, repository);
+                    return new MutationResult(updated, inserted, 0);
+                }
+                return new MutationResult(updated, 0, 0);
+            }
         }
 
         if (mutation.type().isCreateLike()) {
+            if (repository.supportsBoundStatements()) {
+                int inserted = repository.insertObject(buildBoundMinimalInsert(targetSchema, selectedObject, mutation.sfid(), repository.vendorStrategy()));
+                return new MutationResult(0, inserted, 0);
+            }
             int inserted = insertMinimal(targetSchema, selectedObject, mutation.sfid(), repository);
             return new MutationResult(0, inserted, 0);
         }
 
         log.warn("[CDC-APPLY] no-op mutation. type={}, sfid={}, targetFields={}, payloadKeys={}",
-                mutation.type(), mutation.sfid(), mutation.targetFields(), mutation.payload().properties().stream().map(java.util.Map.Entry::getKey).toList());
+                mutation.type(), mutation.sfid(), mutation.targetFields(), mutation.payload().properties().stream().map(Map.Entry::getKey).toList());
         return new MutationResult(0, 0, 0);
     }
 
@@ -73,19 +86,131 @@ public class SalesforceRecordMutationProcessor {
                        SalesforceRecordMutation mutation,
                        SalesforceMutationRepositoryPort repository,
                        String sourceLabel) {
+        if (repository.supportsBoundStatements()) {
+            return repository.deleteObject(buildBoundDelete(targetSchema, selectedObject, mutation, repository.vendorStrategy()));
+        }
+
         StringBuilder strDelete = SalesforceObjectSchemaBuilder.buildConditionalDeleteSql(
                 targetSchema,
                 selectedObject,
                 SqlSanitizer.quoteSfid(mutation.sfid()),
                 mutation.incomingEventLiteral()
         );
-        log.warn("""
-                [CDC-DELETE-SQL]
-                  sfid: {}
-                  sql:
-                {}
-                """, mutation.sfid(), formatIndentedBlock(strDelete.toString()));
+        log.warn("[CDC-DELETE-SQL]\n  sfid: {}\n  sql:\n{}", mutation.sfid(), formatIndentedBlock(strDelete.toString()));
         return repository.deleteObject(strDelete);
+    }
+
+    private BoundSql buildBoundUpdate(String targetSchema,
+                                      String selectedObject,
+                                      Map<String, Object> mapType,
+                                      SalesforceRecordMutation mutation,
+                                      DatabaseVendorStrategy strategy) {
+        StringBuilder sql = new StringBuilder();
+        List<SqlParameter> parameters = new ArrayList<>();
+        int assignmentCount = 0;
+
+        sql.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject, strategy)).append(" SET ");
+        for (String fieldName : mutation.targetFields()) {
+            if (assignmentCount > 0) {
+                sql.append(", ");
+            }
+            sql.append(strategy.quoteIdentifier(fieldName)).append(" = ?");
+
+            JsonNode rawFieldValue = resolveRawFieldValue(mutation.payload(), fieldName);
+            JsonNode fieldValue = normalizeFieldValue(rawFieldValue, fieldName);
+            String sfType = String.valueOf(mapType.get(fieldName));
+            if (mutation.nulledFields().contains(fieldName) || fieldValue == null || fieldValue.isNull()) {
+                parameters.add(strategy.bindValue(null, sfType));
+            } else {
+                parameters.add(strategy.bindValue(toBindableFieldValue(fieldValue), sfType));
+            }
+            assignmentCount++;
+        }
+
+        if (assignmentCount == 0) {
+            return null;
+        }
+
+        sql.append(", ").append(strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN)).append(" = ?");
+        parameters.add(strategy.bindValue(mutation.incomingLastModifiedValue(), "datetime"));
+        sql.append(", ").append(strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN)).append(" = ?");
+        parameters.add(strategy.bindValue(mutation.incomingEventValue(), "datetime"));
+
+        sql.append(" WHERE ").append(strategy.quoteIdentifier("sfid")).append(" = ?");
+        parameters.add(strategy.bindValue(mutation.sfid(), "id"));
+
+        if (mutation.incomingLastModifiedValue() != null) {
+            sql.append(" AND (")
+                    .append(strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN)).append(" IS NULL OR ")
+                    .append(strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN)).append(" <= ?)");
+            parameters.add(strategy.bindValue(mutation.incomingLastModifiedValue(), "datetime"));
+        }
+
+        return new BoundSql(sql.toString(), parameters);
+    }
+
+    private BoundSql buildBoundDelete(String targetSchema,
+                                      String selectedObject,
+                                      SalesforceRecordMutation mutation,
+                                      DatabaseVendorStrategy strategy) {
+        String sql = "DELETE FROM " + SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject, strategy)
+                + " WHERE " + strategy.quoteIdentifier("sfid") + " = ?"
+                + " AND (" + strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN) + " IS NULL OR "
+                + strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN) + " <= ?)";
+        return new BoundSql(sql, List.of(
+                strategy.bindValue(mutation.sfid(), "id"),
+                strategy.bindValue(mutation.incomingEventValue(), "datetime")
+        ));
+    }
+
+    private BoundBatchSql buildBoundInsertFallback(String targetSchema,
+                                                   String selectedObject,
+                                                   Map<String, Object> mapType,
+                                                   SalesforceRecordMutation mutation,
+                                                   DatabaseVendorStrategy strategy) {
+        List<String> insertFields = new ArrayList<>(mutation.targetFields());
+        List<String> columns = new ArrayList<>();
+        columns.add("sfid");
+        columns.addAll(insertFields);
+        columns.add(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN);
+        columns.add(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN);
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("INSERT INTO ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject, strategy)).append(" (");
+        appendQuotedColumns(sql, columns, strategy);
+        sql.append(") VALUES (");
+        appendPlaceholders(sql, columns.size());
+        sql.append(") ").append(SalesforceObjectSchemaBuilder.buildInsertTail(insertFields, strategy));
+
+        List<SqlParameter> parameters = new ArrayList<>();
+        parameters.add(strategy.bindValue(mutation.sfid(), "id"));
+        for (String fieldName : insertFields) {
+            JsonNode fieldValue = normalizeFieldValue(resolveRawFieldValue(mutation.payload(), fieldName), fieldName);
+            String sfType = String.valueOf(mapType.get(fieldName));
+            if (mutation.nulledFields().contains(fieldName) || fieldValue == null || fieldValue.isNull()) {
+                parameters.add(strategy.bindValue(null, sfType));
+            } else {
+                parameters.add(strategy.bindValue(toBindableFieldValue(fieldValue), sfType));
+            }
+        }
+        parameters.add(strategy.bindValue(mutation.incomingLastModifiedValue(), "datetime"));
+        parameters.add(strategy.bindValue(mutation.incomingEventValue(), "datetime"));
+        return new BoundBatchSql(sql.toString(), List.of(parameters));
+    }
+
+    private BoundBatchSql buildBoundMinimalInsert(String targetSchema,
+                                                  String selectedObject,
+                                                  String sfid,
+                                                  DatabaseVendorStrategy strategy) {
+        String sql = "INSERT INTO " + SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject, strategy)
+                + " (" + strategy.quoteIdentifier("sfid") + ", "
+                + strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN) + ", "
+                + strategy.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN) + ") VALUES (?, ?, ?)";
+        return new BoundBatchSql(sql, List.of(List.of(
+                strategy.bindValue(sfid, "id"),
+                strategy.bindValue(null, "datetime"),
+                strategy.bindValue(null, "datetime")
+        )));
     }
 
     private int appendAssignments(StringBuilder strUpdate,
@@ -95,7 +220,7 @@ public class SalesforceRecordMutationProcessor {
                                   Set<String> nulledFields) {
         int assignmentCount = 0;
         for (String fieldName : targetFields) {
-            strUpdate.append(fieldName).append(" = ");
+            strUpdate.append(SqlSanitizer.quoteIdentifier(fieldName)).append(" = ");
             JsonNode rawFieldValue = resolveRawFieldValue(payload, fieldName);
             JsonNode fieldValue = normalizeFieldValue(rawFieldValue, fieldName);
             if (nulledFields.contains(fieldName) || fieldValue == null || fieldValue.isNull()) {
@@ -121,6 +246,16 @@ public class SalesforceRecordMutationProcessor {
             }
             throw primary;
         }
+    }
+
+    private Object toBindableFieldValue(JsonNode fieldValue) {
+        if (fieldValue == null || fieldValue.isNull()) {
+            return null;
+        }
+        if (fieldValue.isObject() || fieldValue.isArray()) {
+            return fieldValue.toString();
+        }
+        return SqlSanitizer.toRawValue(fieldValue);
     }
 
     private JsonNode resolveRawFieldValue(JsonNode payload, String fieldName) {
@@ -156,10 +291,7 @@ public class SalesforceRecordMutationProcessor {
     }
 
     private JsonNode normalizeFieldValue(JsonNode valueNode, String fieldName) {
-        if (valueNode == null || valueNode.isNull()) {
-            return valueNode;
-        }
-        if (!valueNode.isObject()) {
+        if (valueNode == null || valueNode.isNull() || !valueNode.isObject()) {
             return valueNode;
         }
 
@@ -187,18 +319,15 @@ public class SalesforceRecordMutationProcessor {
         if (valueNode.has("newValue")) {
             return valueNode.get("newValue");
         }
-
         if (valueNode.has("value")) {
             return valueNode.get("value");
         }
-
         if (valueNode.size() == 1) {
             String singleField = valueNode.fieldNames().next();
             if (isScalarAlias(singleField)) {
                 return valueNode.get(singleField);
             }
         }
-
         return valueNode;
     }
 
@@ -244,14 +373,12 @@ public class SalesforceRecordMutationProcessor {
         return null;
     }
 
-    // Compound Name payload is flattened into a display string with single spaces:
-    // Salutation + LastName + FirstName (ex: "Mr Doe John", "님 유리유리 이").
     private String joinNameParts(JsonNode salutationNode, JsonNode firstName, JsonNode lastName) {
         String salutation = salutationNode == null ? "" : salutationNode.asText("").trim();
         String first = firstName == null ? "" : firstName.asText("").trim();
         String last = lastName == null ? "" : lastName.asText("").trim();
 
-        java.util.List<String> parts = new java.util.ArrayList<>();
+        List<String> parts = new ArrayList<>();
         if (!salutation.isBlank()) {
             parts.add(salutation);
         }
@@ -271,13 +398,11 @@ public class SalesforceRecordMutationProcessor {
                 || "ShippingAddress".equals(fieldName);
     }
 
-    // Compound Address payload is flattened into one display string in address order
-    // with single spaces between non-empty parts.
     private String joinAddressParts(JsonNode addressNode) {
         if (addressNode == null || addressNode.isNull() || !addressNode.isObject()) {
             return "";
         }
-        java.util.List<String> values = new java.util.ArrayList<>();
+        List<String> values = new ArrayList<>();
         appendAddressPart(values, firstNonNull(addressNode, "Country", "country"));
         appendAddressPart(values, firstNonNull(addressNode, "State", "state"));
         appendAddressPart(values, firstNonNull(addressNode, "City", "city"));
@@ -286,7 +411,7 @@ public class SalesforceRecordMutationProcessor {
         return String.join(" ", values).trim();
     }
 
-    private void appendAddressPart(java.util.List<String> values, JsonNode node) {
+    private void appendAddressPart(List<String> values, JsonNode node) {
         if (node == null || node.isNull()) {
             return;
         }
@@ -309,75 +434,11 @@ public class SalesforceRecordMutationProcessor {
         );
     }
 
-    private String formatFieldList(java.util.Collection<?> fields) {
-        if (fields == null || fields.isEmpty()) {
-            return "    - (empty)";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (Object field : fields) {
-            sb.append("    - ").append(field).append("\n");
-        }
-        sb.deleteCharAt(sb.length() - 1);
-        return sb.toString();
-    }
-
-    private String formatIndentedBlock(String text) {
-        if (text == null || text.isBlank()) {
-            return "    (empty)";
-        }
-        String formatted = formatSqlForLog(text);
-        return "    " + formatted.replace("\r", "").replace("\n", "\n    ");
-    }
-
-    private String formatSqlForLog(String sql) {
-        if (sql == null || sql.isBlank()) {
-            return "(empty)";
-        }
-        String normalized = sql.replace("\r", "").trim();
-        normalized = normalized.replace(" SET ", "\nSET\n    ");
-        normalized = normalized.replace(",", ",\n    ");
-        normalized = normalized.replace(" WHERE ", "\nWHERE\n    ");
-        normalized = normalized.replace(" AND ", "\n    AND ");
-        return normalized;
-    }
-
-    private String prettyNode(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return "null";
-        }
-        if (node.isValueNode()) {
-            return node.asText();
-        }
-        String compact = node.toPrettyString().replace("\r", "");
-        return compact.length() > 1000 ? compact.substring(0, 1000) + "..." : compact;
-    }
-
-    private String describeNode(JsonNode node) {
-        if (node == null) {
-            return "null";
-        }
-        String text = node.asText();
-        if (text == null || text.isBlank()) {
-            return node.getNodeType() + " size=" + node.size();
-        }
-        return node.getNodeType() + ":" + text;
-    }
-
-    private String extractFieldKeys(JsonNode objectNode) {
-        if (objectNode == null || !objectNode.isObject()) {
-            return "[]";
-        }
-        java.util.List<String> keys = new java.util.ArrayList<>();
-        objectNode.fieldNames().forEachRemaining(keys::add);
-        return keys.toString();
-    }
-
     private int insertFallback(String targetSchema,
                                String selectedObject,
                                Map<String, Object> mapType,
                                SalesforceRecordMutation mutation,
-                               SalesforceMutationRepositoryPort repository,
-                               String sourceLabel) {
+                               SalesforceMutationRepositoryPort repository) {
         List<String> insertFields = new ArrayList<>(mutation.targetFields());
         StringBuilder valuesBuilder = new StringBuilder(SqlSanitizer.quoteString(mutation.sfid()));
 
@@ -397,36 +458,41 @@ public class SalesforceRecordMutationProcessor {
 
         String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, String.join(",", insertFields));
         String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, insertFields);
-
-        String insertSql = upperQuery + "\n" + "(" + valuesBuilder + ")" + (tailQuery == null || tailQuery.isBlank() ? "" : "\n" + tailQuery);
-
-        log.warn("""
-                [CDC-INSERT-SQL]
-                  mode: fallback
-                  sfid: {}
-                  sql:
-                {}
-                """, mutation.sfid(), formatIndentedBlock(insertSql));
-
         return repository.insertObject(upperQuery, List.of("(" + valuesBuilder + ")"), tailQuery);
     }
 
     private int insertMinimal(String targetSchema, String selectedObject, String sfid, SalesforceMutationRepositoryPort repository) {
-        String upperQuery = "Insert Into " + SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject) + "(sfid, "
-                + SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN + ", "
-                + SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN + ") values";
+        String upperQuery = "INSERT INTO " + SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject)
+                + "(" + SqlSanitizer.quoteIdentifier("sfid") + ", "
+                + SqlSanitizer.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_MODIFIED_COLUMN) + ", "
+                + SqlSanitizer.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN) + ") VALUES";
         String valuesSql = "(" + SqlSanitizer.quoteSfid(sfid) + ", null, null)";
-        String insertSql = upperQuery + "\n" + valuesSql;
-
-        log.warn("""
-                [CDC-INSERT-SQL]
-                  mode: minimal
-                  sfid: {}
-                  sql:
-                {}
-                """, sfid, formatIndentedBlock(insertSql));
-
         return repository.insertObject(upperQuery, List.of(valuesSql), "");
+    }
+
+    private String formatIndentedBlock(String text) {
+        if (text == null || text.isBlank()) {
+            return "    (empty)";
+        }
+        return "    " + text.replace("\r", "").replace("\n", "\n    ");
+    }
+
+    private void appendQuotedColumns(StringBuilder sql, List<String> columns, DatabaseVendorStrategy strategy) {
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append(strategy.quoteIdentifier(columns.get(i)));
+        }
+    }
+
+    private void appendPlaceholders(StringBuilder sql, int count) {
+        for (int i = 0; i < count; i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append("?");
+        }
     }
 
     public record MutationResult(int updated, int inserted, int deleted) {

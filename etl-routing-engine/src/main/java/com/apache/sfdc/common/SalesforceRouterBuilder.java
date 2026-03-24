@@ -1,6 +1,8 @@
 package com.apache.sfdc.common;
 
-import com.apache.sfdc.streaming.repository.StreamingRepository;
+import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
+import com.etlplatform.common.storage.database.sql.BoundBatchSql;
+import com.etlplatform.common.storage.database.sql.BoundSql;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.builder.RouteBuilder;
 
@@ -12,15 +14,21 @@ public class SalesforceRouterBuilder extends RouteBuilder {
     private final String targetSchema;
     private final String selectedObject;
     private final Map<String, Object> mapType;
-    private final StreamingRepository streamingRepository;
+    private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
+    private final Long targetStorageId;
     private final SalesforceStreamingPayloadMapper payloadMapper = new SalesforceStreamingPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
-    public SalesforceRouterBuilder(String targetSchema, String selectedObject, Map<String, Object> mapType, StreamingRepository streamingRepository) {
+    public SalesforceRouterBuilder(String targetSchema,
+                                   String selectedObject,
+                                   Map<String, Object> mapType,
+                                   ExternalStorageRoutingJdbcExecutor routingJdbcExecutor,
+                                   Long targetStorageId) {
         this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
         this.mapType = mapType;
-        this.streamingRepository = streamingRepository;
+        this.routingJdbcExecutor = routingJdbcExecutor;
+        this.targetStorageId = targetStorageId;
     }
 
     @Override
@@ -31,17 +39,42 @@ public class SalesforceRouterBuilder extends RouteBuilder {
         SalesforceMutationRepositoryPort repositoryPort = new SalesforceMutationRepositoryPort() {
             @Override
             public int insertObject(String upperQuery, List<String> listUnderQuery, String tailQuery) {
-                return streamingRepository.insertObject(upperQuery, listUnderQuery, tailQuery);
+                return routingJdbcExecutor.insert("STREAMING", upperQuery, listUnderQuery, tailQuery, targetStorageId);
             }
 
             @Override
             public int updateObject(StringBuilder strUpdate) {
-                return streamingRepository.updateObject(strUpdate);
+                return routingJdbcExecutor.update("STREAMING", strUpdate, targetStorageId);
             }
 
             @Override
             public int deleteObject(StringBuilder strDelete) {
-                return streamingRepository.deleteObject(strDelete);
+                return routingJdbcExecutor.delete("STREAMING", strDelete, targetStorageId);
+            }
+
+            @Override
+            public boolean supportsBoundStatements() {
+                return routingJdbcExecutor.usesExternalStorage(targetStorageId);
+            }
+
+            @Override
+            public com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy vendorStrategy() {
+                return routingJdbcExecutor.resolveStrategy(targetStorageId);
+            }
+
+            @Override
+            public int insertObject(BoundBatchSql batchSql) {
+                return routingJdbcExecutor.insert(batchSql, targetStorageId);
+            }
+
+            @Override
+            public int updateObject(BoundSql boundSql) {
+                return routingJdbcExecutor.update(boundSql, targetStorageId);
+            }
+
+            @Override
+            public int deleteObject(BoundSql boundSql) {
+                return routingJdbcExecutor.delete(boundSql, targetStorageId);
             }
         };
 

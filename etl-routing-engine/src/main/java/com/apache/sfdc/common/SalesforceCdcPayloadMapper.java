@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -50,7 +52,9 @@ public class SalesforceCdcPayloadMapper {
 
         Set<String> targetFields = resolveTargetFields(payload, header, mapType);
         Set<String> nulledFields = extractFieldSet(header.get("nulledFields"));
+        Object incomingLastModifiedValue = SalesforceObjectSchemaBuilder.lastModifiedValue(payload);
         String incomingLastModifiedLiteral = SalesforceObjectSchemaBuilder.lastModifiedLiteral(payload);
+        Object incomingEventValue = eventTimeValue(header, mutationType.isDelete() ? LocalDateTime.now(ZoneOffset.UTC) : incomingLastModifiedValue);
         String incomingEventLiteral = eventTimeLiteral(header, mutationType.isDelete() ? "CURRENT_TIMESTAMP" : incomingLastModifiedLiteral);
 
         return Optional.of(new SalesforceRecordMutation(
@@ -59,6 +63,8 @@ public class SalesforceCdcPayloadMapper {
                 (ObjectNode) payload,
                 targetFields,
                 nulledFields,
+                incomingLastModifiedValue,
+                incomingEventValue,
                 incomingLastModifiedLiteral,
                 incomingEventLiteral
         ));
@@ -324,9 +330,17 @@ public class SalesforceCdcPayloadMapper {
         if (commitTimestamp == null || commitTimestamp.isBlank()) {
             return fallbackLiteral;
         }
-        if (commitTimestamp.matches("^\\d+$")) {
-            return "FROM_UNIXTIME(" + commitTimestamp + " / 1000)";
+        return SqlSanitizer.sanitizeValue(com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.textNode(commitTimestamp), "datetime");
+    }
+
+    private Object eventTimeValue(JsonNode header, Object fallbackValue) {
+        String commitTimestamp = textOf(header, "commitTimestamp");
+        if (commitTimestamp == null || commitTimestamp.isBlank()) {
+            return fallbackValue;
         }
-        return SqlSanitizer.quoteString(commitTimestamp.replace("T", " ").replace("Z", ""));
+        if (commitTimestamp.matches("^\\d+$")) {
+            return Long.parseLong(commitTimestamp);
+        }
+        return commitTimestamp;
     }
 }

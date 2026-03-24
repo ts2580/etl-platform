@@ -54,6 +54,7 @@ public class SalesforceOrgService {
                                                                       String clientSecret,
                                                                       boolean isDefault) {
         String myDomain = normalizeMyDomain(myDomainInput);
+        // orgKey는 Salesforce orgId가 아니라, 현재 시스템에서 org를 식별하기 위한 myDomain 기반 natural key입니다.
         String resolvedOrgKey = normalizeMyDomain(myDomain);
 
         String sourceOrgName = (orgNameInput == null || orgNameInput.isBlank()) ? resolvedOrgKey : orgNameInput;

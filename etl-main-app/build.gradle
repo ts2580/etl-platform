@@ -12,27 +12,30 @@ dependencies {
     implementation project(':etl-api-contract')
     implementation project(':etl-infra')
 
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-web-services'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation libs.springBootStarterWeb
+    implementation libs.springBootStarterWebServices
+    implementation libs.springBootStarterValidation
+    implementation libs.springBootStarterSecurity
+    implementation libs.springBootStarterWebflux
 
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.3'
-    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation libs.mybatisSpringBootStarter
+    implementation libs.thymeleafExtrasSpringsecurity6
 
-    implementation 'com.google.code.gson:gson:2.7'
-    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+    implementation libs.gson
+    implementation libs.jsonSimple
 
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
-    implementation 'org.apache.httpcomponents:httpmime:4.5.14'
+    implementation libs.okhttp
+    implementation libs.apacheHttpClient
+    implementation libs.apacheHttpMime
 
-    runtimeOnly 'org.postgresql:postgresql'
-    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+    runtimeOnly libs.postgresql
+    runtimeOnly libs.mariadbJdbc
+    runtimeOnly libs.mysqlJdbc
+    runtimeOnly libs.ojdbc11
 
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
-    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.3'
+    testImplementation libs.mybatisSpringBootStarterTest
+    testImplementation 'org.springframework.security:spring-security-test'
 }

@@ -29,6 +29,8 @@ public class RoutingRegistrySupport {
         String orgName = firstNonBlank(mapProperty.get("orgName"), extractHost(instanceUrl), orgKey);
         String selectedObject = mapProperty.getOrDefault("selectedObject", "");
         String objectLabel = firstNonBlank(mapProperty.get("objectLabel"), selectedObject);
+        String targetStorageId = mapProperty.get("targetStorageId");
+        String targetStorageName = mapProperty.get("targetStorageName");
         String targetSchema = firstNonBlank(mapProperty.get("targetSchema"), "config");
         String targetTable = firstNonBlank(mapProperty.get("targetTable"), selectedObject);
 
@@ -36,6 +38,8 @@ public class RoutingRegistrySupport {
         params.put("orgKey", orgKey);
         params.put("orgName", orgName);
         params.put("myDomain", instanceUrl);
+        params.put("targetStorageId", targetStorageId == null || targetStorageId.isBlank() ? null : Long.valueOf(targetStorageId));
+        params.put("targetStorageName", firstNonBlank(targetStorageName, null));
         params.put("targetSchema", targetSchema);
         params.put("targetTable", targetTable);
         params.put("instanceName", firstNonBlank(mapProperty.get("instanceName"), extractHost(instanceUrl)));

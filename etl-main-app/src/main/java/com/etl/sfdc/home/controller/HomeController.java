@@ -22,6 +22,9 @@ public class HomeController {
     @Value("${app.db.enabled:false}")
     private boolean dbEnabled;
 
+    @Value("${file.engine.base-url:http://localhost:9443}")
+    private String fileEngineBaseUrl;
+
     @GetMapping("/")
     public String loginPage(Model model, HttpSession session) {
         model.addAttribute("dbEnabled", dbEnabled);
@@ -40,6 +43,7 @@ public class HomeController {
             model.addAttribute("activeOrg", activeOrg);
         }
 
+        model.addAttribute("fileEngineBaseUrl", fileEngineBaseUrl);
         return "home_form";
     }
 }

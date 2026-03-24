@@ -10,29 +10,27 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-19T11:56:29.641+09:00  INFO 24252 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 24252 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-19T11:56:29.645+09:00  INFO 24252 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
-2026-03-19T11:56:32.087+09:00  INFO 24252 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-19T11:56:32.113+09:00  INFO 24252 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-19T11:56:32.113+09:00  INFO 24252 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-19T11:56:32.189+09:00  INFO 24252 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-19T11:56:32.190+09:00  INFO 24252 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2462 ms
+2026-03-24T11:48:05.806+09:00  INFO 274183 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 274183 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-24T11:48:05.810+09:00  INFO 274183 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
+2026-03-24T11:48:08.009+09:00  INFO 274183 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-24T11:48:08.036+09:00  INFO 274183 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-24T11:48:08.037+09:00  INFO 274183 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-24T11:48:08.076+09:00  INFO 274183 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-24T11:48:08.078+09:00  INFO 274183 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2194 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-19T11:56:33.507+09:00  INFO 24252 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
-2026-03-19T11:56:34.080+09:00  INFO 24252 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2026-03-19T11:56:34.194+09:00  INFO 24252 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-19T11:56:34.216+09:00  INFO 24252 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 5.33 seconds (process running for 5.998)
-2026-03-19T11:57:05.574+09:00  INFO 24252 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-19T11:57:05.574+09:00  INFO 24252 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-19T11:57:05.575+09:00  INFO 24252 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2026-03-19T11:57:08.509+09:00  INFO 24252 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-19T11:57:08.583+09:00  INFO 24252 --- [nio-8080-exec-6] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@1368136c
-2026-03-19T11:57:08.585+09:00  INFO 24252 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-19T11:57:31.683+09:00  INFO 24252 --- [io-8080-exec-10] c.e.sfdc.common.SalesforceTokenManager   : [토큰 만료] Salesforce 접근 토큰 갱신 완료: org yuricompany-dev-ed.develop.my.salesforce.com
-2026-03-19T11:57:32.709+09:00  INFO 24252 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : 라우팅 모듈 자격 증명 갱신 완료. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account, protocol=CDC
-2026-03-19T11:57:34.206+09:00  INFO 24252 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : 라우팅 모듈 자격 증명 갱신 완료. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Contact, protocol=STREAMING
-2026-03-19T11:57:34.207+09:00  INFO 24252 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : [토큰 만료] 라우팅 모듈 자격 증명 갱신 요약. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, targetRoutes=2, refreshed=2, skipped=0, failed=0
-2026-03-19T11:57:43.800+09:00  INFO 24252 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-19T11:57:43.802+09:00  INFO 24252 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-19T11:57:43.833+09:00  INFO 24252 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-19T11:57:43.844+09:00  INFO 24252 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-24T11:48:09.280+09:00  INFO 274183 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
+2026-03-24T11:48:09.727+09:00  INFO 274183 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
+2026-03-24T11:48:09.828+09:00  INFO 274183 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-24T11:48:09.845+09:00  INFO 274183 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 4.659 seconds (process running for 5.302)
+2026-03-24T11:48:21.360+09:00  INFO 274183 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-24T11:48:21.360+09:00  INFO 274183 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-03-24T11:48:21.361+09:00  INFO 274183 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-03-24T11:48:24.807+09:00  INFO 274183 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-24T11:48:25.061+09:00  INFO 274183 --- [nio-8080-exec-6] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@41ca9f61
+2026-03-24T11:48:25.063+09:00  INFO 274183 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-24T11:48:38.519+09:00  INFO 274183 --- [nio-8080-exec-8] c.e.sfdc.common.SalesforceTokenManager   : [토큰 만료] Salesforce 접근 토큰 갱신 완료: org yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T11:49:32.203+09:00  INFO 274183 --- [nio-8080-exec-7] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing registry sync uses local routing_registry only. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, routeCount=1, actor=trstyq
+2026-03-24T11:49:49.881+09:00  INFO 274183 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-24T11:49:49.883+09:00  INFO 274183 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-24T11:49:49.909+09:00  INFO 274183 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-24T11:49:49.920+09:00  INFO 274183 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +44,9 @@ public class SalesforceStreamingPayloadMapper {
             });
         }
 
+        Object incomingLastModifiedValue = SalesforceObjectSchemaBuilder.lastModifiedValue(payload);
         String incomingLastModifiedLiteral = SalesforceObjectSchemaBuilder.lastModifiedLiteral(payload);
+        Object incomingEventValue = mutationType.isDelete() ? LocalDateTime.now(ZoneOffset.UTC) : incomingLastModifiedValue;
         String incomingEventLiteral = mutationType.isDelete() ? "CURRENT_TIMESTAMP" : incomingLastModifiedLiteral;
 
         return Optional.of(new SalesforceRecordMutation(
@@ -51,6 +55,8 @@ public class SalesforceStreamingPayloadMapper {
                 payload,
                 targetFields,
                 Set.of(),
+                incomingLastModifiedValue,
+                incomingEventValue,
                 incomingLastModifiedLiteral,
                 incomingEventLiteral
         ));

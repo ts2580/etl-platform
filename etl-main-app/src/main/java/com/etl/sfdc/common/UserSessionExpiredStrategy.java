@@ -24,7 +24,7 @@ public class UserSessionExpiredStrategy implements SessionInformationExpiredStra
         log.info("세션 만료");
 
         // 세션 만료 시 리다이렉트할 URL
-        String redirectUrl = "/user/login?error=session";
+        String redirectUrl = "/?error=session";
 
         event.getResponse().sendRedirect(redirectUrl);
     }

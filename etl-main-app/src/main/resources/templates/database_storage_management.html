@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>외부 DB 저장소 관리</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="csrf-token" th:content="${_csrf != null ? _csrf.token : ''}">
+    <meta name="csrf-header" th:content="${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}">
+    <meta name="csrf-parameter" th:content="${_csrf != null ? _csrf.parameterName : '_csrf'}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/top-progress.css">
+    <script defer src="/js/top-progress.js"></script>
+    <script defer src="/js/csrf-fetch.js"></script>
+    <script defer src="/js/storage-ui.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#eef2ff] via-[#f3ecff] to-[#e9f5ff] text-slate-800">
+<div id="top-progress-bar" aria-hidden="true"></div>
+
+<div class="mx-auto flex min-h-screen w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <main class="w-full rounded-[28px] border border-[#d9ddfb] bg-[#f8faff]/95 p-4 shadow-xl shadow-[#c7d2fe]/50 sm:p-6 lg:p-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-xl">🗄️</span>
+                <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-500 sm:text-xs">External Storage</p>
+                    <h1 class="mt-1 text-2xl font-bold tracking-tight text-[#312e81] sm:text-3xl">외부 DB 저장소 관리</h1>
+                    <p class="mt-1 text-sm leading-6 text-slate-500 sm:text-base">저장소 등록, 연결 테스트, 상세 조회를 한 화면에서 바로 처리할 수 있어요.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="#storage-registration" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">새 저장소 등록</a>
+                <a href="#storage-list" class="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100">등록 목록 보기</a>
+                <a href="/" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-[#f8faff] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">홈으로</a>
+            </div>
+        </div>
+
+        <div id="result"
+             th:class="'mt-5 rounded-2xl border p-4 text-sm leading-6 sm:mt-6 ' + (${resultTone} == 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : (${resultTone} == 'warning' ? 'border-amber-200 bg-amber-50 text-amber-900' : (${resultTone} == 'error' ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-indigo-200 bg-indigo-50 text-indigo-900')) )"
+             th:if="${resultMessage != null}">
+            <div class="flex items-start gap-3">
+                <span class="mt-0.5 text-lg" th:text="${resultTone} == 'success' ? '✅' : (${resultTone} == 'warning' ? '⚠️' : (${resultTone} == 'error' ? '⛔' : 'ℹ️'))">ℹ️</span>
+                <div>
+                    <p class="font-semibold" th:text="${resultTitle ?: '안내'}">안내</p>
+                    <p class="mt-1 whitespace-pre-wrap" th:text="${resultMessage}">결과 메시지</p>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-6 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <article id="storage-registration" class="rounded-2xl border border-slate-200 bg-[#f8faff] shadow-sm">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">등록/테스트</p>
+                    <h2 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">외부 DB 저장소 등록</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-500">DB 종류를 선택하고 URL, 인증 정보, 대상 스키마를 입력해 주세요.</p>
+                </div>
+
+                <form id="db-storage-form" class="space-y-5 px-4 py-4 sm:px-5 sm:py-5" th:object="${storageForm}" method="post" action="/storages/databases">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="page" th:value="${page}" />
+                    <input type="hidden" name="size" th:value="${size}" />
+                    <input type="hidden" name="sortBy" th:value="${sortBy}" />
+                    <input type="hidden" name="sortDirection" th:value="${sortDirection}" />
+                    <input type="hidden" name="selectedStorageId" th:value="${selectedStorageId}" />
+
+                    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">기본 정보</p>
+                            <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">저장소 식별 정보</h3>
+                        </div>
+                        <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">저장소 이름</label>
+                                <input type="text" id="name" th:field="*{name}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: 고객사 운영 DB">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">설명</label>
+                                <input type="text" id="description" th:field="*{description}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="선택 사항">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">연결 설정</p>
+                            <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">DB 접속 정보</h3>
+                        </div>
+                        <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-3">
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">DB 종류</label>
+                                <select id="vendor" th:field="*{vendor}" required class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                                    <option value="">선택해 주세요</option>
+                                    <option th:each="vendor : ${vendors}" th:value="${vendor}" th:text="${vendor}"></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">인증 방식</label>
+                                <select id="authMethod" th:field="*{authMethod}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                                    <option th:each="authMethod : ${authMethods}" th:value="${authMethod}" th:text="${authMethod}"></option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700" id="schemaLabel">스키마명 / 서비스명</label>
+                                <input type="text" id="schemaName" th:field="*{schemaName}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: public">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700" id="databaseLabel">데이터베이스명</label>
+                                <input type="text" id="databaseName" th:field="*{databaseName}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: postgres_db">
+                            </div>
+                            <div class="lg:col-span-2">
+                                <label class="text-sm font-semibold text-slate-700">DB URL</label>
+                                <input type="text" id="jdbcUrl" th:field="*{jdbcUrl}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: db.example.com/mydb">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">포트</label>
+                                <input type="number" id="port" th:field="*{port}" min="1" max="65535" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: 5432">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="password-auth-fields" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <div class="border-b border-slate-100 px-4 py-4 sm:px-5">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">Password 인증</p>
+                            <h3 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">계정 기반 로그인 정보</h3>
+                        </div>
+                        <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">사용자명</label>
+                                <input type="text" id="username" th:field="*{username}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">비밀번호</label>
+                                <input type="password" id="password" th:field="*{password}" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="certificate-auth-fields" class="hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm">
+                        <div class="border-b border-amber-100 px-4 py-4 sm:px-5">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-amber-600 sm:text-xs">Certificate 인증</p>
+                            <h3 class="mt-2 text-base font-bold text-amber-900 sm:text-lg">TrustStore / KeyStore 메타 입력</h3>
+                        </div>
+                        <div class="grid gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">TrustStore 경로</label>
+                                <input type="text" id="trustStorePath" th:field="*{certificateAuth.trustStorePath}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: /secure/truststore.jks">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">TrustStore 비밀번호</label>
+                                <input type="password" id="trustStorePassword" th:field="*{certificateAuth.trustStorePassword}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">KeyStore 경로</label>
+                                <input type="text" id="keyStorePath" th:field="*{certificateAuth.keyStorePath}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: /secure/client-keystore.p12">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">KeyStore 비밀번호</label>
+                                <input type="password" id="keyStorePassword" th:field="*{certificateAuth.keyStorePassword}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">Key Alias</label>
+                                <input type="text" id="keyAlias" th:field="*{certificateAuth.keyAlias}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100">
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-slate-700">SSL Mode</label>
+                                <input type="text" id="sslMode" th:field="*{certificateAuth.sslMode}" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" placeholder="예: verify-full 또는 REQUIRED">
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" id="test-button" data-test-url="/api/storages/databases/test" class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">연결 테스트</button>
+                        <button type="submit" id="register-button" class="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-5 py-3 text-sm font-semibold text-white transition hover:from-[#4338ca] hover:to-[#6d28d9]">저장소 등록</button>
+                    </div>
+                </form>
+            </article>
+
+            <article id="storage-list" class="rounded-2xl border border-[#d9ddfb] bg-white p-4 sm:p-5">
+                <div class="flex flex-wrap items-center gap-2">
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">조회</p>
+                        <h2 class="mt-2 text-base font-bold text-slate-800 sm:text-lg">등록된 외부 DB 저장소</h2>
+                    </div>
+                    <form method="get" action="/storages/databases" class="ml-auto flex flex-wrap items-center gap-2">
+                        <input id="page-input" name="page" type="number" min="0" class="h-9 w-20 rounded-lg border border-[#d9ddfb] bg-slate-50 px-2 text-sm" th:value="${page}" />
+                        <select id="sort-by" name="sortBy" class="h-9 rounded-lg border border-[#d9ddfb] bg-slate-50 px-2 text-sm">
+                            <option value="id" th:selected="${sortBy == 'id'}">ID</option>
+                            <option value="name" th:selected="${sortBy == 'name'}">이름</option>
+                            <option value="vendor" th:selected="${sortBy == 'vendor'}">DB 종류</option>
+                            <option value="authMethod" th:selected="${sortBy == 'authMethod'}">인증방식</option>
+                            <option value="connectionStatus" th:selected="${sortBy == 'connectionStatus'}">상태</option>
+                            <option value="createdAt" th:selected="${sortBy == 'createdAt'}">생성일</option>
+                        </select>
+                        <select id="sort-direction" name="sortDirection" class="h-9 rounded-lg border border-[#d9ddfb] bg-slate-50 px-2 text-sm">
+                            <option value="asc" th:selected="${sortDirection == 'asc'}">오름차순</option>
+                            <option value="desc" th:selected="${sortDirection == 'desc'}">내림차순</option>
+                        </select>
+                        <select id="page-size" name="size" class="h-9 rounded-lg border border-[#d9ddfb] bg-slate-50 px-2 text-sm">
+                            <option value="10" th:selected="${size == 10}">10건</option>
+                            <option value="20" th:selected="${size == 20}">20건</option>
+                            <option value="50" th:selected="${size == 50}">50건</option>
+                            <option value="100" th:selected="${size == 100}">100건</option>
+                        </select>
+                        <button id="apply-list-option" type="submit" class="h-9 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">적용</button>
+                    </form>
+                </div>
+
+                <div class="mt-3 overflow-x-auto rounded-xl border border-[#d9ddfb]">
+                    <table class="w-full text-sm">
+                        <thead>
+                        <tr class="border-b bg-indigo-50 text-left text-slate-600">
+                            <th class="p-3">No</th>
+                            <th class="p-3">이름</th>
+                            <th class="p-3">DB 종류</th>
+                            <th class="p-3">인증 방식</th>
+                            <th class="p-3">상태</th>
+                        </tr>
+                        </thead>
+                        <tbody id="storage-list-body">
+                        <tr th:if="${listPage.items == null || #lists.isEmpty(listPage.items)}">
+                            <td colspan="5" class="p-4 text-slate-500">아직 등록된 저장소가 없어요. 왼쪽에서 첫 저장소를 등록해 보세요.</td>
+                        </tr>
+                        <tr th:each="item, itemStat : ${listPage.items}" class="border-b transition hover:bg-indigo-50"
+                            th:attr="data-storage-id=${item.id},data-storage-name=${item.name},data-storage-description=${item.description},data-storage-vendor=${item.vendor},data-storage-auth-method=${item.authMethod},data-storage-jdbc-url=${item.jdbcUrl},data-storage-username=${item.username},data-storage-connection-status=${item.connectionStatus}">
+                            <td class="p-3 font-medium text-slate-700" th:text="${page * size + itemStat.count}">1</td>
+                            <td class="p-3 font-medium text-slate-800">
+                                <button type="button" class="detail-open text-indigo-700 hover:underline" th:text="${item.name ?: '-'}">-</button>
+                            </td>
+                            <td class="p-3" th:text="${item.vendor}">POSTGRESQL</td>
+                            <td class="p-3" th:text="${item.authMethod}">PASSWORD</td>
+                            <td class="p-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700" th:text="${item.connectionStatus ?: 'PENDING'}">PENDING</span>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <p id="pager-summary" class="text-xs text-slate-500"
+                       th:text="${listPage.totalElements == 0 ? '표시할 저장소가 없어요.' : '총 ' + listPage.totalElements + '건 중 ' + startRow + '~' + endRow + '건을 보고 있어요.'}">-</p>
+                    <div id="pagination" class="flex gap-2">
+                        <a th:if="${hasPrevPage}"
+                           th:href="@{/storages/databases(page=${page - 1},size=${size},sortBy=${sortBy},sortDirection=${sortDirection})}"
+                           class="rounded-lg border border-slate-200 px-3 py-2 text-sm">이전</a>
+                        <span th:if="${!hasPrevPage}" class="rounded-lg border border-slate-100 px-3 py-2 text-sm text-slate-400">이전</span>
+                        <a th:if="${hasNextPage}"
+                           th:href="@{/storages/databases(page=${page + 1},size=${size},sortBy=${sortBy},sortDirection=${sortDirection})}"
+                           class="rounded-lg border border-slate-200 px-3 py-2 text-sm">다음</a>
+                        <span th:if="${!hasNextPage}" class="rounded-lg border border-slate-100 px-3 py-2 text-sm text-slate-400">다음</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+
+<div id="storage-detail-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 px-4">
+    <div class="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-indigo-500">상세 / 수정</p>
+                <h3 class="mt-1 text-lg font-bold text-slate-900">저장소 상세 정보</h3>
+            </div>
+            <button type="button" id="modal-close" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">닫기</button>
+        </div>
+        <form id="storage-detail-form" class="space-y-4 px-5 py-5">
+            <input type="hidden" id="modal-storage-id">
+            <div class="grid gap-4 md:grid-cols-2">
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">이름</label>
+                    <input type="text" id="modal-name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm" required>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">설명</label>
+                    <input type="text" id="modal-description" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">DB 종류</label>
+                    <input type="text" id="modal-vendor" readonly disabled class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">인증 방식</label>
+                    <input type="text" id="modal-auth-method" readonly disabled class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500 cursor-not-allowed">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-slate-700">JDBC URL</label>
+                    <input type="text" id="modal-jdbc-url" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm" required>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">포트</label>
+                    <input type="number" id="modal-port" min="1" max="65535" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700" id="modal-database-label">데이터베이스명</label>
+                    <input type="text" id="modal-database-name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700" id="modal-schema-label">스키마명 / 서비스명</label>
+                    <input type="text" id="modal-schema-name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">Oracle SID</label>
+                    <input type="text" id="modal-sid" readonly class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">사용자명</label>
+                    <input type="text" id="modal-username" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-700">현재 상태</label>
+                    <input type="text" id="modal-status" readonly class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                </div>
+            </div>
+            <section id="modal-password-fields" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Password 인증</p>
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">비밀번호</label>
+                        <input type="password" id="modal-password" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm" placeholder="비워 두면 기존 비밀번호 유지">
+                    </div>
+                </div>
+            </section>
+            <section id="modal-certificate-fields" class="hidden rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Certificate 인증</p>
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">TrustStore 경로</label>
+                        <input type="text" id="modal-trust-store-path" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">TrustStore 비밀번호</label>
+                        <input type="password" id="modal-trust-store-password" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm" placeholder="비워 두면 기존 비밀번호 유지">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">KeyStore 경로</label>
+                        <input type="text" id="modal-key-store-path" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">KeyStore 비밀번호</label>
+                        <input type="password" id="modal-key-store-password" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm" placeholder="비워 두면 기존 비밀번호 유지">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">Key Alias</label>
+                        <input type="text" id="modal-key-alias" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-700">SSL Mode</label>
+                        <input type="text" id="modal-ssl-mode" class="mt-1 w-full rounded-xl border border-amber-200 bg-white px-3 py-3 text-sm">
+                    </div>
+                </div>
+            </section>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="modal-delete-button" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-100">삭제</button>
+                <button type="button" id="modal-verify-button" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100">검증</button>
+                <button type="button" id="modal-save-button" class="rounded-xl bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] px-4 py-2.5 text-sm font-semibold text-white">수정 저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/js/database-storage-form.js" defer></script>
+<script>
+    (function () {
+        const modal = document.getElementById('storage-detail-modal');
+        const closeButton = document.getElementById('modal-close');
+        const detailButtons = document.querySelectorAll('.detail-open');
+        const modalVerifyButton = document.getElementById('modal-verify-button');
+        const modalSaveButton = document.getElementById('modal-save-button');
+        const modalDeleteButton = document.getElementById('modal-delete-button');
+        const modalFields = {
+            storageId: document.getElementById('modal-storage-id'),
+            name: document.getElementById('modal-name'),
+            description: document.getElementById('modal-description'),
+            vendor: document.getElementById('modal-vendor'),
+            authMethod: document.getElementById('modal-auth-method'),
+            jdbcUrl: document.getElementById('modal-jdbc-url'),
+            port: document.getElementById('modal-port'),
+            databaseName: document.getElementById('modal-database-name'),
+            schemaName: document.getElementById('modal-schema-name'),
+            sid: document.getElementById('modal-sid'),
+            username: document.getElementById('modal-username'),
+            password: document.getElementById('modal-password'),
+            status: document.getElementById('modal-status'),
+            trustStorePath: document.getElementById('modal-trust-store-path'),
+            trustStorePassword: document.getElementById('modal-trust-store-password'),
+            keyStorePath: document.getElementById('modal-key-store-path'),
+            keyStorePassword: document.getElementById('modal-key-store-password'),
+            keyAlias: document.getElementById('modal-key-alias'),
+            sslMode: document.getElementById('modal-ssl-mode'),
+            passwordSection: document.getElementById('modal-password-fields'),
+            certificateSection: document.getElementById('modal-certificate-fields'),
+            databaseLabel: document.getElementById('modal-database-label'),
+            schemaLabel: document.getElementById('modal-schema-label')
+        };
+
+        let activeRow = null;
+
+        function setButtonBusy(button, busyLabel) {
+            if (!button) {
+                return;
+            }
+            if (!button.dataset.defaultLabel) {
+                button.dataset.defaultLabel = button.textContent.trim();
+            }
+            button.disabled = true;
+            button.classList.add('opacity-60');
+            button.textContent = busyLabel;
+        }
+
+        function clearButtonBusy(button) {
+            if (!button) {
+                return;
+            }
+            button.disabled = false;
+            button.classList.remove('opacity-60');
+            button.textContent = button.dataset.defaultLabel || button.textContent;
+        }
+
+        function openModal(row) {
+            activeRow = row || activeRow;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showToast(tone, title, message, timeout) {
+            window.storageUi?.showToast({ tone, title, message, timeout });
+        }
+
+        async function parseJson(response) {
+            if (response.redirected && new URL(response.url, window.location.origin).pathname === '/') {
+                throw new Error('로그인 세션이 만료됐어요. 다시 로그인한 뒤 새로고침해 주세요.');
+            }
+
+            if (response.status === 204) {
+                return null;
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error('서버가 JSON 대신 다른 응답을 반환했어요.');
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data?.message || data?.detail || '요청 처리에 실패했어요.');
+            }
+            return data;
+        }
+
+        async function fetchJson(url, options) {
+            const response = await window.csrf.fetch(url, {
+                headers: {
+                    Accept: 'application/json',
+                    ...(options?.body ? { 'Content-Type': 'application/json' } : {})
+                },
+                ...options
+            });
+            return parseJson(response);
+        }
+
+        function updateFieldLabels(vendor) {
+            if (vendor === 'ORACLE') {
+                modalFields.schemaLabel.textContent = '서비스명';
+                modalFields.databaseLabel.textContent = '데이터베이스명';
+            } else if (vendor === 'POSTGRESQL') {
+                modalFields.schemaLabel.textContent = '스키마명(선택)';
+                modalFields.databaseLabel.textContent = '데이터베이스명(필수)';
+            } else {
+                modalFields.schemaLabel.textContent = '스키마명(선택)';
+                modalFields.databaseLabel.textContent = '데이터베이스명';
+            }
+        }
+
+        function toggleAuthSections(authMethod) {
+            const certificate = authMethod === 'CERTIFICATE';
+            modalFields.passwordSection.classList.toggle('hidden', certificate);
+            modalFields.certificateSection.classList.toggle('hidden', !certificate);
+        }
+
+        function populateModal(detail) {
+            modalFields.storageId.value = detail.id || '';
+            modalFields.name.value = detail.name || '';
+            modalFields.description.value = detail.description || '';
+            modalFields.vendor.value = detail.vendor || '';
+            modalFields.authMethod.value = detail.authMethod || '';
+            modalFields.jdbcUrl.value = detail.jdbcUrl || '';
+            modalFields.port.value = detail.port || '';
+            modalFields.databaseName.value = detail.databaseName || '';
+            modalFields.schemaName.value = detail.schemaName || detail.serviceName || '';
+            modalFields.sid.value = detail.sid || '';
+            modalFields.username.value = detail.username || '';
+            modalFields.password.value = '';
+            modalFields.status.value = detail.connectionStatus || 'PENDING';
+            modalFields.trustStorePath.value = detail.trustStorePath || '';
+            modalFields.trustStorePassword.value = '';
+            modalFields.keyStorePath.value = detail.keyStorePath || '';
+            modalFields.keyStorePassword.value = '';
+            modalFields.keyAlias.value = detail.keyAlias || '';
+            modalFields.sslMode.value = detail.sslMode || '';
+            updateFieldLabels(detail.vendor);
+            toggleAuthSections(detail.authMethod);
+        }
+
+        function syncRow(row, detail) {
+            if (!row || !detail) {
+                return;
+            }
+            row.dataset.storageId = detail.id || '';
+            row.dataset.storageName = detail.name || '';
+            row.dataset.storageDescription = detail.description || '';
+            row.dataset.storageVendor = detail.vendor || '';
+            row.dataset.storageAuthMethod = detail.authMethod || '';
+            row.dataset.storageJdbcUrl = detail.jdbcUrl || '';
+            row.dataset.storageUsername = detail.username || '';
+            row.dataset.storageConnectionStatus = detail.connectionStatus || 'PENDING';
+
+            const cells = row.querySelectorAll('td');
+            if (cells[1]) {
+                const button = cells[1].querySelector('.detail-open');
+                if (button) {
+                    button.textContent = detail.name || '-';
+                }
+            }
+            if (cells[2]) {
+                cells[2].textContent = detail.vendor || '';
+            }
+            if (cells[3]) {
+                cells[3].textContent = detail.authMethod || '';
+            }
+            if (cells[4]) {
+                const statusBadge = cells[4].querySelector('span');
+                if (statusBadge) {
+                    statusBadge.textContent = detail.connectionStatus || 'PENDING';
+                }
+            }
+        }
+
+        function buildUpdatePayload() {
+            const vendor = modalFields.vendor.value;
+            const authMethod = modalFields.authMethod.value;
+            const databaseName = modalFields.databaseName.value.trim();
+
+            if (!modalFields.name.value.trim()) {
+                throw new Error('저장소 이름을 입력해 주세요.');
+            }
+            if (!modalFields.jdbcUrl.value.trim()) {
+                throw new Error('JDBC URL을 입력해 주세요.');
+            }
+            if (vendor === 'POSTGRESQL' && !databaseName) {
+                throw new Error('데이터베이스명은 PostgreSQL에서 필수입니다.');
+            }
+
+            return {
+                name: modalFields.name.value.trim(),
+                description: modalFields.description.value.trim(),
+                vendor,
+                authMethod,
+                jdbcUrl: modalFields.jdbcUrl.value.trim(),
+                port: modalFields.port.value ? Number(modalFields.port.value) : null,
+                databaseName,
+                schemaName: modalFields.schemaName.value.trim(),
+                username: modalFields.username.value.trim(),
+                password: modalFields.password.value || '',
+                certificateAuth: authMethod === 'CERTIFICATE' ? {
+                    trustStorePath: modalFields.trustStorePath.value.trim(),
+                    trustStorePassword: modalFields.trustStorePassword.value || '',
+                    keyStorePath: modalFields.keyStorePath.value.trim(),
+                    keyStorePassword: modalFields.keyStorePassword.value || '',
+                    keyAlias: modalFields.keyAlias.value.trim(),
+                    sslMode: modalFields.sslMode.value.trim()
+                } : null
+            };
+        }
+
+        async function loadDetail(row) {
+            const storageId = row?.dataset?.storageId;
+            if (!storageId) {
+                throw new Error('storageId를 찾지 못했어요.');
+            }
+            const detail = await fetchJson(`/api/storages/databases/${storageId}`);
+            populateModal(detail);
+            syncRow(row, detail);
+            return detail;
+        }
+
+        async function runRevalidate(button) {
+            const storageId = modalFields.storageId.value;
+            if (!storageId) {
+                throw new Error('검증할 저장소를 찾지 못했어요.');
+            }
+
+            setButtonBusy(button, '검증 중...');
+            try {
+                const result = await fetchJson(`/api/storages/databases/${storageId}/revalidate`, { method: 'POST' });
+                const detail = await fetchJson(`/api/storages/databases/${storageId}`);
+                populateModal(detail);
+                syncRow(activeRow, detail);
+                showToast('success', '연결 검증 성공', result.message || '등록된 연결 정보를 다시 검증했어요.', 3200);
+            } catch (error) {
+                const detail = await fetchJson(`/api/storages/databases/${storageId}`).catch(() => null);
+                if (detail) {
+                    populateModal(detail);
+                    syncRow(activeRow, detail);
+                }
+                showToast('error', '연결 검증 실패', error.message || '저장소 재검증에 실패했어요.', 4600);
+            } finally {
+                clearButtonBusy(button);
+            }
+        }
+
+        async function runSave() {
+            const storageId = modalFields.storageId.value;
+            if (!storageId) {
+                throw new Error('수정할 저장소를 찾지 못했어요.');
+            }
+
+            const payload = buildUpdatePayload();
+            setButtonBusy(modalSaveButton, '저장 중...');
+            try {
+                const detail = await fetchJson(`/api/storages/databases/${storageId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                populateModal(detail);
+                syncRow(activeRow, detail);
+                showToast('success', '저장소 수정 완료', '수정 내용을 저장했고 연결 상태를 PENDING으로 갱신했어요.', 3200);
+            } finally {
+                clearButtonBusy(modalSaveButton);
+            }
+        }
+
+        function buildReloadUrlAfterDelete() {
+            const url = new URL(window.location.href);
+            const currentPage = Number(url.searchParams.get('page') || '0');
+            const currentPageSize = Number(url.searchParams.get('size') || document.getElementById('page-size')?.value || '10');
+            const visibleRows = document.querySelectorAll('#storage-list-body tr[data-storage-id]').length;
+            const nextPage = visibleRows <= 1 && currentPage > 0
+                ? Math.max(currentPage - 1, 0)
+                : currentPage;
+            url.searchParams.set('page', String(nextPage));
+            url.searchParams.set('size', String(currentPageSize));
+            return url.toString();
+        }
+
+        async function runDelete() {
+            const storageId = modalFields.storageId.value;
+            if (!storageId) {
+                throw new Error('삭제할 저장소를 찾지 못했어요.');
+            }
+            if (!window.confirm('정말 이 저장소를 삭제할까요?')) {
+                return;
+            }
+
+            setButtonBusy(modalDeleteButton, '삭제 중...');
+            try {
+                await fetchJson(`/api/storages/databases/${storageId}`, { method: 'DELETE' });
+                closeModal();
+                window.location.assign(buildReloadUrlAfterDelete());
+            } finally {
+                clearButtonBusy(modalDeleteButton);
+            }
+        }
+
+        detailButtons.forEach((button) => {
+            button.addEventListener('click', async () => {
+                const row = button.closest('tr');
+                openModal(row);
+                try {
+                    await loadDetail(row);
+                } catch (error) {
+                    closeModal();
+                    showToast('error', '상세 조회 실패', error.message || '상세 정보를 불러오지 못했어요.', 4600);
+                }
+            });
+        });
+
+        closeButton?.addEventListener('click', closeModal);
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) closeModal();
+        });
+        modalVerifyButton?.addEventListener('click', async () => {
+            try {
+                await runRevalidate(modalVerifyButton);
+            } catch (error) {
+                showToast('error', '연결 검증 실패', error.message || '저장소 재검증에 실패했어요.', 4600);
+            }
+        });
+        modalSaveButton?.addEventListener('click', async () => {
+            try {
+                await runSave();
+            } catch (error) {
+                showToast('error', '저장소 수정 실패', error.message || '수정 저장에 실패했어요.', 4600);
+            }
+        });
+        modalDeleteButton?.addEventListener('click', async () => {
+            try {
+                await runDelete();
+            } catch (error) {
+                showToast('error', '저장소 삭제 실패', error.message || '저장소 삭제에 실패했어요.', 4600);
+            }
+        });
+    })();
+</script>
+</body>
+</html>

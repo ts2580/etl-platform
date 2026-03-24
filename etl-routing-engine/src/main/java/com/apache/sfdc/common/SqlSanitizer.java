@@ -1,6 +1,7 @@
 package com.apache.sfdc.common;
 
 import com.etlplatform.common.error.AppException;
+import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategies;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Set;
@@ -11,7 +12,8 @@ public final class SqlSanitizer {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
     private static final Pattern SFID = Pattern.compile("[A-Za-z0-9]{18}");
 
-    private SqlSanitizer() {}
+    private SqlSanitizer() {
+    }
 
     public static void validateIdentifier(String identifier) {
         if (identifier == null || !IDENTIFIER.matcher(identifier).matches()) {
@@ -28,76 +30,29 @@ public final class SqlSanitizer {
     }
 
     public static String sanitizeValue(JsonNode valueNode, String sfType) {
+        return DatabaseVendorStrategies.defaultStrategy().renderLiteral(toRawValue(valueNode), sfType);
+    }
+
+    public static Object toRawValue(JsonNode valueNode) {
         if (valueNode == null || valueNode.isNull()) {
-            return "null";
+            return null;
         }
-
-        return switch (sfType) {
-            case "double", "percent", "currency" -> toNumeric(valueNode, sfType);
-            case "int" -> toInt(valueNode);
-            case "boolean" -> toBoolean(valueNode);
-            case "datetime" -> toDateTimeLiteral(valueNode);
-            case "date" -> toDateLiteral(valueNode);
-            case "time" -> quoteAndNormalizeTime(valueNode.asText());
-            default -> quoteString(valueNode.asText());
-        };
-    }
-
-    private static String toNumeric(JsonNode valueNode, String sfType) {
-        String raw = valueNode.asText();
-        try {
-            Double.parseDouble(raw);
-            return raw;
-        } catch (NumberFormatException ex) {
-            throw new AppException("Invalid numeric value for type " + sfType + ": " + raw);
+        if (valueNode.isBoolean()) {
+            return valueNode.booleanValue();
         }
-    }
-
-    private static String toInt(JsonNode valueNode) {
-        String raw = valueNode.asText();
-        try {
-            Integer.parseInt(raw);
-            return raw;
-        } catch (NumberFormatException ex) {
-            throw new AppException("Invalid integer value: " + raw);
+        if (valueNode.isIntegralNumber()) {
+            return valueNode.longValue();
         }
-    }
-
-    private static String toBoolean(JsonNode valueNode) {
-        return valueNode.asBoolean() ? "true" : "false";
-    }
-
-    private static String toDateTimeLiteral(JsonNode valueNode) {
-        String raw = valueNode.asText();
-        if (raw.matches("^\\d{13}$")) {
-            return "FROM_UNIXTIME(" + raw + " / 1000)";
+        if (valueNode.isFloatingPointNumber()) {
+            return valueNode.decimalValue();
         }
-        if (raw.matches("^\\d{10}$")) {
-            return "FROM_UNIXTIME(" + raw + ")";
+        if (valueNode.isTextual()) {
+            return valueNode.textValue();
         }
-        return quoteAndNormalizeDateTime(raw);
-    }
-
-    private static String toDateLiteral(JsonNode valueNode) {
-        String raw = valueNode.asText();
-        if (raw.matches("^\\d{13}$")) {
-            return "DATE(FROM_UNIXTIME(" + raw + " / 1000))";
+        if (valueNode.isNumber()) {
+            return valueNode.numberValue();
         }
-        if (raw.matches("^\\d{10}$")) {
-            return "DATE(FROM_UNIXTIME(" + raw + "))";
-        }
-        return quoteString(raw);
-    }
-
-    private static String quoteAndNormalizeDateTime(String value) {
-        String normalized = value.replace(".000+0000", "")
-                .replace("T", " ")
-                .replace("Z", "");
-        return quoteString(normalized);
-    }
-
-    private static String quoteAndNormalizeTime(String value) {
-        return quoteString(value.replace("Z", ""));
+        return valueNode.asText();
     }
 
     public static String quoteString(String value) {
@@ -114,11 +69,11 @@ public final class SqlSanitizer {
         if (sfid == null || !SFID.matcher(sfid).matches()) {
             throw new AppException("Invalid sfid: " + sfid);
         }
-        return "'" + sfid + "'";
+        return quoteString(sfid);
     }
 
     public static String quoteIdentifier(String fieldName) {
         validateIdentifier(fieldName);
-        return "`" + fieldName + "`";
+        return DatabaseVendorStrategies.defaultStrategy().quoteIdentifier(fieldName);
     }
 }

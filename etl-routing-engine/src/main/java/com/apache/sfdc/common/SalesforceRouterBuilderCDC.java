@@ -1,6 +1,8 @@
 package com.apache.sfdc.common;
 
-import com.apache.sfdc.pubsub.repository.PubSubRepository;
+import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
+import com.etlplatform.common.storage.database.sql.BoundBatchSql;
+import com.etlplatform.common.storage.database.sql.BoundSql;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.builder.RouteBuilder;
 
@@ -13,15 +15,21 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
     private final String targetSchema;
     private final String selectedObject;
     private final Map<String, Object> mapType;
-    private final PubSubRepository pubSubRepository;
+    private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
+    private final Long targetStorageId;
     private final SalesforceCdcPayloadMapper payloadMapper = new SalesforceCdcPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
-    public SalesforceRouterBuilderCDC(String targetSchema, String selectedObject, Map<String, Object> mapType, PubSubRepository pubSubRepository) {
+    public SalesforceRouterBuilderCDC(String targetSchema,
+                                      String selectedObject,
+                                      Map<String, Object> mapType,
+                                      ExternalStorageRoutingJdbcExecutor routingJdbcExecutor,
+                                      Long targetStorageId) {
         this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
         this.mapType = mapType;
-        this.pubSubRepository = pubSubRepository;
+        this.routingJdbcExecutor = routingJdbcExecutor;
+        this.targetStorageId = targetStorageId;
     }
 
     @Override
@@ -36,17 +44,42 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
         SalesforceMutationRepositoryPort repositoryPort = new SalesforceMutationRepositoryPort() {
             @Override
             public int insertObject(String upperQuery, List<String> listUnderQuery, String tailQuery) {
-                return pubSubRepository.insertObject(upperQuery, listUnderQuery, tailQuery);
+                return routingJdbcExecutor.insert("CDC", upperQuery, listUnderQuery, tailQuery, targetStorageId);
             }
 
             @Override
             public int updateObject(StringBuilder strUpdate) {
-                return pubSubRepository.updateObject(strUpdate);
+                return routingJdbcExecutor.update("CDC", strUpdate, targetStorageId);
             }
 
             @Override
             public int deleteObject(StringBuilder strDelete) {
-                return pubSubRepository.deleteObject(strDelete);
+                return routingJdbcExecutor.delete("CDC", strDelete, targetStorageId);
+            }
+
+            @Override
+            public boolean supportsBoundStatements() {
+                return routingJdbcExecutor.usesExternalStorage(targetStorageId);
+            }
+
+            @Override
+            public com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy vendorStrategy() {
+                return routingJdbcExecutor.resolveStrategy(targetStorageId);
+            }
+
+            @Override
+            public int insertObject(BoundBatchSql batchSql) {
+                return routingJdbcExecutor.insert(batchSql, targetStorageId);
+            }
+
+            @Override
+            public int updateObject(BoundSql boundSql) {
+                return routingJdbcExecutor.update(boundSql, targetStorageId);
+            }
+
+            @Override
+            public int deleteObject(BoundSql boundSql) {
+                return routingJdbcExecutor.delete(boundSql, targetStorageId);
             }
         };
 

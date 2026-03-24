@@ -1,8 +1,8 @@
 package com.apache.sfdc.common;
 
-import com.apache.sfdc.common.RoutingRegistryRepository;
 import com.apache.sfdc.pubsub.service.PubSubService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,20 +16,26 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RoutingDashboardController {
 
-    private final RoutingRegistryRepository routingRegistryRepository;
+    private final ObjectProvider<RoutingRegistryRepository> routingRegistryRepositoryProvider;
     private final PubSubService pubSubService;
 
     @GetMapping("/routing/dashboard")
     public Map<String, Object> getDashboard(@RequestParam(value = "orgKey", required = false) String orgKey) {
         Map<String, Object> result = new HashMap<>();
 
-        List<Map<String, Object>> activeRoutes = (orgKey == null || orgKey.isBlank())
-                ? routingRegistryRepository.findActiveRoutes()
-                : routingRegistryRepository.findActiveRoutesByOrg(orgKey);
+        RoutingRegistryRepository routingRegistryRepository = routingRegistryRepositoryProvider.getIfAvailable();
 
-        List<Map<String, Object>> activeOrgs = (orgKey == null || orgKey.isBlank())
-                ? routingRegistryRepository.findActiveOrgs()
-                : routingRegistryRepository.findActiveOrgsByOrg(orgKey);
+        List<Map<String, Object>> activeRoutes = routingRegistryRepository == null
+                ? List.of()
+                : (orgKey == null || orgKey.isBlank())
+                    ? routingRegistryRepository.findActiveRoutes()
+                    : routingRegistryRepository.findActiveRoutesByOrg(orgKey);
+
+        List<Map<String, Object>> activeOrgs = routingRegistryRepository == null
+                ? List.of()
+                : (orgKey == null || orgKey.isBlank())
+                    ? routingRegistryRepository.findActiveOrgs()
+                    : routingRegistryRepository.findActiveOrgsByOrg(orgKey);
 
         Map<String, Object> cdcSlotSummary = pubSubService.getSlotSummary("CDC");
         int used = asInt(cdcSlotSummary.get("used"));

@@ -1,6 +1,7 @@
 package com.sfdcupload.common;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,13 +10,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalesforceOrgService {
 
-    private final SalesforceOrgCredentialRepository repository;
+    private final ObjectProvider<SalesforceOrgCredentialRepository> repositoryProvider;
 
     public SalesforceOrgCredential getOrg(String orgKey) {
-        return orgKey == null || orgKey.isBlank() ? null : repository.findByOrgKey(orgKey);
+        SalesforceOrgCredentialRepository repository = repository();
+        return repository == null || orgKey == null || orgKey.isBlank() ? null : repository.findByOrgKey(orgKey);
     }
 
     public SalesforceOrgCredential getDefaultOrg() {
+        SalesforceOrgCredentialRepository repository = repository();
+        if (repository == null) {
+            return null;
+        }
+
         List<SalesforceOrgCredential> orgs = repository.findAllActive();
         return orgs.isEmpty() ? null : orgs.get(0);
     }
@@ -26,9 +33,14 @@ public class SalesforceOrgService {
     }
 
     public void storeAccessToken(String orgKey, String accessToken) {
-        if (orgKey == null || orgKey.isBlank() || accessToken == null || accessToken.isBlank()) {
+        SalesforceOrgCredentialRepository repository = repository();
+        if (repository == null || orgKey == null || orgKey.isBlank() || accessToken == null || accessToken.isBlank()) {
             return;
         }
         repository.updateAccessToken(orgKey, accessToken);
+    }
+
+    private SalesforceOrgCredentialRepository repository() {
+        return repositoryProvider.getIfAvailable();
     }
 }
