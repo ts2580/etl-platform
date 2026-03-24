@@ -7,6 +7,7 @@ import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
 import com.apache.sfdc.common.SalesforceRouterBuilder;
 import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
+import com.etlplatform.common.storage.database.DatabaseVendor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +42,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StreamingServiceImpl implements StreamingService {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingServiceImpl.class);
+    private static final long STREAMING_WATCHDOG_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    private static final long STREAMING_STALE_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(20);
+    private static final long STREAMING_RESTART_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(3);
+
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Map<String, StreamingRuntimeState> runtimeStates = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService streamingWatchdog = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "streaming-watchdog");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final AtomicBoolean streamingWatchdogStarted = new AtomicBoolean(false);
 
     @Value("${camel.component.salesforce.instance-url}")
     private String instanceUrl;
@@ -107,6 +123,7 @@ public class StreamingServiceImpl implements StreamingService {
         }
 
         returnMap.put("mapType", schemaResult.mapType());
+        logOracleRecoveryDdlIfNeeded("STREAMING", mapProperty, targetStorageId, schemaResult.ddl());
         routingJdbcExecutor.executeDdl("STREAMING", schemaResult.ddl(), targetStorageId);
         returnMap.put("soqlForPushTopic", schemaResult.soqlForPushTopic());
 
@@ -263,21 +280,45 @@ public class StreamingServiceImpl implements StreamingService {
         String targetSchema = mapProperty.get("targetSchema");
         String resolvedLoginUrl = resolveLoginUrl(mapProperty.get("instanceUrl"));
 
+        ensureStreamingWatchdogStarted();
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "STREAMING");
+        AtomicLong lastEventAt = new AtomicLong(System.currentTimeMillis());
+        AtomicLong lastRestartAttemptAt = new AtomicLong(0L);
+        AtomicBoolean restartInProgress = new AtomicBoolean(false);
+
         SalesforceComponent sfComponent = new SalesforceComponent();
         sfComponent.setLoginUrl(resolvedLoginUrl == null || resolvedLoginUrl.isBlank() ? loginUrl : resolvedLoginUrl);
         applySalesforceAuth(sfComponent, mapProperty, authType);
         sfComponent.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilder(targetSchema, selectedObject, mapType, routingJdbcExecutor, resolveTargetStorageId(mapProperty));
+        RouteBuilder routeBuilder = new SalesforceRouterBuilder(
+                targetSchema,
+                selectedObject,
+                mapType,
+                routingJdbcExecutor,
+                resolveTargetStorageId(mapProperty),
+                processedCount -> {
+                    if (processedCount > 0) {
+                        lastEventAt.set(System.currentTimeMillis());
+                    }
+                }
+        );
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfComponent);
 
         try {
             myCamelContext.start();
-            String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "STREAMING");
-            runtimeStates.put(routeKey, new StreamingRuntimeState(new HashMap<>(mapProperty), new HashMap<>(mapType), myCamelContext));
+            runtimeStates.put(routeKey, new StreamingRuntimeState(
+                    new HashMap<>(mapProperty),
+                    new HashMap<>(mapType),
+                    myCamelContext,
+                    lastEventAt,
+                    lastRestartAttemptAt,
+                    restartInProgress
+            ));
             mapProperty.put("authenticationType", authType.name());
+            log.info("Streaming route started. routeKey={}, loginUrl={}, instanceUrl={}", routeKey, resolvedLoginUrl, mapProperty.get("instanceUrl"));
         } catch (Exception e) {
             log.warn("Streaming CamelContext start 실패(auth={})", authType, e);
             myCamelContext.close();
@@ -382,6 +423,26 @@ public class StreamingServiceImpl implements StreamingService {
         return normalized.length() > 1000 ? normalized.substring(0, 1000) + "..." : normalized;
     }
 
+    private void logOracleRecoveryDdlIfNeeded(String protocol, Map<String, String> mapProperty, Long targetStorageId, String ddl) {
+        if (!log.isDebugEnabled() || targetStorageId == null || ddl == null || ddl.isBlank()) {
+            return;
+        }
+        if (!Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"))) {
+            return;
+        }
+        if (routingJdbcExecutor.resolveStrategy(targetStorageId).vendor() != DatabaseVendor.ORACLE) {
+            return;
+        }
+
+        log.debug("[ORACLE-RECOVERY-DDL] protocol={}, orgKey={}, selectedObject={}, targetSchema={}, storageId={}, ddl=\n{}",
+                protocol,
+                mapProperty.get("orgKey"),
+                mapProperty.get("selectedObject"),
+                mapProperty.get("targetSchema"),
+                targetStorageId,
+                ddl);
+    }
+
     private String resolveInstanceUrl(Map<String, String> mapProperty) {
         String configured = mapProperty != null ? mapProperty.get("instanceUrl") : null;
         if (configured == null || configured.isBlank()) {
@@ -431,8 +492,99 @@ public class StreamingServiceImpl implements StreamingService {
                 || message.contains("credentials");
     }
 
+    private void ensureStreamingWatchdogStarted() {
+        if (streamingWatchdogStarted.compareAndSet(false, true)) {
+            streamingWatchdog.scheduleWithFixedDelay(this::runStreamingWatchdog,
+                    STREAMING_WATCHDOG_INTERVAL_MILLIS,
+                    STREAMING_WATCHDOG_INTERVAL_MILLIS,
+                    TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void runStreamingWatchdog() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, StreamingRuntimeState> entry : runtimeStates.entrySet()) {
+            String routeKey = entry.getKey();
+            StreamingRuntimeState state = entry.getValue();
+            if (state == null || state.camelContext() == null) {
+                continue;
+            }
+
+            try {
+                if (!state.camelContext().isStarted()) {
+                    restartStreamingRoute(routeKey, state, "camelContext not started");
+                    continue;
+                }
+
+                long lastEventAt = state.lastEventAt().get();
+                long idleMillis = now - lastEventAt;
+                if (lastEventAt > 0 && idleMillis >= STREAMING_STALE_THRESHOLD_MILLIS) {
+                    restartStreamingRoute(routeKey, state, "no streaming events for " + (idleMillis / 1000) + "s");
+                }
+            } catch (Exception e) {
+                log.warn("Streaming watchdog check 실패. routeKey={}", routeKey, e);
+            }
+        }
+    }
+
+    private void restartStreamingRoute(String routeKey, StreamingRuntimeState state, String reason) {
+        long now = System.currentTimeMillis();
+        long lastAttempt = state.lastRestartAttemptAt().get();
+        if (now - lastAttempt < STREAMING_RESTART_COOLDOWN_MILLIS) {
+            return;
+        }
+        if (!state.lastRestartAttemptAt().compareAndSet(lastAttempt, now)) {
+            return;
+        }
+        if (!state.restartInProgress().compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            log.warn("Streaming route restart 시작. routeKey={}, reason={}, lastEventAt={}, instanceUrl={}",
+                    routeKey,
+                    reason,
+                    Instant.ofEpochMilli(state.lastEventAt().get()),
+                    state.mapProperty().get("instanceUrl"));
+
+            stopCamelContextQuietly(state.camelContext(), routeKey);
+            closeCamelContextQuietly(state.camelContext(), routeKey);
+            subscribePushTopic(state.mapProperty(), state.mapProperty().get("accessToken"), new HashMap<>(state.mapType()));
+            log.info("Streaming route restart 완료. routeKey={}, reason={}", routeKey, reason);
+        } catch (Exception e) {
+            log.error("Streaming route restart 실패. routeKey={}, reason={}", routeKey, reason, e);
+        } finally {
+            state.restartInProgress().set(false);
+        }
+    }
+
+    private void stopCamelContextQuietly(CamelContext camelContext, String routeKey) {
+        if (camelContext == null) {
+            return;
+        }
+        try {
+            camelContext.stop();
+        } catch (Exception e) {
+            log.warn("Streaming camelContext stop 실패. routeKey={}", routeKey, e);
+        }
+    }
+
+    private void closeCamelContextQuietly(CamelContext camelContext, String routeKey) {
+        if (camelContext == null) {
+            return;
+        }
+        try {
+            camelContext.close();
+        } catch (Exception e) {
+            log.warn("Streaming camelContext close 실패. routeKey={}", routeKey, e);
+        }
+    }
+
     private record StreamingRuntimeState(Map<String, String> mapProperty,
                                          Map<String, Object> mapType,
-                                         CamelContext camelContext) {
+                                         CamelContext camelContext,
+                                         AtomicLong lastEventAt,
+                                         AtomicLong lastRestartAttemptAt,
+                                         AtomicBoolean restartInProgress) {
     }
 }

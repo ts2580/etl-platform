@@ -8,6 +8,7 @@ import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.pubsub.repository.PubSubRepository;
 import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
 import com.etlplatform.common.error.AppException;
+import com.etlplatform.common.storage.database.DatabaseVendor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
@@ -46,10 +52,19 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PubSubServiceImpl implements PubSubService {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubServiceImpl.class);
+    private static final long PUBSUB_WATCHDOG_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    private static final long PUBSUB_STALE_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(20);
+    private static final long PUBSUB_RESTART_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(3);
 
     private final PubSubRepository pubSubRepository;
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Map<String, PubSubRuntimeState> runtimeStates = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService pubSubWatchdog = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "pubsub-watchdog");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final AtomicBoolean pubSubWatchdogStarted = new AtomicBoolean(false);
 
     @Value("${camel.component.salesforce.instance-url}")
     private String instanceUrl;
@@ -222,6 +237,7 @@ public class PubSubServiceImpl implements PubSubService {
                 selectedObject,
                 schemaResult.mapType() == null ? 0 : schemaResult.mapType().size(),
                 schemaResult.mapType() == null ? java.util.List.of() : schemaResult.mapType().keySet().stream().sorted().limit(80).toList());
+        logOracleRecoveryDdlIfNeeded("CDC", mapProperty, targetStorageId, schemaResult.ddl());
         routingJdbcExecutor.executeDdl("CDC", schemaResult.ddl(), targetStorageId);
 
         boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
@@ -316,21 +332,45 @@ public class PubSubServiceImpl implements PubSubService {
         String targetSchema = mapProperty.get("targetSchema");
         String resolvedLoginUrl = resolveLoginUrl(mapProperty.get("instanceUrl"));
 
+        ensurePubSubWatchdogStarted();
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "CDC");
+        AtomicLong lastEventAt = new AtomicLong(System.currentTimeMillis());
+        AtomicLong lastRestartAttemptAt = new AtomicLong(0L);
+        AtomicBoolean restartInProgress = new AtomicBoolean(false);
+
         SalesforceComponent sfEcology = new SalesforceComponent();
         sfEcology.setLoginUrl(resolvedLoginUrl == null || resolvedLoginUrl.isBlank() ? loginUrl : resolvedLoginUrl);
         applySalesforceAuth(sfEcology, mapProperty, authType);
         sfEcology.setPackages("com.apache.sfdc.router.dto");
 
-        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(targetSchema, selectedObject, mapType, routingJdbcExecutor, resolveTargetStorageId(mapProperty));
+        RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(
+                targetSchema,
+                selectedObject,
+                mapType,
+                routingJdbcExecutor,
+                resolveTargetStorageId(mapProperty),
+                processedCount -> {
+                    if (processedCount > 0) {
+                        lastEventAt.set(System.currentTimeMillis());
+                    }
+                }
+        );
         CamelContext myCamelContext = new DefaultCamelContext();
         myCamelContext.addRoutes(routeBuilder);
         myCamelContext.addComponent("sf", sfEcology);
 
         try {
             myCamelContext.start();
-            String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(mapProperty.get("orgKey"), selectedObject, "CDC");
-            runtimeStates.put(routeKey, new PubSubRuntimeState(new HashMap<>(mapProperty), new HashMap<>(mapType), myCamelContext));
+            runtimeStates.put(routeKey, new PubSubRuntimeState(
+                    new HashMap<>(mapProperty),
+                    new HashMap<>(mapType),
+                    myCamelContext,
+                    lastEventAt,
+                    lastRestartAttemptAt,
+                    restartInProgress
+            ));
             mapProperty.put("authenticationType", authType.name());
+            log.info("PubSub route started. routeKey={}, loginUrl={}, instanceUrl={}", routeKey, resolvedLoginUrl, mapProperty.get("instanceUrl"));
         } catch (Exception e) {
             log.warn("PubSub CamelContext start 실패(auth={})", authType, e);
             myCamelContext.close();
@@ -455,6 +495,26 @@ public class PubSubServiceImpl implements PubSubService {
         return override != null && !override.isBlank() ? override : instanceUrl;
     }
 
+    private void logOracleRecoveryDdlIfNeeded(String protocol, Map<String, String> mapProperty, Long targetStorageId, String ddl) {
+        if (!log.isDebugEnabled() || targetStorageId == null || ddl == null || ddl.isBlank()) {
+            return;
+        }
+        if (!Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"))) {
+            return;
+        }
+        if (routingJdbcExecutor.resolveStrategy(targetStorageId).vendor() != DatabaseVendor.ORACLE) {
+            return;
+        }
+
+        log.debug("[ORACLE-RECOVERY-DDL] protocol={}, orgKey={}, selectedObject={}, targetSchema={}, storageId={}, ddl=\n{}",
+                protocol,
+                mapProperty.get("orgKey"),
+                mapProperty.get("selectedObject"),
+                mapProperty.get("targetSchema"),
+                targetStorageId,
+                ddl);
+    }
+
     private List<String> collectInsertRows(JsonNode records, SchemaResult schemaResult) {
         List<String> listUnderQuery = new ArrayList<>();
         for (JsonNode record : records) {
@@ -501,6 +561,94 @@ public class PubSubServiceImpl implements PubSubService {
                 || message.contains("credentials");
     }
 
+    private void ensurePubSubWatchdogStarted() {
+        if (pubSubWatchdogStarted.compareAndSet(false, true)) {
+            pubSubWatchdog.scheduleWithFixedDelay(this::runPubSubWatchdog,
+                    PUBSUB_WATCHDOG_INTERVAL_MILLIS,
+                    PUBSUB_WATCHDOG_INTERVAL_MILLIS,
+                    TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void runPubSubWatchdog() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, PubSubRuntimeState> entry : runtimeStates.entrySet()) {
+            String routeKey = entry.getKey();
+            PubSubRuntimeState state = entry.getValue();
+            if (state == null || state.camelContext() == null) {
+                continue;
+            }
+
+            try {
+                if (!state.camelContext().isStarted()) {
+                    restartPubSubRoute(routeKey, state, "camelContext not started");
+                    continue;
+                }
+
+                long lastEventAt = state.lastEventAt().get();
+                long idleMillis = now - lastEventAt;
+                if (lastEventAt > 0 && idleMillis >= PUBSUB_STALE_THRESHOLD_MILLIS) {
+                    restartPubSubRoute(routeKey, state, "no pubsub events for " + (idleMillis / 1000) + "s");
+                }
+            } catch (Exception e) {
+                log.warn("PubSub watchdog check 실패. routeKey={}", routeKey, e);
+            }
+        }
+    }
+
+    private void restartPubSubRoute(String routeKey, PubSubRuntimeState state, String reason) {
+        long now = System.currentTimeMillis();
+        long lastAttempt = state.lastRestartAttemptAt().get();
+        if (now - lastAttempt < PUBSUB_RESTART_COOLDOWN_MILLIS) {
+            return;
+        }
+        if (!state.lastRestartAttemptAt().compareAndSet(lastAttempt, now)) {
+            return;
+        }
+        if (!state.restartInProgress().compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            log.warn("PubSub route restart 시작. routeKey={}, reason={}, lastEventAt={}, instanceUrl={}",
+                    routeKey,
+                    reason,
+                    Instant.ofEpochMilli(state.lastEventAt().get()),
+                    state.mapProperty().get("instanceUrl"));
+
+            stopCamelContextQuietly(state.camelContext(), routeKey);
+            closeCamelContextQuietly(state.camelContext(), routeKey);
+            subscribeCDC(state.mapProperty(), new HashMap<>(state.mapType()));
+            log.info("PubSub route restart 완료. routeKey={}, reason={}", routeKey, reason);
+        } catch (Exception e) {
+            log.error("PubSub route restart 실패. routeKey={}, reason={}", routeKey, reason, e);
+        } finally {
+            state.restartInProgress().set(false);
+        }
+    }
+
+    private void stopCamelContextQuietly(CamelContext camelContext, String routeKey) {
+        if (camelContext == null) {
+            return;
+        }
+        try {
+            camelContext.stop();
+        } catch (Exception e) {
+            log.warn("PubSub camelContext stop 실패. routeKey={}", routeKey, e);
+        }
+    }
+
+    private void closeCamelContextQuietly(CamelContext camelContext, String routeKey) {
+        if (camelContext == null) {
+            return;
+        }
+        try {
+            camelContext.close();
+        } catch (Exception e) {
+            log.warn("PubSub camelContext close 실패. routeKey={}", routeKey, e);
+        }
+    }
+
     private String toChangeEventEntity(String selectedObject) {
         if (selectedObject == null || selectedObject.isBlank()) {
             throw new AppException("selectedObject is required");
@@ -530,6 +678,9 @@ public class PubSubServiceImpl implements PubSubService {
 
     private record PubSubRuntimeState(Map<String, String> mapProperty,
                                       Map<String, Object> mapType,
-                                      CamelContext camelContext) {
+                                      CamelContext camelContext,
+                                      AtomicLong lastEventAt,
+                                      AtomicLong lastRestartAttemptAt,
+                                      AtomicBoolean restartInProgress) {
     }
 }

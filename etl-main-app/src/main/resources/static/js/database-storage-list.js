@@ -173,6 +173,3 @@ document.getElementById('decrypt-reveal-btn')?.addEventListener('click', async (
         window.storageUi?.showToast({ tone: 'error', title: '평문 조회 실패', message: error.message });
     }
 });
-패', message: error.message });
-    }
-});

@@ -10,54 +10,71 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-24T11:48:06.442+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 274285 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-24T11:48:06.448+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
-2026-03-24T11:48:07.946+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-03-24T11:48:07.950+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-03-24T11:48:07.992+09:00  INFO 274285 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 20 ms. Found 0 Redis repository interfaces.
-2026-03-24T11:48:08.996+09:00  INFO 274285 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
-2026-03-24T11:48:09.019+09:00  INFO 274285 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-24T11:48:09.020+09:00  INFO 274285 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-24T11:48:09.054+09:00  INFO 274285 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-24T11:48:09.055+09:00  INFO 274285 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2438 ms
+2026-03-24T19:05:08.524+09:00  INFO 307360 --- [           main] com.apache.sfdc.SfdcApplication          : Starting SfdcApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 307360 (/home/trstyq/code/etl-platform/etl-routing-engine/build/libs/etl-routing-engine.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-24T19:05:08.528+09:00  INFO 307360 --- [           main] com.apache.sfdc.SfdcApplication          : The following 1 profile is active: "local"
+2026-03-24T19:05:09.869+09:00  INFO 307360 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-03-24T19:05:09.874+09:00  INFO 307360 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-03-24T19:05:09.929+09:00  INFO 307360 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 27 ms. Found 0 Redis repository interfaces.
+2026-03-24T19:05:10.947+09:00  INFO 307360 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 3931 (http)
+2026-03-24T19:05:10.971+09:00  INFO 307360 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-24T19:05:10.972+09:00  INFO 307360 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-24T19:05:11.026+09:00  INFO 307360 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-24T19:05:11.028+09:00  INFO 307360 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2381 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-24T11:48:10.160+09:00  INFO 274285 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
-2026-03-24T11:48:10.862+09:00  INFO 274285 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
-2026-03-24T11:48:10.888+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is starting
-2026-03-24T11:48:10.899+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
-2026-03-24T11:48:10.900+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) started in 10ms (build:0ms init:0ms start:10ms boot:502ms)
-2026-03-24T11:48:10.907+09:00  INFO 274285 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 5.509 seconds (process running for 6.316)
-2026-03-24T11:48:10.924+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-24T11:48:11.114+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@61b76a7d
-2026-03-24T11:48:11.115+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-24T11:48:11.156+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup begin: targetRoutes=1
-2026-03-24T11:48:11.162+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
-2026-03-24T11:48:12.573+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Starting...
-2026-03-24T11:48:12.927+09:00  INFO 274285 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Start completed.
-2026-03-24T11:48:12.930+09:00  INFO 274285 --- [           main] s.s.s.ExternalStorageRoutingJdbcExecutor : Created routed datasource. storageId=3, name=ETL Oracle, vendor=ORACLE, status=VERIFIED
-2026-03-24T11:48:13.357+09:00  INFO 274285 --- [           main] c.a.s.s.service.StreamingServiceImpl     : Skipping initial load during startup recovery. selectedObject=Account, orgKey=yuricompany-dev-ed.develop.my.salesforce.com
-2026-03-24T11:48:14.614+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) is starting
-2026-03-24T11:48:14.677+09:00  INFO 274285 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
-2026-03-24T11:48:15.394+09:00  INFO 274285 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
-2026-03-24T11:48:15.395+09:00  INFO 274285 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
-2026-03-24T11:48:16.050+09:00  INFO 274285 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
-2026-03-24T11:48:16.051+09:00  INFO 274285 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
-2026-03-24T11:48:16.053+09:00  WARN 274285 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
-2026-03-24T11:48:16.053+09:00  INFO 274285 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
-2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
-2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://subscribe:Account)
-2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) started in 1s440ms (build:0ms init:0ms start:1s440ms)
-2026-03-24T11:48:16.055+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] streaming route revived without registry rewrite. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account
-2026-03-24T11:48:16.064+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account, protocol=STREAMING
-2026-03-24T11:48:16.064+09:00  INFO 274285 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup done: targetRoutes=1, recovered=1, skipped=0, failed=0
-2026-03-24T11:48:16.530+09:00  INFO 274285 --- [forceHttpClient] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
-2026-03-24T11:49:32.249+09:00  INFO 274285 --- [nio-3931-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-24T11:49:32.249+09:00  INFO 274285 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-24T11:49:32.250+09:00  INFO 274285 --- [nio-3931-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2026-03-24T11:49:49.881+09:00  INFO 274285 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-24T11:49:49.884+09:00  INFO 274285 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-24T11:49:49.886+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is shutting down (timeout:45s)
-2026-03-24T11:49:49.887+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
-2026-03-24T11:49:49.890+09:00  INFO 274285 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) shutdown in 4ms (uptime:1m39s)
-2026-03-24T11:49:50.007+09:00  INFO 274285 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-24T11:49:50.017+09:00  INFO 274285 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-24T19:05:12.208+09:00  INFO 307360 --- [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2026-03-24T19:05:12.855+09:00  INFO 307360 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 3931 (http) with context path '/'
+2026-03-24T19:05:12.879+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is starting
+2026-03-24T19:05:12.890+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:0)
+2026-03-24T19:05:12.890+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) started in 9ms (build:0ms init:0ms start:9ms boot:466ms)
+2026-03-24T19:05:12.898+09:00  INFO 307360 --- [           main] com.apache.sfdc.SfdcApplication          : Started SfdcApplication in 5.361 seconds (process running for 6.165)
+2026-03-24T19:05:12.914+09:00  INFO 307360 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-24T19:05:13.091+09:00  INFO 307360 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@76208b80
+2026-03-24T19:05:13.092+09:00  INFO 307360 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-24T19:05:13.132+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup begin: targetRoutes=2
+2026-03-24T19:05:13.140+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:14.670+09:00  INFO 307360 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Starting...
+2026-03-24T19:05:14.982+09:00  INFO 307360 --- [           main] com.zaxxer.hikari.HikariDataSource       : routing-storage-3 - Start completed.
+2026-03-24T19:05:14.984+09:00  INFO 307360 --- [           main] s.s.s.ExternalStorageRoutingJdbcExecutor : Created routed datasource. storageId=3, name=ETL Oracle, vendor=ORACLE, status=VERIFIED
+2026-03-24T19:05:15.411+09:00  INFO 307360 --- [           main] c.a.s.s.service.StreamingServiceImpl     : Skipping initial load during startup recovery. selectedObject=Account, orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:15.936+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) is starting
+2026-03-24T19:05:16.001+09:00  INFO 307360 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-24T19:05:16.520+09:00  INFO 307360 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-24T19:05:16.520+09:00  INFO 307360 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-24T19:05:17.176+09:00  INFO 307360 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-24T19:05:17.176+09:00  INFO 307360 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-24T19:05:17.178+09:00  WARN 307360 --- [           main] o.a.c.c.salesforce.StreamingApiConsumer  : Property sObjectName or sObjectClass NOT set, messages will be of type java.lang.Map
+2026-03-24T19:05:17.178+09:00  INFO 307360 --- [           main] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribing to channel /topic/Account...
+2026-03-24T19:05:17.180+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-24T19:05:17.180+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route1 (sf://subscribe:Account)
+2026-03-24T19:05:17.180+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-2) started in 1s243ms (build:0ms init:0ms start:1s243ms)
+2026-03-24T19:05:17.180+09:00  INFO 307360 --- [           main] c.a.s.s.service.StreamingServiceImpl     : Streaming route started. routeKey=yuricompany-dev-ed.develop.my.salesforce.com::STREAMING::Account, loginUrl=https://yuricompany-dev-ed.develop.my.salesforce.com, instanceUrl=https://yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:17.180+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] streaming route revived without registry rewrite. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account
+2026-03-24T19:05:17.187+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Account, protocol=STREAMING
+2026-03-24T19:05:17.190+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : Using client_credentials grant for startup recovery. orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:17.578+09:00  INFO 307360 --- [forceHttpClient] o.a.c.c.s.i.s.SubscriptionHelper         : Subscribed to channel /topic/Account
+2026-03-24T19:05:18.721+09:00  WARN 307360 --- [           main] c.a.s.pubsub.service.PubSubServiceImpl   : [CDC-SCHEMA] selectedObject=Contact, mapTypeSize=67, mapTypeKeys=[AccountId, AssistantName, AssistantPhone, Birthdate, CleanStatus, CreatedById, CreatedDate, Department, Description, DoNotCall, Email, EmailBouncedDate, EmailBouncedReason, Fax, FirstName, GenderIdentity, HasOptedOutOfEmail, HasOptedOutOfFax, HomePhone, Id, IndividualId, IsDeleted, IsEmailBounced, IsPriorityRecord, Jigsaw, JigsawContactId, Languages__c, LastActivityDate, LastCURequestDate, LastCUUpdateDate, LastModifiedById, LastModifiedDate, LastName, LastReferencedDate, LastViewedDate, LeadSource, Level__c, MailingAddress, MailingCity, MailingCountry, MailingGeocodeAccuracy, MailingLatitude, MailingLongitude, MailingPostalCode, MailingState, MailingStreet, MasterRecordId, MobilePhone, Name, OtherAddress, OtherCity, OtherCountry, OtherGeocodeAccuracy, OtherLatitude, OtherLongitude, OtherPhone, OtherPostalCode, OtherState, OtherStreet, OwnerId, Phone, PhotoUrl, Pronouns, ReportsToId, Salutation, SystemModstamp, Title]
+2026-03-24T19:05:18.993+09:00  INFO 307360 --- [           main] c.a.s.pubsub.service.PubSubServiceImpl   : Skipping initial load during startup recovery. selectedObject=Contact, orgKey=yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:19.010+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-3) is starting
+2026-03-24T19:05:19.015+09:00  INFO 307360 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login at Salesforce loginUrl: https://yuricompany-dev-ed.develop.my.salesforce.com/services/oauth2/token
+2026-03-24T19:05:19.653+09:00  INFO 307360 --- [           main] o.a.c.c.s.internal.SalesforceSession     : Login successful
+2026-03-24T19:05:19.654+09:00  INFO 307360 --- [           main] o.a.c.c.salesforce.SalesforceComponent   : Found 0 generated classes in packages: com.apache.sfdc.router.dto
+2026-03-24T19:05:19.655+09:00  INFO 307360 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Defaulting to MemoryAggregationRepository
+2026-03-24T19:05:19.655+09:00  INFO 307360 --- [           main] o.a.c.p.aggregate.AggregateProcessor     : Using CompletionInterval to run every 5000 millis.
+2026-03-24T19:05:19.779+09:00  INFO 307360 --- [           main] o.a.c.c.s.i.client.PubSubApiClient       : Subscribing to topic: /data/ContactChangeEvent.
+2026-03-24T19:05:19.814+09:00  INFO 307360 --- [           main] o.a.c.c.s.i.client.PubSubApiClient       : Subscribe successful.
+2026-03-24T19:05:19.816+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Routes startup (total:1)
+2026-03-24T19:05:19.816+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   :     Started route2 (sf://pubSubSubscribe:/data/ContactChangeEvent)
+2026-03-24T19:05:19.816+09:00  INFO 307360 --- [           main] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-3) started in 805ms (build:0ms init:0ms start:805ms)
+2026-03-24T19:05:19.817+09:00  INFO 307360 --- [           main] c.a.s.pubsub.service.PubSubServiceImpl   : PubSub route started. routeKey=yuricompany-dev-ed.develop.my.salesforce.com::CDC::Contact, loginUrl=https://yuricompany-dev-ed.develop.my.salesforce.com, instanceUrl=https://yuricompany-dev-ed.develop.my.salesforce.com
+2026-03-24T19:05:19.828+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] cdc route revived without registry rewrite. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Contact
+2026-03-24T19:05:19.833+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] recovered: orgKey=yuricompany-dev-ed.develop.my.salesforce.com, selectedObject=Contact, protocol=CDC
+2026-03-24T19:05:19.833+09:00  INFO 307360 --- [           main] c.a.sfdc.common.RoutingStartupRecovery   : [routing-recovery] startup done: targetRoutes=2, recovered=2, skipped=0, failed=0
+2026-03-24T19:05:44.690+09:00  INFO 307360 --- [#6 - Aggregator] c.a.s.common.SalesforceRouterBuilderCDC  : [CDC] updated=1, inserted=0, deleted=0, received=1
+2026-03-24T19:05:59.666+09:00  INFO 307360 --- [#6 - Aggregator] c.a.s.common.SalesforceRouterBuilderCDC  : [CDC] updated=1, inserted=0, deleted=0, received=1
+2026-03-24T19:06:05.581+09:00  INFO 307360 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-24T19:06:05.583+09:00  INFO 307360 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-24T19:06:05.586+09:00  INFO 307360 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) is shutting down (timeout:45s)
+2026-03-24T19:06:05.587+09:00  INFO 307360 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Routes stopped (total:0)
+2026-03-24T19:06:05.591+09:00  INFO 307360 --- [ionShutdownHook] o.a.c.impl.engine.AbstractCamelContext   : Apache Camel 4.18.0 (camel-1) shutdown in 5ms (uptime:52s)
+2026-03-24T19:06:05.713+09:00  INFO 307360 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-24T19:06:05.727+09:00  INFO 307360 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

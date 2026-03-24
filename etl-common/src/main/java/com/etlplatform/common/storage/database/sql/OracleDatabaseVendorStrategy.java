@@ -162,6 +162,19 @@ public final class OracleDatabaseVendorStrategy extends BaseDatabaseVendorStrate
         return statements;
     }
 
+    private String oracleCastExpression(String column) {
+        return switch (column) {
+            case "sfid", "MasterRecordId", "ParentId", "OwnerId", "CreatedById", "LastModifiedById", "JigsawCompanyId", "DandbCompanyId", "OperatingHoursId" -> "CAST(? AS VARCHAR2(18))";
+            case "IsDeleted", "Active__c" -> "CAST(? AS NUMBER(1))";
+            case "BillingLatitude", "BillingLongitude", "ShippingLatitude", "ShippingLongitude", "AnnualRevenue", "NumberofLocations__c" -> "CAST(? AS BINARY_DOUBLE)";
+            case "NumberOfEmployees", "YearStarted" -> "CAST(? AS NUMBER(10))";
+            case "CreatedDate", "LastModifiedDate", "SystemModstamp", "LastViewedDate", "LastReferencedDate", "_oc_last_modified_at", "_oc_last_event_at" -> "CAST(? AS TIMESTAMP(6))";
+            case "LastActivityDate", "SLAExpirationDate__c" -> "CAST(? AS DATE)";
+            case "BillingStreet", "BillingAddress", "ShippingStreet", "ShippingAddress", "Description" -> "TO_CLOB(?)";
+            default -> "CAST(? AS VARCHAR2(4000))";
+        };
+    }
+
     private void appendQuotedColumns(StringBuilder sql, List<String> columns) {
         for (int i = 0; i < columns.size(); i++) {
             if (i > 0) {

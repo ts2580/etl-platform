@@ -9,6 +9,7 @@ import org.apache.camel.builder.RouteBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 @Slf4j
 public class SalesforceRouterBuilderCDC extends RouteBuilder {
@@ -17,6 +18,7 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
     private final Map<String, Object> mapType;
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Long targetStorageId;
+    private final Consumer<Integer> activityCallback;
     private final SalesforceCdcPayloadMapper payloadMapper = new SalesforceCdcPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
@@ -24,12 +26,14 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                                       String selectedObject,
                                       Map<String, Object> mapType,
                                       ExternalStorageRoutingJdbcExecutor routingJdbcExecutor,
-                                      Long targetStorageId) {
+                                      Long targetStorageId,
+                                      Consumer<Integer> activityCallback) {
         this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
         this.mapType = mapType;
         this.routingJdbcExecutor = routingJdbcExecutor;
         this.targetStorageId = targetStorageId;
+        this.activityCallback = activityCallback != null ? activityCallback : ignored -> { };
     }
 
     @Override
