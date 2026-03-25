@@ -101,7 +101,7 @@ public class GlobalExceptionHandler {
                     <meta charset=\"UTF-8\">
                     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
                     <title>ETL 오류</title>
-                    <script src=\"https://cdn.tailwindcss.com\"></script>
+                    <link rel=\"stylesheet\" href=\"/css/tailwind.css\">
                 </head>
                 <body class=\"min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 text-slate-800\">
                 <div class=\"mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8\">

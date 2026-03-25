@@ -25,20 +25,13 @@ public class SalesforceOrgController {
     private final SalesforceTokenManager tokenManager;
     private final ETLService etlService;
     private final UserSession userSession;
+    private final SalesforceOrgViewHelper salesforceOrgViewHelper;
 
     @GetMapping("/etl/orgs")
     public String orgManagement(@RequestParam(value = "editOrgKey", required = false) String editOrgKey,
                                Model model,
                                HttpSession session) {
-        model.addAttribute("orgs", salesforceOrgService.getActiveOrgs());
-        model.addAttribute("activeOrgKey", session.getAttribute(ACTIVE_ORG_SESSION_KEY));
-        if (editOrgKey != null && !editOrgKey.isBlank()) {
-            model.addAttribute("editOrg", salesforceOrgService.getOrg(editOrgKey));
-        }
-        if (userSession.getUserAccount() != null) {
-            model.addAttribute(userSession.getUserAccount().getMember());
-        }
-        return "org_management";
+        return "redirect:/?tab=orgs";
     }
 
     @PostMapping("/etl/orgs/register")
@@ -49,29 +42,19 @@ public class SalesforceOrgController {
                                    @RequestParam(value = "isDefault", defaultValue = "false") boolean isDefault,
                                    Model model,
                                    HttpSession session) {
-        model.addAttribute("orgNameInput", orgName);
-        model.addAttribute("myDomainInput", myDomain);
-        model.addAttribute("clientIdInput", clientId);
-        model.addAttribute("clientSecretInput", clientSecret);
-        model.addAttribute("isDefaultInput", isDefault);
-        model.addAttribute("orgs", salesforceOrgService.getActiveOrgs());
-        model.addAttribute("activeOrgKey", session.getAttribute(ACTIVE_ORG_SESSION_KEY));
-
-        if (userSession.getUserAccount() != null) {
-            model.addAttribute(userSession.getUserAccount().getMember());
-        }
+        salesforceOrgViewHelper.populateOrgInputModel(model, session, orgName, myDomain, clientId, clientSecret, isDefault);
 
         if (orgName == null || orgName.isBlank() || myDomain == null || myDomain.isBlank()
                 || clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
             model.addAttribute("message", "need_org_login_inputs");
-            return "org_management";
+            return "home_form";
         }
 
         try {
             salesforceOrgService.normalizeOrgName(orgName);
         } catch (Exception e) {
             model.addAttribute("message", "invalid_org_name");
-            return "org_management";
+            return "home_form";
         }
 
         SalesforceOrgCredential org = salesforceOrgService.registerOrUpdateClientCredentials(
@@ -88,10 +71,10 @@ public class SalesforceOrgController {
         if (refreshResult != null && refreshResult.accessToken() != null && !refreshResult.accessToken().isBlank()) {
             salesforceOrgService.persistTokens(org.getOrgKey(), refreshResult.accessToken());
             tokenManager.setAccessToken(session, refreshResult.accessToken());
-            return "redirect:/etl/orgs?message=org_registered";
+            return "redirect:/?tab=orgs&message=org_registered";
         }
 
-        return "redirect:/etl/orgs?message=org_registered_but_token_failed&orgKey=" + org.getOrgKey();
+        return "redirect:/?tab=orgs&message=org_registered_but_token_failed&orgKey=" + org.getOrgKey();
     }
 
     @PostMapping(value = "/etl/orgs/select")
@@ -103,15 +86,15 @@ public class SalesforceOrgController {
             if ("/".equals(returnTo)) {
                 return "redirect:/";
             }
-            return "redirect:/etl/orgs?message=org_selected";
+            return "redirect:/?tab=orgs&message=org_selected";
         }
-        return "redirect:/etl/orgs?message=org_selected";
+        return "redirect:/?tab=orgs&message=org_selected";
     }
 
     @PostMapping(value = "/etl/orgs/activate")
     public String activateOrg(@RequestParam("orgKey") String orgKey, HttpSession session) {
         salesforceOrgService.setDefaultOrg(orgKey);
-        return "redirect:/etl/orgs?message=org_activated";
+        return "redirect:/?tab=orgs&message=org_activated";
     }
 
 
@@ -119,18 +102,18 @@ public class SalesforceOrgController {
     public String refreshOrgToken(@RequestParam("orgKey") String orgKey, HttpSession session) {
 
         if (orgKey == null || orgKey.isBlank()) {
-            return "redirect:/etl/orgs?message=token_refresh_failed";
+            return "redirect:/?tab=orgs&message=token_refresh_failed";
         }
 
         SalesforceOrgCredential org = salesforceOrgService.getOrg(orgKey);
         if (org == null) {
-            return "redirect:/etl/orgs?message=token_refresh_failed";
+            return "redirect:/?tab=orgs&message=token_refresh_failed";
         }
 
         String clientId = org.getClientId();
         String clientSecret = org.getClientSecret();
         if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
-            return "redirect:/etl/orgs?message=oauth_start_failed&reason=missing_client_info";
+            return "redirect:/?tab=orgs&message=oauth_start_failed&reason=missing_client_info";
         }
 
         // CLIENT_CREDENTIALS 기준으로 접근 토큰 갱신
@@ -139,11 +122,11 @@ public class SalesforceOrgController {
             salesforceOrgService.persistTokens(orgKey, refreshResult.accessToken());
             tokenManager.setAccessToken(session, refreshResult.accessToken());
             tokenManager.setActiveOrg(session, orgKey);
-            return "redirect:/etl/orgs?message=token_refreshed&orgKey=" + orgKey;
+            return "redirect:/?tab=orgs&message=token_refreshed&orgKey=" + orgKey;
         }
 
         // client credentials 기반 access token 발급 실패
-        return "redirect:/etl/orgs?message=token_refresh_failed&reason=client_credentials_failed&orgKey=" + orgKey;
+        return "redirect:/?tab=orgs&message=token_refresh_failed&reason=client_credentials_failed&orgKey=" + orgKey;
     }
 
     @PostMapping(value = "/etl/orgs/update-credentials")
@@ -152,12 +135,12 @@ public class SalesforceOrgController {
                                             @RequestParam("clientSecret") String clientSecret,
                                             HttpSession session) {
         if (orgKey == null || orgKey.isBlank() || clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
-            return "redirect:/etl/orgs?message=need_org_login_inputs&orgKey=" + (orgKey == null ? "" : orgKey);
+            return "redirect:/?tab=orgs&message=need_org_login_inputs&orgKey=" + (orgKey == null ? "" : orgKey);
         }
 
         SalesforceOrgCredential updatedOrg = salesforceOrgService.updateClientCredentials(orgKey, clientId, clientSecret);
         if (updatedOrg == null) {
-            return "redirect:/etl/orgs?message=org_credentials_update_failed&orgKey=" + orgKey;
+            return "redirect:/?tab=orgs&message=org_credentials_update_failed&orgKey=" + orgKey;
         }
 
         SalesforceTokenManager.RefreshResult refreshResult = tokenManager.refreshClientCredentialsToken(session, updatedOrg);
@@ -167,12 +150,12 @@ public class SalesforceOrgController {
             try {
                 etlService.refreshRoutingModuleCredentials(refreshResult.accessToken(), updatedOrg.getMyDomain(), orgKey);
             } catch (Exception e) {
-                return "redirect:/etl/orgs?message=org_credentials_updated_routing_failed&orgKey=" + orgKey;
+                return "redirect:/?tab=orgs&message=org_credentials_updated_routing_failed&orgKey=" + orgKey;
             }
-            return "redirect:/etl/orgs?message=org_credentials_updated&orgKey=" + orgKey;
+            return "redirect:/?tab=orgs&message=org_credentials_updated&orgKey=" + orgKey;
         }
 
-        return "redirect:/etl/orgs?message=org_credentials_updated_token_failed&orgKey=" + orgKey;
+        return "redirect:/?tab=orgs&message=org_credentials_updated_token_failed&orgKey=" + orgKey;
     }
 
     @PostMapping(value = "/etl/orgs/deactivate")
@@ -182,6 +165,6 @@ public class SalesforceOrgController {
         if (orgKey.equals(String.valueOf(active))) {
             session.removeAttribute(ACTIVE_ORG_SESSION_KEY);
         }
-        return "redirect:/etl/orgs?message=org_deactivated";
+        return "redirect:/?tab=orgs&message=org_deactivated";
     }
 }

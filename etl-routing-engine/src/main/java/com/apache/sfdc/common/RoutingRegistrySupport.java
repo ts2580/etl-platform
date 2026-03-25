@@ -33,6 +33,8 @@ public class RoutingRegistrySupport {
         String targetStorageName = mapProperty.get("targetStorageName");
         String targetSchema = firstNonBlank(mapProperty.get("targetSchema"), "config");
         String targetTable = firstNonBlank(mapProperty.get("targetTable"), selectedObject);
+        String sourceStatusValue = firstNonBlank(sourceStatus, "UNKNOWN");
+        String routingStatusValue = firstNonBlank(routingStatus, "UNKNOWN");
 
         Map<String, Object> params = new HashMap<>();
         params.put("orgKey", orgKey);
@@ -49,8 +51,8 @@ public class RoutingRegistrySupport {
         params.put("objectLabel", objectLabel);
         params.put("routingProtocol", routingProtocol);
         params.put("routingEndpoint", routingEndpoint);
-        params.put("routingStatus", routingStatus);
-        params.put("sourceStatus", sourceStatus);
+        params.put("routingStatus", routingStatusValue);
+        params.put("sourceStatus", sourceStatusValue);
         params.put("initialLoadCount", initialLoadCount);
         params.put("lastErrorMessage", lastErrorMessage);
         params.put("activatedAt", null);

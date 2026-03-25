@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DB 저장소 등록</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/tailwind.css">
     <link rel="stylesheet" href="/css/top-progress.css">
     <script defer src="/js/top-progress.js"></script>
 </head>
@@ -86,13 +86,13 @@
                             <option value="CERTIFICATE">CERTIFICATE</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="text-sm font-semibold text-slate-700" id="schemaLabel">스키마명 / 서비스명</label>
-                        <input type="text" id="schemaName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: public">
+                    <div id="serviceNameField">
+                        <label class="text-sm font-semibold text-slate-700" id="schemaLabel">서비스명 / SID</label>
+                        <input type="text" id="schemaName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: FREEPDB1 또는 SID">
                     </div>
-                    <div>
+                    <div id="databaseNameField" class="hidden">
                         <label class="text-sm font-semibold text-slate-700" id="databaseLabel">데이터베이스명</label>
-                        <input type="text" id="databaseName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: postgres_db">
+                        <input type="text" id="databaseName" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: etl_sfdc" readonly>
                     </div>
                     <div class="lg:col-span-2">
                         <label class="text-sm font-semibold text-slate-700">DB URL</label>
@@ -102,6 +102,9 @@
                         <label class="text-sm font-semibold text-slate-700">포트</label>
                         <input type="number" id="port" min="1" max="65535" class="mt-1 w-full rounded-xl border border-indigo-200 bg-[#f8faff] px-3 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="예: 5432">
                     </div>
+                </div>
+                <div id="postgresSchemaHint" class="mt-3 hidden rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-800">
+                    PostgreSQL 라우팅은 <span class="font-semibold">etl_sfdc</span> DB 안에 org_ 접두사 스키마를 자동 생성해서 사용해요.
                 </div>
             </section>
 
@@ -170,5 +173,8 @@
     </main>
 </div>
 <script src="/js/database-storage-form.js" defer></script>
+</body>
+</html>
+.js" defer></script>
 </body>
 </html>

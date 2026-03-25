@@ -118,7 +118,42 @@ stop_children() {
 
 trap 'stop_children; exit 130' INT TERM
 
+build_tailwind_css() {
+  echo "[BUILD] building tailwind css..."
+  (
+    cd "$BASE_DIR/etl-main-app"
+
+    if [[ ! -f "package.json" ]]; then
+      echo "[ERROR] package.json not found in etl-main-app. skipped tailwind build"
+      exit 1
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+      echo "[ERROR] npm not found. Install Node.js (npm) for tailwind build."
+      exit 1
+    fi
+
+    if [[ ! -d node_modules ]]; then
+      echo "[BUILD] npm ci (node_modules not found)"
+      npm ci --no-audit --no-fund --silent
+    else
+      echo "[BUILD] using existing node_modules (skip npm ci)"
+    fi
+
+    npm run build:css
+  )
+
+  if [[ ! -f "$BASE_DIR/etl-main-app/src/main/resources/static/css/tailwind.css" ]]; then
+    echo "[ERROR] expected tailwind output not found after build"
+    exit 1
+  fi
+
+  cp "$BASE_DIR/etl-main-app/src/main/resources/static/css/tailwind.css" "$BASE_DIR/etl-file-engine/src/main/resources/static/css/tailwind.css"
+  echo "[OK] tailwind build done and synced"
+}
+
 build_all() {
+  build_tailwind_css
   echo "[BUILD] building jars..."
   ./gradlew clean \
     :etl-main-app:bootJar \
@@ -253,9 +288,10 @@ case "${1:-run}" in
     ;;
   *)
     echo "Usage: $0 {run|nobuild|build}"
-    echo "  run    : kill ports -> build jars -> foreground run"
+    echo "  run    : kill ports -> build css & jars -> foreground run"
     echo "  nobuild: kill ports -> foreground run"
-    echo "  build  : build jars only"
+    echo "  build  : build css + jars"
     exit 1
     ;;
+
 esac

@@ -3,6 +3,8 @@ package com.apache.sfdc.pubsub.service;
 import com.apache.sfdc.common.RoutingRuntimeKeyUtils;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
+import com.apache.sfdc.common.SalesforceOrgCredential;
+import com.apache.sfdc.common.SalesforceOrgCredentialRepository;
 import com.apache.sfdc.common.SalesforceRouterBuilderCDC;
 import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.pubsub.repository.PubSubRepository;
@@ -53,11 +55,11 @@ public class PubSubServiceImpl implements PubSubService {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubServiceImpl.class);
     private static final long PUBSUB_WATCHDOG_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
-    private static final long PUBSUB_STALE_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(20);
     private static final long PUBSUB_RESTART_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(3);
 
     private final PubSubRepository pubSubRepository;
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
+    private final SalesforceOrgCredentialRepository salesforceOrgCredentialRepository;
     private final Map<String, PubSubRuntimeState> runtimeStates = new ConcurrentHashMap<>();
     private final ScheduledExecutorService pubSubWatchdog = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "pubsub-watchdog");
@@ -184,9 +186,10 @@ public class PubSubServiceImpl implements PubSubService {
         String ddl = SalesforceObjectSchemaBuilder.buildDropTableSql(
                 targetSchema,
                 selectedObject,
+                mapProperty.get("orgName"),
                 routingJdbcExecutor.resolveStrategy(targetStorageId)
         );
-        routingJdbcExecutor.executeDdl("CDC", ddl, targetStorageId);
+        routingJdbcExecutor.executeDdl("CDC", ddl, targetStorageId, mapProperty.get("targetSchema"));
     }
 
     @Override
@@ -224,6 +227,7 @@ public class PubSubServiceImpl implements PubSubService {
             schemaResult = SalesforceObjectSchemaBuilder.buildSchema(
                     targetSchema,
                     selectedObject,
+                    mapProperty.get("orgName"),
                     responseBody.get("fields"),
                     objectMapper,
                     routingJdbcExecutor.resolveStrategy(targetStorageId)
@@ -238,7 +242,7 @@ public class PubSubServiceImpl implements PubSubService {
                 schemaResult.mapType() == null ? 0 : schemaResult.mapType().size(),
                 schemaResult.mapType() == null ? java.util.List.of() : schemaResult.mapType().keySet().stream().sorted().limit(80).toList());
         logOracleRecoveryDdlIfNeeded("CDC", mapProperty, targetStorageId, schemaResult.ddl());
-        routingJdbcExecutor.executeDdl("CDC", schemaResult.ddl(), targetStorageId);
+        routingJdbcExecutor.executeDdl("CDC", schemaResult.ddl(), targetStorageId, targetSchema);
 
         boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
         if (skipInitialLoad) {
@@ -271,7 +275,7 @@ public class PubSubServiceImpl implements PubSubService {
                     insertedData = routingJdbcExecutor.insert(
                             SalesforceObjectSchemaBuilder.buildPreparedInsertBatch(
                                     targetSchema,
-                                    selectedObject,
+                                    resolvePhysicalTableName(mapProperty, selectedObject, targetStorageId),
                                     schemaResult,
                                     records,
                                     routingJdbcExecutor.resolveStrategy(targetStorageId)
@@ -279,8 +283,9 @@ public class PubSubServiceImpl implements PubSubService {
                             targetStorageId
                     );
                 } else {
-                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
-                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
+                    String physicalTableName = resolvePhysicalTableName(mapProperty, selectedObject, targetStorageId);
+                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, physicalTableName, schemaResult.soql());
+                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(physicalTableName, schemaResult.fields());
                     List<String> listUnderQuery = collectInsertRows(records, schemaResult);
                     insertedData = routingJdbcExecutor.insert("CDC", upperQuery, listUnderQuery, tailQuery, targetStorageId);
                 }
@@ -361,10 +366,12 @@ public class PubSubServiceImpl implements PubSubService {
 
         try {
             myCamelContext.start();
+            long credentialVersion = readCredentialVersion(mapProperty.get("orgKey"));
             runtimeStates.put(routeKey, new PubSubRuntimeState(
                     new HashMap<>(mapProperty),
                     new HashMap<>(mapType),
                     myCamelContext,
+                    credentialVersion,
                     lastEventAt,
                     lastRestartAttemptAt,
                     restartInProgress
@@ -383,6 +390,22 @@ public class PubSubServiceImpl implements PubSubService {
         String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(orgKey, selectedObject, "CDC");
         PubSubRuntimeState state = runtimeStates.get(routeKey);
         return state != null && state.camelContext != null && state.camelContext.isStarted();
+    }
+
+    @Override
+    public void stopRoute(String orgKey, String selectedObject, String reason) {
+        if (orgKey == null || orgKey.isBlank() || selectedObject == null || selectedObject.isBlank()) {
+            return;
+        }
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(orgKey, selectedObject, "CDC");
+        PubSubRuntimeState state = runtimeStates.remove(routeKey);
+        if (state == null) {
+            log.info("PubSub route already absent. routeKey={}, reason={}", routeKey, reason);
+            return;
+        }
+        stopCamelContextQuietly(state.camelContext(), routeKey);
+        closeCamelContextQuietly(state.camelContext(), routeKey);
+        log.info("PubSub route stopped. routeKey={}, reason={}", routeKey, reason);
     }
 
     @Override
@@ -405,21 +428,42 @@ public class PubSubServiceImpl implements PubSubService {
         }
 
         mergeRefreshableProperties(state.mapProperty, mapProperty);
-
-        try {
-            state.camelContext.stop();
-        } catch (Exception e) {
-            log.warn("기존 pubsub camelContext stop 실패. selectedObject={}", selectedObject, e);
-        }
-        try {
-            state.camelContext.close();
-        } catch (Exception e) {
-            log.warn("기존 pubsub camelContext close 실패. selectedObject={}", selectedObject, e);
-        }
-
-        subscribeCDC(state.mapProperty, new HashMap<>(state.mapType));
+        restartPubSubRoute(routeKey, state, "manual credential refresh");
         result.put("status", "SUCCESS");
         result.put("message", "CDC routing credentials refresh가 완료되었어요.");
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> restartRoutesForOrg(String orgKey, String reason) throws Exception {
+        if (orgKey == null || orgKey.isBlank()) {
+            throw new AppException("orgKey is required");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        List<String> restartedRoutes = new ArrayList<>();
+
+        for (Map.Entry<String, PubSubRuntimeState> entry : runtimeStates.entrySet()) {
+            String routeKey = entry.getKey();
+            PubSubRuntimeState state = entry.getValue();
+            if (state == null || state.mapProperty() == null) {
+                continue;
+            }
+            if (!orgKey.equals(state.mapProperty().get("orgKey"))) {
+                continue;
+            }
+            restartPubSubRoute(routeKey, state, reason == null || reason.isBlank() ? "credential updated" : reason);
+            restartedRoutes.add(routeKey);
+        }
+
+        result.put("orgKey", orgKey);
+        result.put("protocol", "CDC");
+        result.put("restartedCount", restartedRoutes.size());
+        result.put("restartedRoutes", restartedRoutes);
+        result.put("status", restartedRoutes.isEmpty() ? "NOT_FOUND" : "SUCCESS");
+        result.put("message", restartedRoutes.isEmpty()
+                ? "재시작할 CDC route가 없어요."
+                : "CDC route 재시작이 완료되었어요.");
         return result;
     }
 
@@ -571,7 +615,11 @@ public class PubSubServiceImpl implements PubSubService {
     }
 
     private void runPubSubWatchdog() {
-        long now = System.currentTimeMillis();
+        int activeRoutes = 0;
+        int restartedRoutes = 0;
+        int versionMismatches = 0;
+        int stoppedRoutes = 0;
+
         for (Map.Entry<String, PubSubRuntimeState> entry : runtimeStates.entrySet()) {
             String routeKey = entry.getKey();
             PubSubRuntimeState state = entry.getValue();
@@ -579,20 +627,34 @@ public class PubSubServiceImpl implements PubSubService {
                 continue;
             }
 
+            if (shouldSkipRuntime(state.mapProperty())) {
+                stopRoute(state.mapProperty().get("orgKey"), state.mapProperty().get("selectedObject"), "source_status inactive or route released");
+                continue;
+            }
+            activeRoutes++;
+
             try {
                 if (!state.camelContext().isStarted()) {
+                    stoppedRoutes++;
+                    restartedRoutes++;
                     restartPubSubRoute(routeKey, state, "camelContext not started");
                     continue;
                 }
 
-                long lastEventAt = state.lastEventAt().get();
-                long idleMillis = now - lastEventAt;
-                if (lastEventAt > 0 && idleMillis >= PUBSUB_STALE_THRESHOLD_MILLIS) {
-                    restartPubSubRoute(routeKey, state, "no pubsub events for " + (idleMillis / 1000) + "s");
+                long latestCredentialVersion = readCredentialVersion(state.mapProperty().get("orgKey"));
+                if (state.credentialVersion() < latestCredentialVersion) {
+                    versionMismatches++;
+                    restartedRoutes++;
+                    restartPubSubRoute(routeKey, state, "credential version updated");
                 }
             } catch (Exception e) {
                 log.warn("PubSub watchdog check 실패. routeKey={}", routeKey, e);
             }
+        }
+
+        if (activeRoutes > 0) {
+            log.info("[PUBSUB-WATCHDOG] activeRoutes={}, restartedRoutes={}, versionMismatches={}, stoppedRoutes={}",
+                    activeRoutes, restartedRoutes, versionMismatches, stoppedRoutes);
         }
     }
 
@@ -610,6 +672,14 @@ public class PubSubServiceImpl implements PubSubService {
         }
 
         try {
+            mergeLatestCredentialSnapshot(state.mapProperty());
+            if (shouldSkipRuntime(state.mapProperty())) {
+                runtimeStates.remove(routeKey);
+                stopCamelContextQuietly(state.camelContext(), routeKey);
+                closeCamelContextQuietly(state.camelContext(), routeKey);
+                log.info("PubSub route restart skipped because route is inactive. routeKey={}, reason={}", routeKey, reason);
+                return;
+            }
             log.warn("PubSub route restart 시작. routeKey={}, reason={}, lastEventAt={}, instanceUrl={}",
                     routeKey,
                     reason,
@@ -625,6 +695,63 @@ public class PubSubServiceImpl implements PubSubService {
         } finally {
             state.restartInProgress().set(false);
         }
+    }
+
+    private void mergeLatestCredentialSnapshot(Map<String, String> mapProperty) {
+        if (mapProperty == null) {
+            return;
+        }
+        String orgKey = mapProperty.get("orgKey");
+        if (orgKey == null || orgKey.isBlank()) {
+            return;
+        }
+        SalesforceOrgCredential credential = salesforceOrgCredentialRepository.findActiveByOrgKey(orgKey);
+        if (credential == null) {
+            return;
+        }
+        copyIfText(mapProperty, "orgKey", credential.getOrgKey());
+        copyIfText(mapProperty, "orgName", credential.getOrgName());
+        copyIfText(mapProperty, "instanceUrl", credential.getMyDomain());
+        copyIfText(mapProperty, "clientId", credential.getClientId());
+        copyIfText(mapProperty, "clientSecret", credential.getClientSecret());
+        copyIfText(mapProperty, "accessToken", credential.getAccessToken());
+    }
+
+    private boolean shouldSkipRuntime(Map<String, String> mapProperty) {
+        String sourceStatus = mapProperty == null ? null : mapProperty.get("sourceStatus");
+        String routingStatus = mapProperty == null ? null : mapProperty.get("routingStatus");
+        return "INACTIVE".equalsIgnoreCase(sourceStatus)
+                || "RELEASED".equalsIgnoreCase(routingStatus)
+                || "FAILED".equalsIgnoreCase(routingStatus);
+    }
+
+    private String resolvePhysicalTableName(Map<String, String> mapProperty, String selectedObject, Long targetStorageId) {
+        var strategy = routingJdbcExecutor.resolveStrategy(targetStorageId);
+        String orgName = mapProperty == null ? null : mapProperty.get("orgName");
+        String physicalTableName = SalesforceObjectSchemaBuilder.resolvePhysicalTableName(
+                mapProperty.get("targetSchema"),
+                selectedObject,
+                orgName,
+                strategy
+        );
+        if (mapProperty != null) {
+            mapProperty.put("targetTable", physicalTableName);
+        }
+        return physicalTableName;
+    }
+
+    private void copyIfText(Map<String, String> target, String key, String value) {
+        if (target != null && value != null && !value.isBlank()) {
+            target.put(key, value);
+        }
+    }
+
+    private long readCredentialVersion(String orgKey) {
+        if (orgKey == null || orgKey.isBlank()) {
+            return 0L;
+        }
+        SalesforceOrgCredential credential = salesforceOrgCredentialRepository.findActiveByOrgKey(orgKey);
+        return credential != null && credential.getCredentialVersion() != null ? credential.getCredentialVersion() : 0L;
     }
 
     private void stopCamelContextQuietly(CamelContext camelContext, String routeKey) {
@@ -679,6 +806,7 @@ public class PubSubServiceImpl implements PubSubService {
     private record PubSubRuntimeState(Map<String, String> mapProperty,
                                       Map<String, Object> mapType,
                                       CamelContext camelContext,
+                                      long credentialVersion,
                                       AtomicLong lastEventAt,
                                       AtomicLong lastRestartAttemptAt,
                                       AtomicBoolean restartInProgress) {

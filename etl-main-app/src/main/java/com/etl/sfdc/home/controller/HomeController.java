@@ -1,12 +1,9 @@
 package com.etl.sfdc.home.controller;
 
-import com.etl.sfdc.common.SalesforceTokenManager;
 import com.etl.sfdc.common.UserSession;
-import com.etl.sfdc.config.model.dto.SalesforceOrgCredential;
-import com.etl.sfdc.config.model.service.SalesforceOrgService;
+import com.etl.sfdc.config.controller.SalesforceOrgViewHelper;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,34 +13,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class HomeController {
 
     private final UserSession userSession;
-    private final SalesforceOrgService salesforceOrgService;
-    private final SalesforceTokenManager tokenManager;
-
-    @Value("${app.db.enabled:false}")
-    private boolean dbEnabled;
-
-    @Value("${file.engine.base-url:http://localhost:9443}")
-    private String fileEngineBaseUrl;
+    private final SalesforceOrgViewHelper salesforceOrgViewHelper;
 
     @GetMapping("/")
     public String loginPage(Model model, HttpSession session) {
-        model.addAttribute("dbEnabled", dbEnabled);
+        salesforceOrgViewHelper.populateHomeModel(model, session);
 
-        if (userSession.getUserAccount() != null) {
-            var member = userSession.getUserAccount().getMember();
-            model.addAttribute("member", member);
-            model.addAttribute("displayName", member.getName() != null && !member.getName().isBlank() ? member.getName() : member.getUsername());
-            model.addAttribute("displayDescription", member.getDescription() != null && !member.getDescription().isBlank() ? member.getDescription() : "-");
-            model.addAttribute("orgs", salesforceOrgService.getActiveOrgs());
-            String activeOrgKey = tokenManager.getActiveOrgKey(session);
-            SalesforceOrgCredential activeOrg = activeOrgKey == null ? salesforceOrgService.getDefaultOrg() : salesforceOrgService.getOrg(activeOrgKey);
-            if (activeOrg == null) {
-                activeOrg = salesforceOrgService.getDefaultOrg();
-            }
-            model.addAttribute("activeOrg", activeOrg);
+        if (userSession.getUserAccount() == null) {
+            return "login_form";
         }
 
-        model.addAttribute("fileEngineBaseUrl", fileEngineBaseUrl);
         return "home_form";
     }
 }

@@ -4,6 +4,8 @@ import com.etlplatform.common.error.AppException;
 import com.apache.sfdc.common.RoutingRuntimeKeyUtils;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder;
 import com.apache.sfdc.common.SalesforceObjectSchemaBuilder.SchemaResult;
+import com.apache.sfdc.common.SalesforceOrgCredential;
+import com.apache.sfdc.common.SalesforceOrgCredentialRepository;
 import com.apache.sfdc.common.SalesforceRouterBuilder;
 import com.apache.sfdc.common.SqlSanitizer;
 import com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor;
@@ -43,10 +45,10 @@ public class StreamingServiceImpl implements StreamingService {
 
     private static final Logger log = LoggerFactory.getLogger(StreamingServiceImpl.class);
     private static final long STREAMING_WATCHDOG_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
-    private static final long STREAMING_STALE_THRESHOLD_MILLIS = TimeUnit.MINUTES.toMillis(20);
     private static final long STREAMING_RESTART_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(3);
 
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
+    private final SalesforceOrgCredentialRepository salesforceOrgCredentialRepository;
     private final Map<String, StreamingRuntimeState> runtimeStates = new ConcurrentHashMap<>();
     private final ScheduledExecutorService streamingWatchdog = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "streaming-watchdog");
@@ -114,6 +116,7 @@ public class StreamingServiceImpl implements StreamingService {
             schemaResult = SalesforceObjectSchemaBuilder.buildSchema(
                     targetSchema,
                     selectedObject,
+                    mapProperty.get("orgName"),
                     fields,
                     objectMapper,
                     routingJdbcExecutor.resolveStrategy(targetStorageId)
@@ -124,7 +127,7 @@ public class StreamingServiceImpl implements StreamingService {
 
         returnMap.put("mapType", schemaResult.mapType());
         logOracleRecoveryDdlIfNeeded("STREAMING", mapProperty, targetStorageId, schemaResult.ddl());
-        routingJdbcExecutor.executeDdl("STREAMING", schemaResult.ddl(), targetStorageId);
+        routingJdbcExecutor.executeDdl("STREAMING", schemaResult.ddl(), targetStorageId, targetSchema);
         returnMap.put("soqlForPushTopic", schemaResult.soqlForPushTopic());
 
         boolean skipInitialLoad = Boolean.parseBoolean(mapProperty.getOrDefault("skipInitialLoad", "false"));
@@ -151,7 +154,7 @@ public class StreamingServiceImpl implements StreamingService {
                     insertedData = routingJdbcExecutor.insert(
                             SalesforceObjectSchemaBuilder.buildPreparedInsertBatch(
                                     targetSchema,
-                                    selectedObject,
+                                    resolvePhysicalTableName(mapProperty, selectedObject, targetStorageId),
                                     schemaResult,
                                     records,
                                     routingJdbcExecutor.resolveStrategy(targetStorageId)
@@ -159,8 +162,9 @@ public class StreamingServiceImpl implements StreamingService {
                             targetStorageId
                     );
                 } else {
-                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, selectedObject, schemaResult.soql());
-                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(selectedObject, schemaResult.fields());
+                    String physicalTableName = resolvePhysicalTableName(mapProperty, selectedObject, targetStorageId);
+                    String upperQuery = SalesforceObjectSchemaBuilder.buildInsertSql(targetSchema, physicalTableName, schemaResult.soql());
+                    String tailQuery = SalesforceObjectSchemaBuilder.buildInsertTail(physicalTableName, schemaResult.fields());
                     List<String> listUnderQuery = collectInsertRows(records, schemaResult);
                     insertedData = routingJdbcExecutor.insert("STREAMING", upperQuery, listUnderQuery, tailQuery, targetStorageId);
                 }
@@ -243,9 +247,10 @@ public class StreamingServiceImpl implements StreamingService {
         String ddl = SalesforceObjectSchemaBuilder.buildDropTableSql(
                 targetSchema,
                 selectedObject,
+                mapProperty.get("orgName"),
                 routingJdbcExecutor.resolveStrategy(targetStorageId)
         );
-        routingJdbcExecutor.executeDdl("STREAMING", ddl, targetStorageId);
+        routingJdbcExecutor.executeDdl("STREAMING", ddl, targetStorageId, mapProperty.get("targetSchema"));
     }
 
     @Override
@@ -309,10 +314,12 @@ public class StreamingServiceImpl implements StreamingService {
 
         try {
             myCamelContext.start();
+            long credentialVersion = readCredentialVersion(mapProperty.get("orgKey"));
             runtimeStates.put(routeKey, new StreamingRuntimeState(
                     new HashMap<>(mapProperty),
                     new HashMap<>(mapType),
                     myCamelContext,
+                    credentialVersion,
                     lastEventAt,
                     lastRestartAttemptAt,
                     restartInProgress
@@ -331,6 +338,22 @@ public class StreamingServiceImpl implements StreamingService {
         String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(orgKey, selectedObject, "STREAMING");
         StreamingRuntimeState state = runtimeStates.get(routeKey);
         return state != null && state.camelContext != null && state.camelContext.isStarted();
+    }
+
+    @Override
+    public void stopRoute(String orgKey, String selectedObject, String reason) {
+        if (orgKey == null || orgKey.isBlank() || selectedObject == null || selectedObject.isBlank()) {
+            return;
+        }
+        String routeKey = RoutingRuntimeKeyUtils.buildRouteKey(orgKey, selectedObject, "STREAMING");
+        StreamingRuntimeState state = runtimeStates.remove(routeKey);
+        if (state == null) {
+            log.info("Streaming route already absent. routeKey={}, reason={}", routeKey, reason);
+            return;
+        }
+        stopCamelContextQuietly(state.camelContext(), routeKey);
+        closeCamelContextQuietly(state.camelContext(), routeKey);
+        log.info("Streaming route stopped. routeKey={}, reason={}", routeKey, reason);
     }
 
     @Override
@@ -353,21 +376,42 @@ public class StreamingServiceImpl implements StreamingService {
         }
 
         mergeRefreshableProperties(state.mapProperty, mapProperty);
-
-        try {
-            state.camelContext.stop();
-        } catch (Exception e) {
-            log.warn("기존 streaming camelContext stop 실패. selectedObject={}", selectedObject, e);
-        }
-        try {
-            state.camelContext.close();
-        } catch (Exception e) {
-            log.warn("기존 streaming camelContext close 실패. selectedObject={}", selectedObject, e);
-        }
-
-        subscribePushTopic(state.mapProperty, state.mapProperty.get("accessToken"), new HashMap<>(state.mapType));
+        restartStreamingRoute(routeKey, state, "manual credential refresh");
         result.put("status", "SUCCESS");
         result.put("message", "Streaming routing credentials refresh가 완료되었어요.");
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> restartRoutesForOrg(String orgKey, String reason) throws Exception {
+        if (orgKey == null || orgKey.isBlank()) {
+            throw new AppException("orgKey is required");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        List<String> restartedRoutes = new ArrayList<>();
+
+        for (Map.Entry<String, StreamingRuntimeState> entry : runtimeStates.entrySet()) {
+            String routeKey = entry.getKey();
+            StreamingRuntimeState state = entry.getValue();
+            if (state == null || state.mapProperty() == null) {
+                continue;
+            }
+            if (!orgKey.equals(state.mapProperty().get("orgKey"))) {
+                continue;
+            }
+            restartStreamingRoute(routeKey, state, reason == null || reason.isBlank() ? "credential updated" : reason);
+            restartedRoutes.add(routeKey);
+        }
+
+        result.put("orgKey", orgKey);
+        result.put("protocol", "STREAMING");
+        result.put("restartedCount", restartedRoutes.size());
+        result.put("restartedRoutes", restartedRoutes);
+        result.put("status", restartedRoutes.isEmpty() ? "NOT_FOUND" : "SUCCESS");
+        result.put("message", restartedRoutes.isEmpty()
+                ? "재시작할 Streaming route가 없어요."
+                : "Streaming route 재시작이 완료되었어요.");
         return result;
     }
 
@@ -502,7 +546,11 @@ public class StreamingServiceImpl implements StreamingService {
     }
 
     private void runStreamingWatchdog() {
-        long now = System.currentTimeMillis();
+        int activeRoutes = 0;
+        int restartedRoutes = 0;
+        int versionMismatches = 0;
+        int stoppedRoutes = 0;
+
         for (Map.Entry<String, StreamingRuntimeState> entry : runtimeStates.entrySet()) {
             String routeKey = entry.getKey();
             StreamingRuntimeState state = entry.getValue();
@@ -510,20 +558,34 @@ public class StreamingServiceImpl implements StreamingService {
                 continue;
             }
 
+            if (shouldSkipRuntime(state.mapProperty())) {
+                stopRoute(state.mapProperty().get("orgKey"), state.mapProperty().get("selectedObject"), "source_status inactive or route released");
+                continue;
+            }
+            activeRoutes++;
+
             try {
                 if (!state.camelContext().isStarted()) {
+                    stoppedRoutes++;
+                    restartedRoutes++;
                     restartStreamingRoute(routeKey, state, "camelContext not started");
                     continue;
                 }
 
-                long lastEventAt = state.lastEventAt().get();
-                long idleMillis = now - lastEventAt;
-                if (lastEventAt > 0 && idleMillis >= STREAMING_STALE_THRESHOLD_MILLIS) {
-                    restartStreamingRoute(routeKey, state, "no streaming events for " + (idleMillis / 1000) + "s");
+                long latestCredentialVersion = readCredentialVersion(state.mapProperty().get("orgKey"));
+                if (state.credentialVersion() < latestCredentialVersion) {
+                    versionMismatches++;
+                    restartedRoutes++;
+                    restartStreamingRoute(routeKey, state, "credential version updated");
                 }
             } catch (Exception e) {
                 log.warn("Streaming watchdog check 실패. routeKey={}", routeKey, e);
             }
+        }
+
+        if (activeRoutes > 0) {
+            log.info("[STREAMING-WATCHDOG] activeRoutes={}, restartedRoutes={}, versionMismatches={}, stoppedRoutes={}",
+                    activeRoutes, restartedRoutes, versionMismatches, stoppedRoutes);
         }
     }
 
@@ -541,6 +603,14 @@ public class StreamingServiceImpl implements StreamingService {
         }
 
         try {
+            mergeLatestCredentialSnapshot(state.mapProperty());
+            if (shouldSkipRuntime(state.mapProperty())) {
+                runtimeStates.remove(routeKey);
+                stopCamelContextQuietly(state.camelContext(), routeKey);
+                closeCamelContextQuietly(state.camelContext(), routeKey);
+                log.info("Streaming route restart skipped because route is inactive. routeKey={}, reason={}", routeKey, reason);
+                return;
+            }
             log.warn("Streaming route restart 시작. routeKey={}, reason={}, lastEventAt={}, instanceUrl={}",
                     routeKey,
                     reason,
@@ -556,6 +626,63 @@ public class StreamingServiceImpl implements StreamingService {
         } finally {
             state.restartInProgress().set(false);
         }
+    }
+
+    private void mergeLatestCredentialSnapshot(Map<String, String> mapProperty) {
+        if (mapProperty == null) {
+            return;
+        }
+        String orgKey = mapProperty.get("orgKey");
+        if (orgKey == null || orgKey.isBlank()) {
+            return;
+        }
+        SalesforceOrgCredential credential = salesforceOrgCredentialRepository.findActiveByOrgKey(orgKey);
+        if (credential == null) {
+            return;
+        }
+        copyIfText(mapProperty, "orgKey", credential.getOrgKey());
+        copyIfText(mapProperty, "orgName", credential.getOrgName());
+        copyIfText(mapProperty, "instanceUrl", credential.getMyDomain());
+        copyIfText(mapProperty, "clientId", credential.getClientId());
+        copyIfText(mapProperty, "clientSecret", credential.getClientSecret());
+        copyIfText(mapProperty, "accessToken", credential.getAccessToken());
+    }
+
+    private boolean shouldSkipRuntime(Map<String, String> mapProperty) {
+        String sourceStatus = mapProperty == null ? null : mapProperty.get("sourceStatus");
+        String routingStatus = mapProperty == null ? null : mapProperty.get("routingStatus");
+        return "INACTIVE".equalsIgnoreCase(sourceStatus)
+                || "RELEASED".equalsIgnoreCase(routingStatus)
+                || "FAILED".equalsIgnoreCase(routingStatus);
+    }
+
+    private String resolvePhysicalTableName(Map<String, String> mapProperty, String selectedObject, Long targetStorageId) {
+        var strategy = routingJdbcExecutor.resolveStrategy(targetStorageId);
+        String orgName = mapProperty == null ? null : mapProperty.get("orgName");
+        String physicalTableName = SalesforceObjectSchemaBuilder.resolvePhysicalTableName(
+                mapProperty.get("targetSchema"),
+                selectedObject,
+                orgName,
+                strategy
+        );
+        if (mapProperty != null) {
+            mapProperty.put("targetTable", physicalTableName);
+        }
+        return physicalTableName;
+    }
+
+    private void copyIfText(Map<String, String> target, String key, String value) {
+        if (target != null && value != null && !value.isBlank()) {
+            target.put(key, value);
+        }
+    }
+
+    private long readCredentialVersion(String orgKey) {
+        if (orgKey == null || orgKey.isBlank()) {
+            return 0L;
+        }
+        SalesforceOrgCredential credential = salesforceOrgCredentialRepository.findActiveByOrgKey(orgKey);
+        return credential != null && credential.getCredentialVersion() != null ? credential.getCredentialVersion() : 0L;
     }
 
     private void stopCamelContextQuietly(CamelContext camelContext, String routeKey) {
@@ -583,6 +710,7 @@ public class StreamingServiceImpl implements StreamingService {
     private record StreamingRuntimeState(Map<String, String> mapProperty,
                                          Map<String, Object> mapType,
                                          CamelContext camelContext,
+                                         long credentialVersion,
                                          AtomicLong lastEventAt,
                                          AtomicLong lastRestartAttemptAt,
                                          AtomicBoolean restartInProgress) {

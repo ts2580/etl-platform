@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko">
+<body>
+<th:block th:fragment="sidebar">
+    <aside class="rounded-[32px] border border-white/70 bg-white/85 p-5 shadow-[0_18px_60px_rgba(129,140,248,0.18)] backdrop-blur">
+        <div class="flex items-center gap-3 rounded-2xl px-2 py-2">
+            <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-500 text-base font-bold text-white shadow-lg shadow-indigo-300/40">E</span>
+            <div>
+                <p class="text-sm font-semibold text-slate-500">Salesforce</p>
+                <h1 class="text-lg font-bold tracking-tight text-slate-900">ETL Workspace</h1>
+            </div>
+        </div>
+
+        <div sec:authorize="isAuthenticated()" class="mt-6 rounded-3xl bg-gradient-to-br from-[#eef2ff] to-[#f5edff] p-4 shadow-sm">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-500">NOW</p>
+            <p class="mt-2 text-lg font-bold text-slate-900"><span th:text="${displayName}">사용자</span>님</p>
+            <p class="mt-1 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_ADMIN')">- 관리자</p>
+            <p class="mt-1 text-sm text-slate-500" sec:authorize="hasAuthority('ROLE_USER')">- 사용자</p>
+        </div>
+
+        <nav sec:authorize="isAuthenticated()" class="mt-6 space-y-2" aria-label="메인 화면 탭">
+            <button type="button"
+                    data-tab-button="summary"
+                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    aria-selected="true">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">📊</span>
+                <span>대시보드</span>
+            </button>
+            <button type="button"
+                    data-tab-button="orgs"
+                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    aria-selected="false">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">🏢</span>
+                <span>Orgs</span>
+            </button>
+            <button type="button"
+                    data-tab-button="routing"
+                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    aria-selected="false">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">🔀</span>
+                <span>라우팅</span>
+            </button>
+            <a th:href="${activeOrg != null} ? ${fileEngineBaseUrl + '/file?orgKey=' + activeOrg.orgKey} : ${fileEngineBaseUrl + '/file'}"
+               class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+                <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">📁</span>
+                <span>파일 모듈</span>
+            </a>
+        </nav>
+
+        <div sec:authorize="isAuthenticated()" class="mt-8 space-y-3">
+            <form th:action="@{/user/logout}" method="post" class="block">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="inline-flex w-full items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">로그아웃</button>
+            </form>
+        </div>
+    </aside>
+</th:block>
+</body>
+</html>

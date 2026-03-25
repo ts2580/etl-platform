@@ -16,7 +16,7 @@ public interface SalesforceOrgCredentialRepository {
                                                     @Param("myDomain") String myDomain,
                                                     @Param("normalizedMyDomain") String normalizedMyDomain);
 
-    @Update("UPDATE config.salesforce_org_credentials SET access_token = #{accessToken}, access_token_issued_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE org_key = #{orgKey}")
+    @Update("UPDATE config.salesforce_org_credentials SET access_token = #{accessToken}, access_token_issued_at = NOW(), credential_version = credential_version + 1, updated_at = CURRENT_TIMESTAMP WHERE org_key = #{orgKey}")
     int updateAccessToken(@Param("orgKey") String orgKey,
                           @Param("accessToken") String accessToken);
 }

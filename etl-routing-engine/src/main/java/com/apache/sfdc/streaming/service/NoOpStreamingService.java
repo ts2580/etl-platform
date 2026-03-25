@@ -30,8 +30,18 @@ public class NoOpStreamingService implements StreamingService {
     }
 
     @Override
+    public void stopRoute(String orgKey, String selectedObject, String reason) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 Streaming route 중지 기능을 사용할 수 없습니다.");
+    }
+
+    @Override
     public Map<String, Object> refreshCredentials(Map<String, String> mapProperty) {
         throw new FeatureDisabledException("DB 비활성 모드에서는 Streaming credential refresh 기능을 사용할 수 없습니다.");
+    }
+
+    @Override
+    public Map<String, Object> restartRoutesForOrg(String orgKey, String reason) {
+        throw new FeatureDisabledException("DB 비활성 모드에서는 Streaming route restart 기능을 사용할 수 없습니다.");
     }
 
     @Override

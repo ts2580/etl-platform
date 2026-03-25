@@ -137,6 +137,7 @@
             org_type AS orgType
         FROM routing.routing_registry
         WHERE routing_status = 'ACTIVE'
+          AND source_status = 'ACTIVE'
         ORDER BY org_name, selected_object ASC, routing_protocol DESC
     </select>
 
@@ -165,6 +166,7 @@
             org_type AS orgType
         FROM routing.routing_registry
         WHERE routing_status = 'ACTIVE'
+          AND source_status = 'ACTIVE'
           AND org_key = #{orgKey}
         ORDER BY selected_object ASC, routing_protocol DESC
     </select>

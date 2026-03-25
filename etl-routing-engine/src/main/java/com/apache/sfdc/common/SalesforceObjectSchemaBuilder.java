@@ -2,6 +2,7 @@ package com.apache.sfdc.common;
 
 import com.apache.sfdc.streaming.dto.FieldDefinition;
 import com.etlplatform.common.storage.database.DatabaseVendor;
+import com.etlplatform.common.storage.database.OracleRoutingNaming;
 import com.etlplatform.common.storage.database.sql.BoundBatchSql;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategies;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy;
@@ -26,15 +27,24 @@ public final class SalesforceObjectSchemaBuilder {
     }
 
     public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode) throws IOException {
-        return buildSchema(targetSchema, selectedObject, fieldsNode, new ObjectMapper(), DatabaseVendorStrategies.defaultStrategy());
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, new ObjectMapper(), DatabaseVendorStrategies.defaultStrategy());
     }
 
     public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode, ObjectMapper objectMapper) throws IOException {
-        return buildSchema(targetSchema, selectedObject, fieldsNode, objectMapper, DatabaseVendorStrategies.defaultStrategy());
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, objectMapper, DatabaseVendorStrategies.defaultStrategy());
     }
 
     public static SchemaResult buildSchema(String targetSchema,
                                            String selectedObject,
+                                           JsonNode fieldsNode,
+                                           ObjectMapper objectMapper,
+                                           DatabaseVendorStrategy strategy) throws IOException {
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, objectMapper, strategy);
+    }
+
+    public static SchemaResult buildSchema(String targetSchema,
+                                           String selectedObject,
+                                           String orgName,
                                            JsonNode fieldsNode,
                                            ObjectMapper objectMapper,
                                            DatabaseVendorStrategy strategy) throws IOException {
@@ -53,11 +63,13 @@ public final class SalesforceObjectSchemaBuilder {
         Map<String, String> mapType = new HashMap<>();
         List<DatabaseVendorStrategy.ColumnDefinition> columnDefinitions = new ArrayList<>();
 
+        String physicalTableName = resolvePhysicalTableName(targetSchema, selectedObject, orgName, strategy);
+
         ddl.append("CREATE TABLE ");
         if (strategy.vendor() != DatabaseVendor.ORACLE) {
             ddl.append("IF NOT EXISTS ");
         }
-        ddl.append(qualifiedName(targetSchema, selectedObject, strategy)).append("(");
+        ddl.append(qualifiedName(targetSchema, physicalTableName, strategy)).append("(");
 
         for (FieldDefinition obj : listDef) {
             mapType.put(obj.name, obj.type);
@@ -133,7 +145,7 @@ public final class SalesforceObjectSchemaBuilder {
                                                          DatabaseVendorStrategy strategy) {
         List<String> columns = buildInsertColumns(schemaResult.fields());
         String sql = strategy.buildUpsertSql(
-                qualifiedName(targetSchema, selectedObject, strategy),
+                qualifiedName(targetSchema, selectedObject, null, strategy),
                 columns,
                 schemaResult.fields(),
                 "sfid",
@@ -258,11 +270,35 @@ public final class SalesforceObjectSchemaBuilder {
         return strategy.qualifyTableName(targetSchema, tableName);
     }
 
+    public static String resolvePhysicalTableName(String targetSchema,
+                                                  String tableName,
+                                                  String orgName,
+                                                  DatabaseVendorStrategy strategy) {
+        SqlSanitizer.validateSchemaName(targetSchema);
+        SqlSanitizer.validateTableName(tableName);
+        if (strategy.vendor() == DatabaseVendor.ORACLE) {
+            return OracleRoutingNaming.buildTableName(orgName, tableName);
+        }
+        return tableName;
+    }
+
+    public static String qualifiedName(String targetSchema,
+                                       String logicalTableName,
+                                       String orgName,
+                                       DatabaseVendorStrategy strategy) {
+        String physicalTableName = resolvePhysicalTableName(targetSchema, logicalTableName, orgName, strategy);
+        return qualifiedName(targetSchema, physicalTableName, strategy);
+    }
+
     public static String buildDropTableSql(String targetSchema, String tableName, DatabaseVendorStrategy strategy) {
-        String qualifiedName = qualifiedName(targetSchema, tableName, strategy);
+        return buildDropTableSql(targetSchema, tableName, null, strategy);
+    }
+
+    public static String buildDropTableSql(String targetSchema, String tableName, String orgName, DatabaseVendorStrategy strategy) {
+        String qualifiedName = qualifiedName(targetSchema, tableName, orgName, strategy);
         return switch (strategy.vendor()) {
             case ORACLE -> "BEGIN EXECUTE IMMEDIATE 'DROP TABLE " + qualifiedName.replace("'", "''")
-                    + "'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END";
+                    + " CASCADE CONSTRAINTS PURGE'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END";
             default -> "DROP TABLE IF EXISTS " + qualifiedName;
         };
     }

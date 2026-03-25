@@ -62,7 +62,7 @@ class NavigationFlowWebMvcTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("id=\"login-form\"")))
                 .andExpect(content().string(containsString("action=\"/user/login\"")))
-                .andExpect(content().string(containsString("메인 페이지에서 바로 로그인")));
+                .andExpect(content().string(containsString("<h3 class=\"mt-2 text-xl font-bold tracking-tight text-[#312e81]\">로그인</h3>")));
     }
 
     @Test

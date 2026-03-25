@@ -78,28 +78,40 @@ function updateDbFieldLabels() {
     const vendor = document.getElementById('vendor')?.value;
     const schemaLabel = document.getElementById('schemaLabel');
     const schemaInput = document.getElementById('schemaName');
-    const databaseLabel = document.getElementById('databaseLabel');
+    const databaseInput = document.getElementById('databaseName');
+    const serviceNameField = document.getElementById('serviceNameField');
+    const databaseNameField = document.getElementById('databaseNameField');
+    const postgresSchemaHint = document.getElementById('postgresSchemaHint');
 
-    if (!schemaLabel || !schemaInput || !databaseLabel) {
+    if (!schemaLabel || !schemaInput) {
         return;
     }
 
-    if (vendor === 'ORACLE') {
+    const isOracle = vendor === 'ORACLE';
+    const isRoutingDb = vendor === 'POSTGRESQL' || vendor === 'MYSQL' || vendor === 'MARIADB';
+
+    if (serviceNameField) {
+        serviceNameField.classList.toggle('hidden', isRoutingDb);
+    }
+    if (databaseNameField) {
+        databaseNameField.classList.toggle('hidden', !isRoutingDb);
+    }
+    if (postgresSchemaHint) {
+        postgresSchemaHint.classList.toggle('hidden', vendor !== 'POSTGRESQL');
+    }
+
+    if (databaseInput) {
+        databaseInput.value = isRoutingDb ? 'etl_sfdc' : '';
+    }
+
+    if (isOracle) {
         schemaLabel.textContent = '서비스명 / SID';
         schemaInput.placeholder = '예: FREEPDB1 또는 SID';
-        databaseLabel.textContent = '스키마명(선택)';
-    } else if (vendor === 'POSTGRESQL') {
-        schemaLabel.textContent = '스키마명(선택)';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명(필수)';
-    } else if (vendor === 'MYSQL' || vendor === 'MARIADB') {
-        schemaLabel.textContent = '스키마명(선택)';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명';
+        schemaInput.value = schemaInput.value || '';
     } else {
-        schemaLabel.textContent = '스키마명';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명';
+        schemaLabel.textContent = '라우팅 스키마명';
+        schemaInput.placeholder = '예: studyorg (저장 시 org_ 자동 추가)';
+        schemaInput.value = '';
     }
 }
 

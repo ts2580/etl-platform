@@ -8,11 +8,15 @@ public interface StreamingService {
 
     void dropTable(Map<String, String> mapProperty) throws Exception;
 
+    void stopRoute(String orgKey, String selectedObject, String reason);
+
     String setPushTopic(Map<String, String> mapProperty, Map<String, Object> mapReturn, String token) throws Exception;
 
     void subscribePushTopic(Map<String, String> mapProperty, String token, Map<String, Object> mapType) throws Exception;
 
     Map<String, Object> refreshCredentials(Map<String, String> mapProperty) throws Exception;
+
+    Map<String, Object> restartRoutesForOrg(String orgKey, String reason) throws Exception;
 
     boolean isRouteActive(String orgKey, String selectedObject);
 }

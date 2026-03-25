@@ -25,7 +25,7 @@ public interface SalesforceOrgCredentialRepository {
             "FROM config.salesforce_org_credentials WHERE is_active = true ORDER BY is_default DESC, id ASC")
     List<SalesforceOrgCredential> findAllActiveOrDefault();
 
-    @Select("SELECT id, org_key AS orgKey, org_name AS orgName, my_domain AS myDomain, schema_name AS schemaName, client_id AS clientId, client_secret AS clientSecret, access_token AS accessToken, access_token_issued_at AS accessTokenIssuedAt, is_active AS isActive, is_default AS isDefault, created_at AS createdAt, updated_at AS updatedAt " +
+    @Select("SELECT id, org_key AS orgKey, org_name AS orgName, my_domain AS myDomain, schema_name AS schemaName, client_id AS clientId, client_secret AS clientSecret, access_token AS accessToken, access_token_issued_at AS accessTokenIssuedAt, credential_version AS credentialVersion, is_active AS isActive, is_default AS isDefault, created_at AS createdAt, updated_at AS updatedAt " +
             "FROM config.salesforce_org_credentials WHERE org_key = #{orgKey}")
     SalesforceOrgCredential findByOrgKey(@Param("orgKey") String orgKey);
 
@@ -38,6 +38,6 @@ public interface SalesforceOrgCredentialRepository {
     @Delete("DELETE FROM config.salesforce_org_credentials WHERE org_key = #{orgKey}")
     int deleteByOrgKey(@Param("orgKey") String orgKey);
 
-    @Update("UPDATE config.salesforce_org_credentials SET access_token = #{accessToken}, access_token_issued_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE org_key = #{orgKey}")
+    @Update("UPDATE config.salesforce_org_credentials SET access_token = #{accessToken}, access_token_issued_at = NOW(), credential_version = credential_version + 1, updated_at = CURRENT_TIMESTAMP WHERE org_key = #{orgKey}")
     int updateAccessToken(@Param("orgKey") String orgKey, @Param("accessToken") String accessToken);
 }

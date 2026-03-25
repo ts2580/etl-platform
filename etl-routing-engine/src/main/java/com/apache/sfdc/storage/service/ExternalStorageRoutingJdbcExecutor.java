@@ -19,6 +19,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -42,6 +43,7 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "app.db.enabled", havingValue = "true")
 public class ExternalStorageRoutingJdbcExecutor {
 
     private final StreamingRepository streamingRepository;
@@ -65,7 +67,7 @@ public class ExternalStorageRoutingJdbcExecutor {
         return targetStorageId != null;
     }
 
-    public void executeDdl(String routingProtocol, String ddl, Long targetStorageId) {
+    public void executeDdl(String routingProtocol, String ddl, Long targetStorageId, String targetSchema) {
         if (targetStorageId == null) {
             defaultRepository(routingProtocol).setTable(ddl);
             return;
@@ -74,6 +76,7 @@ public class ExternalStorageRoutingJdbcExecutor {
         RoutedStorageContext context = routedContexts.computeIfAbsent(targetStorageId, this::createContext);
         try (Connection connection = context.dataSource().getConnection();
              Statement statement = connection.createStatement()) {
+            ensureLogicalSchemaExistsIfNeeded(statement, context, targetSchema);
             for (String ddlStatement : splitDdlStatements(ddl, context.strategy().vendor())) {
                 statement.execute(ddlStatement);
             }
@@ -477,6 +480,25 @@ public class ExternalStorageRoutingJdbcExecutor {
                 hikariDataSource.close();
             } catch (Exception ignored) {
             }
+        }
+    }
+
+    private void ensureLogicalSchemaExistsIfNeeded(Statement statement, RoutedStorageContext context, String targetSchema) throws Exception {
+        if (statement == null || context == null) {
+            return;
+        }
+        DatabaseVendor vendor = context.strategy().vendor();
+        String schemaName = normalize(targetSchema);
+        if (schemaName == null && context.storage() != null) {
+            schemaName = normalize(context.storage().getSchemaName());
+        }
+        if (schemaName == null) {
+            return;
+        }
+
+        if (vendor == DatabaseVendor.MARIADB || vendor == DatabaseVendor.MYSQL) {
+            String sql = "CREATE DATABASE IF NOT EXISTS `" + schemaName.replace("`", "``") + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
+            statement.execute(sql);
         }
     }
 

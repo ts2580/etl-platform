@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko">
+<body>
+<th:block th:fragment="container">
+    <div sec:authorize="isAuthenticated()" class="space-y-5">
+        <section class="rounded-[32px] border border-white/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(129,140,248,0.18)] backdrop-blur sm:p-7 lg:p-8">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-indigo-500">Workspace</p>
+            <h2 class="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">ETL 대시보드</h2>
+        </section>
+
+        <th:block th:replace="~{fragments/dashboard_panel :: panel}"></th:block>
+
+        <section data-tab-panel="orgs" class="tab-panel hidden space-y-5">
+            <div class="space-y-5">
+                <th:block th:replace="~{fragments/orgs_alerts :: alerts}"></th:block>
+                <th:block th:replace="~{fragments/orgs_panel :: panel}"></th:block>
+            </div>
+        </section>
+
+        <section data-tab-panel="routing" class="tab-panel hidden space-y-5">
+            <th:block th:replace="~{fragments/routing_panel :: panel}"></th:block>
+        </section>
+    </div>
+</th:block>
+</body>
+</html>

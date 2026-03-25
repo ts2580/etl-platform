@@ -164,7 +164,7 @@ public class RoutingStartupRecovery {
         String instanceUrl = firstNonBlank(tokenResponse.instanceUrl(), normalizeInstanceUrl(credential.getMyDomain()), text(route.get("myDomain")));
         String orgKey = firstNonBlank(credential.getOrgKey(), text(route.get("orgKey")));
         String orgName = firstNonBlank(credential.getOrgName(), text(route.get("orgName")));
-        String targetSchema = firstNonBlank(text(route.get("targetSchema")), credential.getSchemaName(), "config");
+        String targetSchema = firstNonBlank(text(route.get("targetSchema")), "config");
         String targetTable = firstNonBlank(text(route.get("targetTable")), selectedObject);
         String targetStorageId = text(route.get("targetStorageId"));
         String targetStorageName = text(route.get("targetStorageName"));
