@@ -23,21 +23,21 @@
         <nav sec:authorize="isAuthenticated()" class="mt-6 space-y-2" aria-label="메인 화면 탭">
             <button type="button"
                     data-tab-button="summary"
-                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    class="tab-nav cursor-pointer flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
                     aria-selected="true">
                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">📊</span>
                 <span>대시보드</span>
             </button>
             <button type="button"
                     data-tab-button="orgs"
-                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    class="tab-nav cursor-pointer flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
                     aria-selected="false">
                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">🏢</span>
                 <span>Orgs</span>
             </button>
             <button type="button"
                     data-tab-button="routing"
-                    class="tab-nav flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
+                    class="tab-nav cursor-pointer flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition"
                     aria-selected="false">
                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-base shadow-sm">🔀</span>
                 <span>라우팅</span>

@@ -4,6 +4,7 @@ import com.etl.sfdc.storage.dto.DatabaseConnectionTestResponse;
 import com.etl.sfdc.storage.dto.DatabaseStorageRegistrationRequest;
 import com.etl.sfdc.storage.model.repository.ExternalStorageConnectionHistoryRepository;
 import com.etlplatform.common.error.AppException;
+import com.etlplatform.common.storage.database.DatabaseConnectionLogFormatter;
 import com.etlplatform.common.storage.database.DatabaseConnectionTestResult;
 import com.etlplatform.common.storage.database.DatabaseConnectionTestSupport;
 import com.etlplatform.common.storage.database.DatabaseJdbcMetadata;
@@ -23,8 +24,7 @@ public class DatabaseConnectionTestService {
 
     public DatabaseConnectionTestResponse test(DatabaseStorageRegistrationRequest request) {
         validate(request);
-        String start = String.format("[DB 연결 테스트] 시작. vendor=%s, authMethod=%s, user=%s, rawUrl=%s, port=%s, schemaName=%s, databaseName=%s",
-                request.getVendor(), request.getAuthMethod(), request.getUsername(), request.getJdbcUrl(), request.getPort(), request.getSchemaName(), request.getDatabaseName());
+        String start = "[DB 연결 테스트] 시작. " + DatabaseConnectionLogFormatter.requestSummary(request);
         log.info(start);
         System.out.println(start);
 
@@ -35,9 +35,15 @@ public class DatabaseConnectionTestService {
                     request.getJdbcUrl(),
                     request.getPort()
             );
+            if (request.getVendor() == com.etlplatform.common.storage.database.DatabaseVendor.POSTGRESQL
+                    && metadata.databaseName() == null
+                    && request.getDatabaseName() != null
+                    && !request.getDatabaseName().isBlank()) {
+                metadata = new DatabaseJdbcMetadata(metadata.host(), metadata.port(), request.getDatabaseName().trim(), metadata.serviceName(), metadata.sid());
+            }
             String jdbcUrl = DatabaseJdbcSupport.buildJdbcUrl(request.getVendor(), metadata);
-            String success = String.format("[DB 연결 테스트] 성공. vendor=%s, authMethod=%s, jdbcUrl=%s, metadataHost=%s, metadataPort=%s",
-                    request.getVendor(), request.getAuthMethod(), jdbcUrl, metadata.host(), metadata.port());
+            String success = "[DB 연결 테스트] 성공. "
+                    + DatabaseConnectionLogFormatter.outcomeSummary(request.getVendor(), request.getAuthMethod(), jdbcUrl, metadata);
             log.info(success);
             System.out.println(success);
             historyRepository.insert(null, "TEST", true, "등록 전 연결 테스트 성공", request.getVendor() + " / " + jdbcUrl);
@@ -46,8 +52,10 @@ public class DatabaseConnectionTestService {
                     .message(result.message())
                     .build();
         } catch (AppException e) {
-            String err = String.format("[DB 연결 테스트] 실패. vendor=%s, authMethod=%s, rawUrl=%s, port=%s, reason=%s, causeChain=%s",
-                    request.getVendor(), request.getAuthMethod(), request.getJdbcUrl(), request.getPort(), e.getMessage(), summarizeThrowableChain(e));
+            String err = "[DB 연결 테스트] 실패. "
+                    + DatabaseConnectionLogFormatter.requestSummary(request)
+                    + ", reason=" + e.getMessage()
+                    + ", causeChain=" + summarizeThrowableChain(e);
             log.error("Database connection test failed in API service. vendor={}, authMethod={}, rawUrl={}, port={}, causeChain={}",
                     request.getVendor(), request.getAuthMethod(), request.getJdbcUrl(), request.getPort(), summarizeThrowableChain(e), e);
             System.err.println(err);

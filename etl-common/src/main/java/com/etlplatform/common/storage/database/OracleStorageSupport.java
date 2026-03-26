@@ -12,22 +12,13 @@ public final class OracleStorageSupport {
     }
 
     public static String normalizeSchemaName(String schemaName, String username, String serviceName, String sid) {
-        String normalizedSchema = normalizeBlankToNull(schemaName);
         String normalizedUsername = normalizeBlankToNull(username);
-        String normalizedService = normalizeBlankToNull(serviceName);
-        String normalizedSid = normalizeBlankToNull(sid);
-
-        String resolved = normalizedSchema;
-        if (resolved == null) {
-            resolved = normalizedUsername;
-        } else if (normalizedUsername != null
-                && ((normalizedService != null && normalizedService.equalsIgnoreCase(resolved))
-                || (normalizedSid != null && normalizedSid.equalsIgnoreCase(resolved)))
-                && !normalizedUsername.equalsIgnoreCase(resolved)) {
-            resolved = normalizedUsername;
+        if (normalizedUsername != null) {
+            return normalizedUsername.toUpperCase(Locale.ROOT);
         }
 
-        return resolved == null ? null : resolved.toUpperCase(Locale.ROOT);
+        String normalizedSchema = normalizeBlankToNull(schemaName);
+        return normalizedSchema == null ? null : normalizedSchema.toUpperCase(Locale.ROOT);
     }
 
     public static String resolveJdbcServiceName(String currentServiceName, String sid, String schemaName) {

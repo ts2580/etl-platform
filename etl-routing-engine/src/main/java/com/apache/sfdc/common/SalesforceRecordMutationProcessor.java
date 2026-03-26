@@ -19,29 +19,33 @@ public class SalesforceRecordMutationProcessor {
 
     public MutationResult apply(String targetSchema,
                                 String selectedObject,
+                                String targetTable,
+                                String orgName,
                                 Map<String, Object> mapType,
                                 SalesforceRecordMutation mutation,
                                 SalesforceMutationRepositoryPort repository,
                                 String sourceLabel) {
 
+        String physicalTableName = resolvePhysicalTableName(targetSchema, selectedObject, targetTable, orgName, repository.vendorStrategy());
+
         if (mutation.type().isDelete()) {
-            int deleted = delete(targetSchema, selectedObject, mutation, repository, sourceLabel);
+            int deleted = delete(targetSchema, physicalTableName, mutation, repository, sourceLabel);
             return new MutationResult(0, 0, deleted);
         }
 
         if (repository.supportsBoundStatements()) {
-            BoundSql boundUpdate = buildBoundUpdate(targetSchema, selectedObject, mapType, mutation, repository.vendorStrategy());
+            BoundSql boundUpdate = buildBoundUpdate(targetSchema, physicalTableName, mapType, mutation, repository.vendorStrategy());
             if (boundUpdate != null) {
                 int updated = repository.updateObject(boundUpdate);
                 if (updated == 0 && mutation.type().isCreateLike()) {
-                    int inserted = repository.insertObject(buildBoundInsertFallback(targetSchema, selectedObject, mapType, mutation, repository.vendorStrategy()));
+                    int inserted = repository.insertObject(buildBoundInsertFallback(targetSchema, physicalTableName, mapType, mutation, repository.vendorStrategy()));
                     return new MutationResult(updated, inserted, 0);
                 }
                 return new MutationResult(updated, 0, 0);
             }
         } else {
             StringBuilder strUpdate = new StringBuilder();
-            strUpdate.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, selectedObject)).append(" SET ");
+            strUpdate.append("UPDATE ").append(SalesforceObjectSchemaBuilder.qualifiedName(targetSchema, physicalTableName, repository.vendorStrategy())).append(" SET ");
 
             int assignmentCount = appendAssignments(strUpdate, mapType, mutation.payload(), mutation.targetFields(), mutation.nulledFields());
             if (assignmentCount > 0) {
@@ -60,7 +64,7 @@ public class SalesforceRecordMutationProcessor {
                 log.warn("[CDC-UPDATE-SQL]\n  sfid: {}\n  sql:\n{}", mutation.sfid(), formatIndentedBlock(strUpdate.toString()));
                 int updated = repository.updateObject(strUpdate);
                 if (updated == 0 && mutation.type().isCreateLike()) {
-                    int inserted = insertFallback(targetSchema, selectedObject, mapType, mutation, repository);
+                    int inserted = insertFallback(targetSchema, physicalTableName, mapType, mutation, repository);
                     return new MutationResult(updated, inserted, 0);
                 }
                 return new MutationResult(updated, 0, 0);
@@ -69,10 +73,10 @@ public class SalesforceRecordMutationProcessor {
 
         if (mutation.type().isCreateLike()) {
             if (repository.supportsBoundStatements()) {
-                int inserted = repository.insertObject(buildBoundMinimalInsert(targetSchema, selectedObject, mutation.sfid(), repository.vendorStrategy()));
+                int inserted = repository.insertObject(buildBoundMinimalInsert(targetSchema, physicalTableName, mutation.sfid(), repository.vendorStrategy()));
                 return new MutationResult(0, inserted, 0);
             }
-            int inserted = insertMinimal(targetSchema, selectedObject, mutation.sfid(), repository);
+            int inserted = insertMinimal(targetSchema, physicalTableName, mutation.sfid(), repository);
             return new MutationResult(0, inserted, 0);
         }
 
@@ -468,6 +472,23 @@ public class SalesforceRecordMutationProcessor {
                 + SqlSanitizer.quoteIdentifier(SalesforceObjectSchemaBuilder.INTERNAL_LAST_EVENT_AT_COLUMN) + ") VALUES";
         String valuesSql = "(" + SqlSanitizer.quoteSfid(sfid) + ", null, null)";
         return repository.insertObject(upperQuery, List.of(valuesSql), "");
+    }
+
+    private String resolvePhysicalTableName(String targetSchema,
+                                            String selectedObject,
+                                            String targetTable,
+                                            String orgName,
+                                            DatabaseVendorStrategy strategy) {
+        if (targetTable != null && !targetTable.isBlank()) {
+            return targetTable;
+        }
+        if (strategy == null) {
+            return selectedObject;
+        }
+        if (strategy.vendor() == com.etlplatform.common.storage.database.DatabaseVendor.ORACLE) {
+            return SalesforceObjectSchemaBuilder.resolvePhysicalTableName(targetSchema, selectedObject, orgName, strategy);
+        }
+        return selectedObject;
     }
 
     private String formatIndentedBlock(String text) {

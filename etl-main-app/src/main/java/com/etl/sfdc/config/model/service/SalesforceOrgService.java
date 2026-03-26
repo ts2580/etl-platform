@@ -103,19 +103,48 @@ public class SalesforceOrgService {
         return repository.findByOrgKey(existing.getOrgKey());
     }
 
-    public SalesforceOrgCredential updateClientCredentials(String orgKey,
-                                                       String clientId,
-                                                       String clientSecret) {
+    public SalesforceOrgCredential updateOrg(String orgKey,
+                                              String orgNameInput,
+                                              String myDomainInput,
+                                              String clientId,
+                                              String clientSecret,
+                                              boolean isDefault) {
         SalesforceOrgCredential existing = repository.findByOrgKey(orgKey);
         if (existing == null) {
             throw new AppException("존재하지 않는 Org입니다.");
         }
 
+        String myDomain = normalizeMyDomain(myDomainInput);
+        String sourceOrgName = (orgNameInput == null || orgNameInput.isBlank()) ? existing.getOrgName() : orgNameInput;
+        String resolvedOrgName;
+        try {
+            resolvedOrgName = normalizeOrgName(sourceOrgName);
+        } catch (Exception e) {
+            resolvedOrgName = normalizeOrgName(coerceOrgNameForSchema(sourceOrgName));
+        }
+        String schemaName = buildSchemaName(resolvedOrgName);
+
+        existing.setOrgName(resolvedOrgName);
+        existing.setMyDomain(myDomain);
+        existing.setSchemaName(schemaName);
         existing.setClientId(clientId);
-        existing.setClientSecret(clientSecret);
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            existing.setClientSecret(clientSecret);
+        }
         existing.setIsActive(true);
+        if (isDefault) {
+            repository.unsetDefaultOrgs();
+            existing.setIsDefault(true);
+        }
         repository.upsertSalesforceOrg(existing);
+        ensureOrgSchemaExists(schemaName);
         return repository.findByOrgKey(existing.getOrgKey());
+    }
+
+    public SalesforceOrgCredential updateClientCredentials(String orgKey,
+                                                       String clientId,
+                                                       String clientSecret) {
+        return updateOrg(orgKey, null, null, clientId, clientSecret, false);
     }
 
     public SalesforceOrgCredential setDefaultOrg(String orgKey) {

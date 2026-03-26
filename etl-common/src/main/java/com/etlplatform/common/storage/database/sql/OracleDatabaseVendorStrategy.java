@@ -41,7 +41,7 @@ public final class OracleDatabaseVendorStrategy extends BaseDatabaseVendorStrate
         return switch (sfType) {
             case "id", "reference" -> "VARCHAR2(18)";
             case "textarea" -> "CLOB";
-            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR2(" + Math.max(length, 1) + ")";
+            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR2(" + Math.max(length, 255) + ")";
             case "boolean" -> "NUMBER(1)";
             case "datetime" -> "TIMESTAMP(6)";
             case "date" -> "DATE";

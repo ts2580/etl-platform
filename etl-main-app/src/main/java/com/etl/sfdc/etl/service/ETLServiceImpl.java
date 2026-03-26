@@ -483,7 +483,7 @@ public class ETLServiceImpl implements ETLService {
         String targetTable = targetStorage.getVendor() == com.etlplatform.common.storage.database.DatabaseVendor.ORACLE
                 ? com.etlplatform.common.storage.database.OracleRoutingNaming.buildTableName(resolvedOrgName, sanitizedObject)
                 : sanitizedObject;
-        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema, targetStorageId, targetStorageName));
+        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema, targetTable, targetStorageId, targetStorageName));
         String endpoint = "CDC".equals(sanitizedMode) ? "/pubsub" : "/streaming";
         String modeLabel = "CDC".equals(sanitizedMode) ? "CDC" : "Streaming";
         String routingBase = resolveRoutingBaseUrl();
@@ -699,6 +699,7 @@ public class ETLServiceImpl implements ETLService {
                                             String orgName,
                                             String orgKey,
                                             String targetSchema,
+                                            String targetTable,
                                             Long targetStorageId,
                                             String targetStorageName) {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
@@ -715,7 +716,7 @@ public class ETLServiceImpl implements ETLService {
         mapProperty.put("orgKey", resolveOrgKey(orgKey, resolvedMyDomain));
         mapProperty.put("orgName", orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName);
         mapProperty.put("targetSchema", targetSchema);
-        mapProperty.put("targetTable", selectedObject);
+        mapProperty.put("targetTable", targetTable == null || targetTable.isBlank() ? selectedObject : targetTable);
         if (targetStorageId != null) {
             mapProperty.put("targetStorageId", String.valueOf(targetStorageId));
         }

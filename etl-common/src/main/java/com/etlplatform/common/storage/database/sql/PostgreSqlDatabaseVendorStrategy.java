@@ -21,7 +21,7 @@ public final class PostgreSqlDatabaseVendorStrategy extends BaseDatabaseVendorSt
         return switch (sfType) {
             case "id", "reference" -> "VARCHAR(18)";
             case "textarea" -> "TEXT";
-            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR(" + Math.max(length, 1) + ")";
+            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR(" + Math.max(length, 255) + ")";
             case "boolean" -> "BOOLEAN";
             case "datetime" -> "TIMESTAMP(6)";
             case "date" -> "DATE";

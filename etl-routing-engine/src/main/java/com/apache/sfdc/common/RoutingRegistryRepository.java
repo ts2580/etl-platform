@@ -33,6 +33,11 @@ public interface RoutingRegistryRepository {
                            @Param("message") String message,
                            @Param("updatedBy") String updatedBy);
 
+    void markRoutingRecovered(@Param("orgKey") String orgKey,
+                              @Param("selectedObject") String selectedObject,
+                              @Param("routingProtocol") String routingProtocol,
+                              @Param("updatedBy") String updatedBy);
+
     int countActiveSlots(@Param("routingProtocol") String routingProtocol);
 
     void deactivateSlotsByObject(@Param("orgKey") String orgKey,

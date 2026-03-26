@@ -129,16 +129,22 @@ public class SalesforceOrgController {
         return "redirect:/?tab=orgs&message=token_refresh_failed&reason=client_credentials_failed&orgKey=" + orgKey;
     }
 
-    @PostMapping(value = "/etl/orgs/update-credentials")
-    public String updateOrgClientCredentials(@RequestParam("orgKey") String orgKey,
-                                            @RequestParam("clientId") String clientId,
-                                            @RequestParam("clientSecret") String clientSecret,
-                                            HttpSession session) {
-        if (orgKey == null || orgKey.isBlank() || clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+    @PostMapping(value = "/etl/orgs/update")
+    public String updateOrg(@RequestParam("orgKey") String orgKey,
+                            @RequestParam("orgName") String orgName,
+                            @RequestParam("myDomain") String myDomain,
+                            @RequestParam("clientId") String clientId,
+                            @RequestParam("clientSecret") String clientSecret,
+                            @RequestParam(value = "isDefault", defaultValue = "false") boolean isDefault,
+                            HttpSession session) {
+        if (orgKey == null || orgKey.isBlank()
+                || orgName == null || orgName.isBlank()
+                || myDomain == null || myDomain.isBlank()
+                || clientId == null || clientId.isBlank()) {
             return "redirect:/?tab=orgs&message=need_org_login_inputs&orgKey=" + (orgKey == null ? "" : orgKey);
         }
 
-        SalesforceOrgCredential updatedOrg = salesforceOrgService.updateClientCredentials(orgKey, clientId, clientSecret);
+        SalesforceOrgCredential updatedOrg = salesforceOrgService.updateOrg(orgKey, orgName, myDomain, clientId, clientSecret, isDefault);
         if (updatedOrg == null) {
             return "redirect:/?tab=orgs&message=org_credentials_update_failed&orgKey=" + orgKey;
         }

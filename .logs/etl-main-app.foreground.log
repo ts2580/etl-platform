@@ -10,28 +10,17 @@ Standard Commons Logging discovery in action with spring-jcl: please remove comm
 
  :: Spring Boot ::                (v3.5.6)
 
-2026-03-25T17:58:15.336+09:00  INFO 360587 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 360587 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
-2026-03-25T17:58:15.339+09:00  INFO 360587 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
-2026-03-25T17:58:17.374+09:00  INFO 360587 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
-2026-03-25T17:58:17.390+09:00  INFO 360587 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-03-25T17:58:17.391+09:00  INFO 360587 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
-2026-03-25T17:58:17.426+09:00  INFO 360587 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-03-25T17:58:17.428+09:00  INFO 360587 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2030 ms
+2026-03-26T17:29:05.261+09:00  INFO 446506 --- [           main] com.etl.sfdc.ETLApplication              : Starting ETLApplication v0.1.0-SNAPSHOT using Java 21.0.10 with PID 446506 (/home/trstyq/code/etl-platform/etl-main-app/build/libs/etl-main-app.jar started by trstyq in /home/trstyq/code/etl-platform)
+2026-03-26T17:29:05.264+09:00  INFO 446506 --- [           main] com.etl.sfdc.ETLApplication              : The following 1 profile is active: "local"
+2026-03-26T17:29:07.328+09:00  INFO 446506 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-26T17:29:07.348+09:00  INFO 446506 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-26T17:29:07.348+09:00  INFO 446506 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-03-26T17:29:07.386+09:00  INFO 446506 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-26T17:29:07.387+09:00  INFO 446506 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2062 ms
 Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
-2026-03-25T17:58:18.718+09:00  INFO 360587 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
-2026-03-25T17:58:19.131+09:00  INFO 360587 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
-2026-03-25T17:58:19.236+09:00  INFO 360587 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
-2026-03-25T17:58:19.255+09:00  INFO 360587 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 4.57 seconds (process running for 5.213)
-2026-03-25T17:58:25.487+09:00  INFO 360587 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-03-25T17:58:25.487+09:00  INFO 360587 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-03-25T17:58:25.488+09:00  INFO 360587 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2026-03-25T17:58:28.059+09:00  INFO 360587 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-25T17:58:28.392+09:00  INFO 360587 --- [nio-8080-exec-6] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.mariadb.jdbc.Connection@28e3eb8
-2026-03-25T17:58:28.393+09:00  INFO 360587 --- [nio-8080-exec-6] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-25T17:59:22.170+09:00  INFO 360587 --- [nio-8080-exec-1] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing registry sync uses local routing_registry only. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, routeCount=0, actor=trstyq
-2026-03-25T17:59:28.001+09:00  INFO 360587 --- [nio-8080-exec-8] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing registry sync uses local routing_registry only. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, routeCount=0, actor=trstyq
-2026-03-25T17:59:35.419+09:00  INFO 360587 --- [io-8080-exec-10] c.etl.sfdc.etl.service.ETLServiceImpl    : Routing registry sync uses local routing_registry only. orgKey=yuricompany-dev-ed.develop.my.salesforce.com, routeCount=0, actor=trstyq
-2026-03-25T18:00:19.188+09:00  INFO 360587 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
-2026-03-25T18:00:19.190+09:00  INFO 360587 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
-2026-03-25T18:00:19.227+09:00  INFO 360587 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
-2026-03-25T18:00:19.238+09:00  INFO 360587 --- [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-26T17:29:08.701+09:00  INFO 446506 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name userSecurityServiceImpl
+2026-03-26T17:29:09.170+09:00  INFO 446506 --- [           main] .w.s.a.s.AnnotationActionEndpointMapping : Supporting [WS-Addressing August 2004, WS-Addressing 1.0]
+2026-03-26T17:29:09.293+09:00  INFO 446506 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-26T17:29:09.318+09:00  INFO 446506 --- [           main] com.etl.sfdc.ETLApplication              : Started ETLApplication in 4.741 seconds (process running for 5.351)
+2026-03-26T17:33:15.940+09:00  INFO 446506 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-26T17:33:15.944+09:00  INFO 446506 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete

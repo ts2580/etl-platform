@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,19 +39,20 @@ public class DatabaseConnectionTestSupport {
             String debugJdbcUrl = safeBuildJdbcUrl(request, debugMetadata);
             Properties debugProperties = buildConnectionProperties(request);
 
-            String line = String.format("[DB 연결 테스트] 실패. vendor=%s, authMethod=%s, rawUrl=%s, port=%s, user=%s, jdbcUrl=%s, metadata=%s, properties=%s, reason=%s, sqlState=%s, errorCode=%s, causeChain=%s",
+            String line = "[DB 연결 테스트] 실패. "
+                    + DatabaseConnectionLogFormatter.connectionSummary(
                     request.getVendor(),
                     request.getAuthMethod(),
                     request.getJdbcUrl(),
                     request.getPort(),
                     request.getUsername(),
                     debugJdbcUrl,
-                    metadataSummary(debugMetadata),
-                    summarizeProperties(debugProperties),
-                    e.getMessage(),
-                    e.getSQLState(),
-                    e.getErrorCode(),
-                    summarizeThrowableChain(e));
+                    debugMetadata,
+                    debugProperties)
+                    + ", reason=" + e.getMessage()
+                    + ", sqlState=" + e.getSQLState()
+                    + ", errorCode=" + e.getErrorCode()
+                    + ", causeChain=" + summarizeThrowableChain(e);
             log.log(Level.SEVERE, line);
             log.log(Level.SEVERE, "SQLException detail", e);
             System.err.println(line);
@@ -70,9 +70,7 @@ public class DatabaseConnectionTestSupport {
             metadata = new DatabaseJdbcMetadata(metadata.host(), metadata.port(), metadata.databaseName(), serviceName, metadata.sid());
         }
 
-        if ((request.getVendor() == DatabaseVendor.POSTGRESQL
-                || request.getVendor() == DatabaseVendor.MYSQL
-                || request.getVendor() == DatabaseVendor.MARIADB)
+        if (request.getVendor() == DatabaseVendor.POSTGRESQL
                 && metadata.databaseName() == null) {
             String databaseName = normalizeBlankToNull(request.getDatabaseName());
             if (databaseName != null) {
@@ -117,15 +115,16 @@ public class DatabaseConnectionTestSupport {
                                    DatabaseJdbcMetadata metadata,
                                    String jdbcUrl,
                                    Properties properties) {
-        String line = String.format("[DB 연결 테스트] 계획. vendor=%s, authMethod=%s, rawUrl=%s, port=%s, username=%s, jdbcUrl=%s, metadata=%s, properties=%s",
+        String line = "[DB 연결 테스트] 계획. "
+                + DatabaseConnectionLogFormatter.connectionSummary(
                 request.getVendor(),
                 request.getAuthMethod(),
                 request.getJdbcUrl(),
                 request.getPort(),
                 request.getUsername(),
                 jdbcUrl,
-                metadataSummary(metadata),
-                summarizeProperties(properties));
+                metadata,
+                properties);
         log.info(line);
         System.out.println(line);
     }
@@ -159,37 +158,6 @@ public class DatabaseConnectionTestSupport {
             }
         }
         return copy;
-    }
-
-    private String summarizeProperties(Properties props) {
-        if (props == null || props.isEmpty()) {
-            return "{}";
-        }
-
-        List<String> entries = new ArrayList<>();
-        for (String key : new TreeSet<>(props.stringPropertyNames())) {
-            entries.add(key + "=" + maskPropertyValue(key, props.getProperty(key)));
-        }
-        return "{" + String.join(", ", entries) + "}";
-    }
-
-    private String maskPropertyValue(String key, String value) {
-        if (value == null) {
-            return "null";
-        }
-        String normalizedKey = key == null ? "" : key.toLowerCase();
-        if (normalizedKey.contains("password") || normalizedKey.contains("secret") || normalizedKey.contains("token")) {
-            return "****";
-        }
-        return value;
-    }
-
-    private String metadataSummary(DatabaseJdbcMetadata metadata) {
-        if (metadata == null) {
-            return "null";
-        }
-        return String.format("{host=%s, port=%s, databaseName=%s, serviceName=%s, sid=%s}",
-                metadata.host(), metadata.port(), metadata.databaseName(), metadata.serviceName(), metadata.sid());
     }
 
     private String summarizeThrowableChain(Throwable throwable) {

@@ -36,6 +36,7 @@ public class RoutingStartupRecovery {
     @org.springframework.beans.factory.annotation.Value("${salesforce.tokenUrl:/services/oauth2/token}")
     private String configuredTokenUrl;
 
+
     @EventListener(ApplicationReadyEvent.class)
     public void recoverRoutesOnStartup() {
         List<Map<String, Object>> activeRoutes = routingRegistryRepository.findActiveRoutes();
@@ -97,6 +98,7 @@ public class RoutingStartupRecovery {
             } else {
                 initialLoadCount = recoverStreamingRoute(mapProperty, actor);
             }
+            routingRegistryRepository.markRoutingRecovered(orgKey, selectedObject, protocol, actor);
             routingRegistrySupport.insertHistory(orgKey, selectedObject, protocol, "RECOVER", "SUCCESS", "STARTUP_RECOVERY", endpoint,
                     "재기동 후 라우팅 복구 완료", "startup recovery succeeded", initialLoadCount, actor);
             successCount.incrementAndGet();
@@ -225,38 +227,34 @@ public class RoutingStartupRecovery {
 
     private String resolveSalesforceBaseUrl(String myDomain) {
         String base = myDomain == null || myDomain.isBlank() ? null : myDomain.trim();
-        String scheme = "https";
         String host;
+
         if (base != null) {
             try {
-                if (base.startsWith("http://") || base.startsWith("https://")) {
+                if (base.startsWith("http://")) {
+                    throw new AppException("Insecure Salesforce myDomain is not allowed: http:// scheme is rejected");
+                }
+                if (base.startsWith("https://")) {
                     URI uri = URI.create(base);
                     host = uri.getHost();
-                    if (uri.getScheme() != null && !uri.getScheme().isBlank()) {
-                        scheme = uri.getScheme();
-                    }
                 } else {
                     host = base;
                 }
             } catch (Exception e) {
+                if (e instanceof AppException appException) {
+                    throw appException;
+                }
                 host = base;
             }
 
             if (host != null && !host.isBlank()) {
                 String normalizedHost = host.replaceAll("/+$", "").trim();
-                return scheme + "://" + normalizedHost;
+                String withoutPath = normalizedHost.split("[/?]", 2)[0];
+                String[] hostParts = withoutPath.split(":", 2);
+                if (hostParts.length > 0 && !hostParts[0].isBlank()) {
+                    return "https://" + withoutPath;
+                }
             }
-        }
-        return "https://login.salesforce.com";
-    }
-
-    private String normalizeLoginUrl(String myDomain) {
-        if (myDomain == null || myDomain.isBlank()) {
-            return "https://login.salesforce.com";
-        }
-        String lower = myDomain.toLowerCase(Locale.ROOT);
-        if (lower.contains("test") || lower.contains("sandbox")) {
-            return "https://test.salesforce.com";
         }
         return "https://login.salesforce.com";
     }

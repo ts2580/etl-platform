@@ -18,17 +18,23 @@ public class SalesforceRouterBuilder extends RouteBuilder {
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Long targetStorageId;
     private final Consumer<Integer> activityCallback;
+    private final String orgName;
+    private final String targetTable;
     private final SalesforceStreamingPayloadMapper payloadMapper = new SalesforceStreamingPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
     public SalesforceRouterBuilder(String targetSchema,
                                    String selectedObject,
+                                   String orgName,
+                                   String targetTable,
                                    Map<String, Object> mapType,
                                    ExternalStorageRoutingJdbcExecutor routingJdbcExecutor,
                                    Long targetStorageId,
                                    Consumer<Integer> activityCallback) {
         this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
+        this.orgName = orgName;
+        this.targetTable = targetTable;
         this.mapType = mapType;
         this.routingJdbcExecutor = routingJdbcExecutor;
         this.targetStorageId = targetStorageId;
@@ -109,17 +115,30 @@ public class SalesforceRouterBuilder extends RouteBuilder {
                                 continue;
                             }
 
-                            SalesforceRecordMutationProcessor.MutationResult result = mutationProcessor.apply(
-                                    targetSchema,
-                                    selectedObject,
-                                    mapType,
-                                    mutationOptional.get(),
-                                    repositoryPort,
-                                    "STREAMING"
-                            );
-                            insertedTotal += result.inserted();
-                            updatedTotal += result.updated();
-                            deletedTotal += result.deleted();
+                            var mutation = mutationOptional.get();
+                            try {
+                                SalesforceRecordMutationProcessor.MutationResult result = mutationProcessor.apply(
+                                        targetSchema,
+                                        selectedObject,
+                                        targetTable,
+                                        orgName,
+                                        mapType,
+                                        mutation,
+                                        repositoryPort,
+                                        "STREAMING"
+                                );
+                                insertedTotal += result.inserted();
+                                updatedTotal += result.updated();
+                                deletedTotal += result.deleted();
+                            } catch (Exception e) {
+                                log.info("[PUSHTOPIC-MUTATION-FAILURE] eventType={}, sfid={}, targetSchema={}, targetTable={}, payloadSummary={}",
+                                        eventType,
+                                        mutation.sfid(),
+                                        targetSchema,
+                                        targetTable,
+                                        mutation.summarizeForLog(mapType));
+                                throw e;
+                            }
                         }
                     }
 

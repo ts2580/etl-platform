@@ -251,6 +251,8 @@ public class PubSubServiceImpl implements PubSubService {
             return returnMap;
         }
 
+        ensureExternalTargetTableReadyIfNeeded(targetStorageId, targetSchema, schemaResult.ddl());
+
         String query = SalesforceObjectSchemaBuilder.buildInitialQuery(selectedObject, schemaResult.fields());
         request = new Request.Builder()
                 .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/query/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8))
@@ -351,6 +353,8 @@ public class PubSubServiceImpl implements PubSubService {
         RouteBuilder routeBuilder = new SalesforceRouterBuilderCDC(
                 targetSchema,
                 selectedObject,
+                mapProperty.get("orgName"),
+                mapProperty.get("targetTable"),
                 mapType,
                 routingJdbcExecutor,
                 resolveTargetStorageId(mapProperty),
@@ -496,6 +500,13 @@ public class PubSubServiceImpl implements PubSubService {
         result.put("available", Math.max(limit - used, 0));
         result.put("remaining", Math.max(limit - used, 0));
         return result;
+    }
+
+    private void ensureExternalTargetTableReadyIfNeeded(Long targetStorageId, String targetSchema, String ddl) {
+        if (targetStorageId == null || ddl == null || ddl.isBlank()) {
+            return;
+        }
+        routingJdbcExecutor.executeDdl("CDC", ddl, targetStorageId, targetSchema);
     }
 
     private void mergeRefreshableProperties(Map<String, String> current, Map<String, String> updates) {

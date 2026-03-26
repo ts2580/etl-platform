@@ -52,6 +52,7 @@ public class SalesforceCdcPayloadMapper {
 
         Set<String> targetFields = resolveTargetFields(payload, header, mapType);
         Set<String> nulledFields = extractFieldSet(header.get("nulledFields"));
+        normalizeFiscalFields((ObjectNode) payload, mapType, targetFields, nulledFields);
         Object incomingLastModifiedValue = SalesforceObjectSchemaBuilder.lastModifiedValue(payload);
         String incomingLastModifiedLiteral = SalesforceObjectSchemaBuilder.lastModifiedLiteral(payload);
         Object incomingEventValue = eventTimeValue(header, mutationType.isDelete() ? LocalDateTime.now(ZoneOffset.UTC) : incomingLastModifiedValue);
@@ -359,6 +360,52 @@ public class SalesforceCdcPayloadMapper {
             payload.fieldNames().forEachRemaining(names::add);
         }
         return names;
+    }
+
+    private void normalizeFiscalFields(ObjectNode payload,
+                                       Map<String, Object> mapType,
+                                       Set<String> targetFields,
+                                       Set<String> nulledFields) {
+        if (payload == null || mapType == null || mapType.isEmpty()) {
+            return;
+        }
+        JsonNode fiscalNode = payload.get("Fiscal");
+        if (fiscalNode == null || fiscalNode.isNull() || !fiscalNode.isObject()) {
+            return;
+        }
+
+        JsonNode yearNode = fiscalNode.get("Year");
+        JsonNode quarterNode = fiscalNode.get("Quarter");
+        String year = yearNode == null || yearNode.isNull() ? null : yearNode.asText(null);
+        String quarter = quarterNode == null || quarterNode.isNull() ? null : quarterNode.asText(null);
+        if (year == null || year.isBlank() || quarter == null || quarter.isBlank()) {
+            payload.remove("Fiscal");
+            targetFields.remove("Fiscal");
+            targetFields.remove("FiscalYear");
+            targetFields.remove("FiscalQuarter");
+            nulledFields.remove("Fiscal");
+            nulledFields.remove("FiscalYear");
+            nulledFields.remove("FiscalQuarter");
+            return;
+        }
+
+        String normalizedFiscal = year.trim() + " " + quarter.trim();
+
+        if (mapType.containsKey("Fiscal")) {
+            payload.put("Fiscal", normalizedFiscal);
+            targetFields.add("Fiscal");
+            nulledFields.remove("Fiscal");
+        }
+        if (mapType.containsKey("FiscalYear")) {
+            payload.put("FiscalYear", Integer.parseInt(year.trim()));
+            targetFields.add("FiscalYear");
+            nulledFields.remove("FiscalYear");
+        }
+        if (mapType.containsKey("FiscalQuarter")) {
+            payload.put("FiscalQuarter", Integer.parseInt(quarter.trim()));
+            targetFields.add("FiscalQuarter");
+            nulledFields.remove("FiscalQuarter");
+        }
     }
 
     private Object summarizeKeys(Map<String, Object> mapType) {

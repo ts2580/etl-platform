@@ -137,6 +137,8 @@ public class StreamingServiceImpl implements StreamingService {
             return returnMap;
         }
 
+        ensureExternalTargetTableReadyIfNeeded(targetStorageId, targetSchema, schemaResult.ddl());
+
         String query = SalesforceObjectSchemaBuilder.buildInitialQuery(selectedObject, schemaResult.fields());
         request = new Request.Builder()
                 .url(resolvedInstanceUrl + "/services/data/v" + apiVersion + "/query/?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8))
@@ -299,6 +301,8 @@ public class StreamingServiceImpl implements StreamingService {
         RouteBuilder routeBuilder = new SalesforceRouterBuilder(
                 targetSchema,
                 selectedObject,
+                mapProperty.get("orgName"),
+                mapProperty.get("targetTable"),
                 mapType,
                 routingJdbcExecutor,
                 resolveTargetStorageId(mapProperty),
@@ -457,6 +461,13 @@ public class StreamingServiceImpl implements StreamingService {
             listUnderQuery.add(SalesforceObjectSchemaBuilder.buildInsertValues(record, schemaResult.fields(), schemaResult.mapType()));
         }
         return listUnderQuery;
+    }
+
+    private void ensureExternalTargetTableReadyIfNeeded(Long targetStorageId, String targetSchema, String ddl) {
+        if (targetStorageId == null || ddl == null || ddl.isBlank()) {
+            return;
+        }
+        routingJdbcExecutor.executeDdl("STREAMING", ddl, targetStorageId, targetSchema);
     }
 
     private String truncateForLog(String value) {

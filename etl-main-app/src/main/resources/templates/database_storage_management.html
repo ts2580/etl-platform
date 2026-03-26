@@ -300,9 +300,10 @@
                     <label class="text-sm font-semibold text-slate-700" id="modal-database-label">데이터베이스명</label>
                     <input type="text" id="modal-database-name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
                 </div>
-                <div>
+                <div id="modal-schema-field">
                     <label class="text-sm font-semibold text-slate-700" id="modal-schema-label">스키마명 / 서비스명</label>
                     <input type="text" id="modal-schema-name" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm">
+                    <p id="modal-schema-help" class="mt-2 hidden text-xs leading-5 text-slate-500">Oracle은 사용자명 기준 스키마를 사용해요. 사용자명을 바꾸면 스키마도 함께 맞춰져요.</p>
                 </div>
                 <div>
                     <label class="text-sm font-semibold text-slate-700">Oracle SID</label>
@@ -396,7 +397,9 @@
             passwordSection: document.getElementById('modal-password-fields'),
             certificateSection: document.getElementById('modal-certificate-fields'),
             databaseLabel: document.getElementById('modal-database-label'),
-            schemaLabel: document.getElementById('modal-schema-label')
+            schemaLabel: document.getElementById('modal-schema-label'),
+            schemaField: document.getElementById('modal-schema-field'),
+            schemaHelp: document.getElementById('modal-schema-help')
         };
 
         let activeRow = null;
@@ -471,14 +474,31 @@
 
         function updateFieldLabels(vendor) {
             if (vendor === 'ORACLE') {
-                modalFields.schemaLabel.textContent = '서비스명';
+                modalFields.schemaLabel.textContent = 'Oracle 스키마(사용자명 연동)';
                 modalFields.databaseLabel.textContent = '데이터베이스명';
+                modalFields.schemaField?.classList.remove('hidden');
+                modalFields.schemaHelp?.classList.remove('hidden');
+                modalFields.schemaName.readOnly = true;
+                modalFields.schemaName.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+                modalFields.databaseName.closest('div')?.classList.remove('hidden');
             } else if (vendor === 'POSTGRESQL') {
-                modalFields.schemaLabel.textContent = '스키마명(선택)';
+                modalFields.schemaLabel.textContent = '라우팅 스키마명(선택)';
                 modalFields.databaseLabel.textContent = '데이터베이스명(필수)';
+                modalFields.schemaField?.classList.remove('hidden');
+                modalFields.schemaHelp?.classList.add('hidden');
+                modalFields.schemaName.readOnly = false;
+                modalFields.schemaName.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+                modalFields.databaseName.closest('div')?.classList.remove('hidden');
             } else {
-                modalFields.schemaLabel.textContent = '스키마명(선택)';
+                modalFields.schemaLabel.textContent = '스키마 정보';
                 modalFields.databaseLabel.textContent = '데이터베이스명';
+                modalFields.schemaField?.classList.add('hidden');
+                modalFields.schemaHelp?.classList.add('hidden');
+                modalFields.schemaName.readOnly = false;
+                modalFields.schemaName.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+                modalFields.schemaName.value = '';
+                modalFields.databaseName.closest('div')?.classList.add('hidden');
+                modalFields.databaseName.value = '';
             }
         }
 
@@ -510,6 +530,14 @@
             modalFields.sslMode.value = detail.sslMode || '';
             updateFieldLabels(detail.vendor);
             toggleAuthSections(detail.authMethod);
+            syncOracleSchemaWithUsername();
+        }
+
+        function syncOracleSchemaWithUsername() {
+            if (modalFields.vendor.value !== 'ORACLE') {
+                return;
+            }
+            modalFields.schemaName.value = (modalFields.username.value || '').trim().toUpperCase();
         }
 
         function syncRow(row, detail) {
@@ -549,7 +577,9 @@
         function buildUpdatePayload() {
             const vendor = modalFields.vendor.value;
             const authMethod = modalFields.authMethod.value;
-            const databaseName = modalFields.databaseName.value.trim();
+            const databaseName = vendor === 'POSTGRESQL'
+                ? modalFields.databaseName.value.trim()
+                : '';
 
             if (!modalFields.name.value.trim()) {
                 throw new Error('저장소 이름을 입력해 주세요.');
@@ -600,20 +630,18 @@
                 throw new Error('검증할 저장소를 찾지 못했어요.');
             }
 
+            const payload = buildUpdatePayload();
             setButtonBusy(button, '검증 중...');
             try {
-                const result = await fetchJson(`/api/storages/databases/${storageId}/revalidate`, { method: 'POST' });
-                const detail = await fetchJson(`/api/storages/databases/${storageId}`);
-                populateModal(detail);
-                syncRow(activeRow, detail);
-                showToast('success', '연결 검증 성공', result.message || '등록된 연결 정보를 다시 검증했어요.', 3200);
+                const result = await fetchJson('/api/storages/databases/test', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                modalFields.status.value = result?.success ? 'VERIFIED' : 'FAILED';
+                showToast('success', '연결 검증 성공', result.message || '현재 입력값 기준 검증 완료', 3200);
             } catch (error) {
-                const detail = await fetchJson(`/api/storages/databases/${storageId}`).catch(() => null);
-                if (detail) {
-                    populateModal(detail);
-                    syncRow(activeRow, detail);
-                }
-                showToast('error', '연결 검증 실패', error.message || '저장소 재검증에 실패했어요.', 4600);
+                modalFields.status.value = 'FAILED';
+                showToast('error', '연결 검증 실패', error.message || '현재 입력한 연결 정보 검증에 실패했어요.', 4600);
             } finally {
                 clearButtonBusy(button);
             }
@@ -689,6 +717,7 @@
         modal?.addEventListener('click', (event) => {
             if (event.target === modal) closeModal();
         });
+        modalFields.username?.addEventListener('input', syncOracleSchemaWithUsername);
         modalVerifyButton?.addEventListener('click', async () => {
             try {
                 await runRevalidate(modalVerifyButton);

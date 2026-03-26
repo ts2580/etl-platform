@@ -766,7 +766,7 @@ public class ETLController {
         try {
             return operation.apply(accessToken);
         } catch (AppException e) {
-            if (e.getMessage() != null && e.getMessage().contains("401")) {
+            if (isSalesforceAuthFailure(e)) {
                 String refreshedAccessToken = refreshAccessTokenIfNeeded(context, session);
                 if (refreshedAccessToken != null) {
                     return operation.apply(refreshedAccessToken);

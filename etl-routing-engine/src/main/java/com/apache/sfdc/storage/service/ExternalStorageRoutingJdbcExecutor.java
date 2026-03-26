@@ -499,6 +499,12 @@ public class ExternalStorageRoutingJdbcExecutor {
         if (vendor == DatabaseVendor.MARIADB || vendor == DatabaseVendor.MYSQL) {
             String sql = "CREATE DATABASE IF NOT EXISTS `" + schemaName.replace("`", "``") + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
             statement.execute(sql);
+            return;
+        }
+
+        if (vendor == DatabaseVendor.POSTGRESQL) {
+            String sql = "CREATE SCHEMA IF NOT EXISTS \"" + schemaName.replace("\"", "\"\"") + "\"";
+            statement.execute(sql);
         }
     }
 

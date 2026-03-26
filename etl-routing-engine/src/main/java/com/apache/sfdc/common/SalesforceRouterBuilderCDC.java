@@ -19,17 +19,23 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
     private final ExternalStorageRoutingJdbcExecutor routingJdbcExecutor;
     private final Long targetStorageId;
     private final Consumer<Integer> activityCallback;
+    private final String orgName;
+    private final String targetTable;
     private final SalesforceCdcPayloadMapper payloadMapper = new SalesforceCdcPayloadMapper();
     private final SalesforceRecordMutationProcessor mutationProcessor = new SalesforceRecordMutationProcessor();
 
     public SalesforceRouterBuilderCDC(String targetSchema,
                                       String selectedObject,
+                                      String orgName,
+                                      String targetTable,
                                       Map<String, Object> mapType,
                                       ExternalStorageRoutingJdbcExecutor routingJdbcExecutor,
                                       Long targetStorageId,
                                       Consumer<Integer> activityCallback) {
         this.targetSchema = targetSchema;
         this.selectedObject = selectedObject;
+        this.orgName = orgName;
+        this.targetTable = targetTable;
         this.mapType = mapType;
         this.routingJdbcExecutor = routingJdbcExecutor;
         this.targetStorageId = targetStorageId;
@@ -117,6 +123,8 @@ public class SalesforceRouterBuilderCDC extends RouteBuilder {
                         SalesforceRecordMutationProcessor.MutationResult result = mutationProcessor.apply(
                                 targetSchema,
                                 selectedObject,
+                                targetTable,
+                                orgName,
                                 mapType,
                                 mutationOptional.get(),
                                 repositoryPort,

@@ -95,16 +95,25 @@ public class DatabaseStorageRegistrationService {
         if (request == null || request.getVendor() == null) {
             return;
         }
+        if (request.getVendor() == DatabaseVendor.ORACLE) {
+            request.setSchemaName(com.etlplatform.common.storage.database.OracleStorageSupport.normalizeSchemaName(
+                    request.getSchemaName(),
+                    request.getUsername(),
+                    request.getSchemaName(),
+                    null
+            ));
+            return;
+        }
         if (!(request.getVendor() == DatabaseVendor.MARIADB
                 || request.getVendor() == DatabaseVendor.MYSQL
                 || request.getVendor() == DatabaseVendor.POSTGRESQL)) {
             return;
         }
-        if (request.getVendor() == DatabaseVendor.ORACLE) {
-            request.setSchemaName(null);
-            return;
+        if (request.getVendor() == DatabaseVendor.POSTGRESQL) {
+            request.setDatabaseName("etl_sfdc");
+        } else {
+            request.setDatabaseName(null);
         }
-        request.setDatabaseName("etl_sfdc");
         String schemaName = request.getSchemaName();
         if (schemaName == null || schemaName.isBlank()) {
             return;

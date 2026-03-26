@@ -19,9 +19,15 @@ public final class OracleRoutingNaming {
     }
 
     public static String buildTableName(String orgName, String selectedObject) {
-        String normalizedOrg = normalizePart(orgName, DEFAULT_PREFIX);
-        String normalizedObject = normalizePart(selectedObject, DEFAULT_OBJECT);
-        String combined = normalizedOrg + "_" + normalizedObject;
+        String normalizedSelectedObject = selectedObject == null ? "" : selectedObject.trim().toUpperCase(Locale.ROOT);
+        if (normalizedSelectedObject.matches("ORG_[A-Z0-9_]+_[A-Z0-9_]+")) {
+            validateOracleIdentifier(normalizedSelectedObject);
+            return normalizedSelectedObject;
+        }
+
+        String normalizedOrg = stripLeadingOrgPrefix(stripLeadingSchemaPrefix(normalizePart(orgName, DEFAULT_PREFIX)));
+        String normalizedObject = stripLeadingOrgPrefix(normalizePart(selectedObject, DEFAULT_OBJECT));
+        String combined = DEFAULT_PREFIX + "_" + normalizedOrg + "_" + normalizedObject;
         if (combined.length() <= ORACLE_IDENTIFIER_MAX_LENGTH) {
             validateOracleIdentifier(combined);
             return combined;
@@ -58,6 +64,28 @@ public final class OracleRoutingNaming {
             normalized = DEFAULT_PREFIX + "_" + normalized;
         }
         return normalized;
+    }
+
+    private static String stripLeadingSchemaPrefix(String value) {
+        if (value == null || value.isBlank()) {
+            return DEFAULT_PREFIX;
+        }
+        String normalized = value;
+        while (normalized.startsWith("ORG_")) {
+            normalized = normalized.substring(4);
+        }
+        return normalized.isBlank() ? DEFAULT_PREFIX : normalized;
+    }
+
+    private static String stripLeadingOrgPrefix(String value) {
+        if (value == null || value.isBlank()) {
+            return DEFAULT_PREFIX;
+        }
+        String normalized = value;
+        while (normalized.startsWith(DEFAULT_PREFIX + "_")) {
+            normalized = normalized.substring((DEFAULT_PREFIX + "_").length());
+        }
+        return normalized.isBlank() ? DEFAULT_PREFIX : normalized;
     }
 
     private static void validateOracleIdentifier(String identifier) {

@@ -120,7 +120,7 @@ public final class SalesforceObjectSchemaBuilder {
         } else {
             ddlStatements.add(ddl.toString());
         }
-        ddlStatements.addAll(strategy.afterCreateTableStatements(targetSchema, selectedObject, columnDefinitions));
+        ddlStatements.addAll(strategy.afterCreateTableStatements(targetSchema, physicalTableName, columnDefinitions));
 
         return new SchemaResult(String.join(";\n", ddlStatements) + ";", mapType, listFields, soql.toString(), soqlForPushTopic.toString());
     }
