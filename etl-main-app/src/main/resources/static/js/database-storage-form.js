@@ -115,6 +115,10 @@ function updateDbFieldLabels() {
 
     if (databaseInput) {
         databaseInput.value = isPostgresql ? 'etl_sfdc' : '';
+        databaseInput.disabled = isPostgresql;
+        databaseInput.classList.toggle('bg-slate-50', isPostgresql);
+        databaseInput.classList.toggle('text-slate-500', isPostgresql);
+        databaseInput.classList.toggle('cursor-not-allowed', isPostgresql);
     }
 
     if (isOracle) {
@@ -127,12 +131,12 @@ function updateDbFieldLabels() {
         syncOracleSchemaWithUsername();
     } else if (isPostgresql) {
         schemaLabel.textContent = '라우팅 스키마명';
-        schemaInput.placeholder = '예: studyorg (저장 시 org_ 자동 추가)';
+        schemaInput.placeholder = 'PostgreSQL은 고정 스키마 규칙을 사용해요';
         schemaInput.readOnly = false;
-        schemaInput.disabled = false;
-        schemaInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        schemaInput.disabled = true;
+        schemaInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
         oracleSchemaHelp?.classList.add('hidden');
-        schemaInput.value = '';
+        schemaInput.value = 'org_<org명>';
     } else if (isMySqlFamily) {
         schemaLabel.textContent = '스키마 정보';
         schemaInput.placeholder = 'MySQL/MariaDB는 스키마 입력 없이 연결만 확인해요';
