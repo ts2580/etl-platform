@@ -52,6 +52,7 @@ public class SalesforceCdcPayloadMapper {
 
         Set<String> targetFields = resolveTargetFields(payload, header, mapType);
         Set<String> nulledFields = extractFieldSet(header.get("nulledFields"));
+        normalizeFiscalFields((ObjectNode) payload, mapType, targetFields, nulledFields);
         Object incomingLastModifiedValue = SalesforceObjectSchemaBuilder.lastModifiedValue(payload);
         String incomingLastModifiedLiteral = SalesforceObjectSchemaBuilder.lastModifiedLiteral(payload);
         Object incomingEventValue = eventTimeValue(header, mutationType.isDelete() ? LocalDateTime.now(ZoneOffset.UTC) : incomingLastModifiedValue);
@@ -185,11 +186,15 @@ public class SalesforceCdcPayloadMapper {
     }
 
     private Set<String> resolveTargetFields(JsonNode payload, JsonNode header, Map<String, Object> mapType) {
+        Set<String> changedFields = extractFieldSet(header.get("changedFields"));
+        Set<String> nulledFields = extractFieldSet(header.get("nulledFields"));
+
         Set<String> candidateFields = new LinkedHashSet<>();
-        addFieldArray(header.get("changedFields"), candidateFields);
-        addFieldArray(header.get("nulledFields"), candidateFields);
-        augmentCompoundNameFields(payload, mapType, candidateFields);
-        augmentCompoundAddressFields(payload, mapType, candidateFields);
+        candidateFields.addAll(changedFields);
+        candidateFields.addAll(nulledFields);
+
+        augmentCompoundNameFields(payload, mapType, candidateFields, changedFields, nulledFields);
+        augmentCompoundAddressFields(payload, mapType, candidateFields, changedFields, nulledFields);
 
         Set<String> targetFields = mapToSupportedFields(candidateFields, mapType);
 
@@ -234,23 +239,42 @@ public class SalesforceCdcPayloadMapper {
 
     private Set<String> extractFieldSet(JsonNode arrayNode) {
         Set<String> output = new HashSet<>();
-        addFieldArray(arrayNode, output);
+        if (arrayNode == null || !arrayNode.isArray()) {
+            return output;
+        }
+
+        for (JsonNode item : arrayNode) {
+            if (item == null || item.isNull()) {
+                continue;
+            }
+            String raw = item.asText("");
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            String normalized = normalizeFieldToken(raw);
+            if (normalized == null || normalized.isBlank()) {
+                continue;
+            }
+            if (isDataField(normalized)) {
+                output.add(normalized);
+            }
+        }
         return output;
     }
 
-    private void addFieldArray(JsonNode arrayNode, Set<String> output) {
-        if (arrayNode == null || !arrayNode.isArray()) {
-            return;
+    private String normalizeFieldToken(String raw) {
+        if (raw == null) {
+            return "";
         }
-        for (JsonNode item : arrayNode) {
-            String raw = item.asText();
-            if (raw == null || raw.isBlank() || raw.contains(".")) {
-                continue;
-            }
-            if (isDataField(raw)) {
-                output.add(raw);
-            }
+        String token = raw.strip();
+        if (token.isBlank()) {
+            return "";
         }
+        int dotIndex = token.lastIndexOf('.');
+        if (dotIndex >= 0) {
+            token = token.substring(dotIndex + 1);
+        }
+        return token;
     }
 
     private boolean isDataField(String fieldName) {
@@ -261,26 +285,35 @@ public class SalesforceCdcPayloadMapper {
                 && !"schema".equals(fieldName);
     }
 
-    private void augmentCompoundNameFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields) {
+    private void augmentCompoundNameFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields, Set<String> changedFields, Set<String> nulledFields) {
         if (payload == null || !payload.isObject() || candidateFields == null) {
             return;
         }
+
         JsonNode nameNode = payload.get("Name");
         if (nameNode == null || !nameNode.isObject()) {
             return;
         }
-        if (mapType != null && mapType.containsKey("Name")) {
+
+        boolean firstNamePresent = hasCompoundFieldValue(nameNode, "FirstName", changedFields, nulledFields)
+                || hasCompoundFieldValue(nameNode, "firstName", changedFields, nulledFields);
+        boolean lastNamePresent = hasCompoundFieldValue(nameNode, "LastName", changedFields, nulledFields)
+                || hasCompoundFieldValue(nameNode, "lastName", changedFields, nulledFields);
+        boolean salutationPresent = hasCompoundFieldValue(nameNode, "Salutation", changedFields, nulledFields)
+                || hasCompoundFieldValue(nameNode, "salutation", changedFields, nulledFields);
+
+        if (mapType != null && mapType.containsKey("Name") && (firstNamePresent || lastNamePresent || salutationPresent)) {
             candidateFields.add("Name");
         }
-        if (mapType != null && mapType.containsKey("FirstName")) {
+        if (mapType != null && mapType.containsKey("FirstName") && hasCompoundFieldValue(nameNode, "FirstName", changedFields, nulledFields)) {
             candidateFields.add("FirstName");
         }
-        if (mapType != null && mapType.containsKey("LastName")) {
+        if (mapType != null && mapType.containsKey("LastName") && hasCompoundFieldValue(nameNode, "LastName", changedFields, nulledFields)) {
             candidateFields.add("LastName");
         }
     }
 
-    private void augmentCompoundAddressFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields) {
+    private void augmentCompoundAddressFields(JsonNode payload, Map<String, Object> mapType, Set<String> candidateFields, Set<String> changedFields, Set<String> nulledFields) {
         if (payload == null || !payload.isObject() || candidateFields == null || mapType == null || mapType.isEmpty()) {
             return;
         }
@@ -298,16 +331,27 @@ public class SalesforceCdcPayloadMapper {
             if (addressNode == null || !addressNode.isObject()) {
                 continue;
             }
-            if (mapType.containsKey(parentName)) {
-                candidateFields.add(parentName);
-            }
+
+            boolean parentAdded = false;
             for (String suffix : suffixes) {
                 String fieldName = prefix + suffix;
-                if (mapType.containsKey(fieldName)) {
+                if (mapType.containsKey(fieldName) && hasCompoundFieldValue(addressNode, suffix, changedFields, nulledFields)) {
                     candidateFields.add(fieldName);
+                    parentAdded = true;
                 }
             }
+            if (mapType.containsKey(parentName) && parentAdded) {
+                candidateFields.add(parentName);
+            }
         }
+    }
+
+    private boolean hasCompoundFieldValue(JsonNode node, String key, Set<String> changedFields, Set<String> nulledFields) {
+        if (node == null || !node.isObject()) {
+            return false;
+        }
+        JsonNode valueNode = node.get(key);
+        return ((valueNode != null && !valueNode.isNull()) || changedFields.contains(key) || nulledFields.contains(key));
     }
 
     private Set<String> payloadFieldNames(JsonNode payload) {
@@ -316,6 +360,52 @@ public class SalesforceCdcPayloadMapper {
             payload.fieldNames().forEachRemaining(names::add);
         }
         return names;
+    }
+
+    private void normalizeFiscalFields(ObjectNode payload,
+                                       Map<String, Object> mapType,
+                                       Set<String> targetFields,
+                                       Set<String> nulledFields) {
+        if (payload == null || mapType == null || mapType.isEmpty()) {
+            return;
+        }
+        JsonNode fiscalNode = payload.get("Fiscal");
+        if (fiscalNode == null || fiscalNode.isNull() || !fiscalNode.isObject()) {
+            return;
+        }
+
+        JsonNode yearNode = fiscalNode.get("Year");
+        JsonNode quarterNode = fiscalNode.get("Quarter");
+        String year = yearNode == null || yearNode.isNull() ? null : yearNode.asText(null);
+        String quarter = quarterNode == null || quarterNode.isNull() ? null : quarterNode.asText(null);
+        if (year == null || year.isBlank() || quarter == null || quarter.isBlank()) {
+            payload.remove("Fiscal");
+            targetFields.remove("Fiscal");
+            targetFields.remove("FiscalYear");
+            targetFields.remove("FiscalQuarter");
+            nulledFields.remove("Fiscal");
+            nulledFields.remove("FiscalYear");
+            nulledFields.remove("FiscalQuarter");
+            return;
+        }
+
+        String normalizedFiscal = year.trim() + " " + quarter.trim();
+
+        if (mapType.containsKey("Fiscal")) {
+            payload.put("Fiscal", normalizedFiscal);
+            targetFields.add("Fiscal");
+            nulledFields.remove("Fiscal");
+        }
+        if (mapType.containsKey("FiscalYear")) {
+            payload.put("FiscalYear", Integer.parseInt(year.trim()));
+            targetFields.add("FiscalYear");
+            nulledFields.remove("FiscalYear");
+        }
+        if (mapType.containsKey("FiscalQuarter")) {
+            payload.put("FiscalQuarter", Integer.parseInt(quarter.trim()));
+            targetFields.add("FiscalQuarter");
+            nulledFields.remove("FiscalQuarter");
+        }
     }
 
     private Object summarizeKeys(Map<String, Object> mapType) {

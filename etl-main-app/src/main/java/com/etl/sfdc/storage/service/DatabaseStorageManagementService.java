@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -42,6 +43,7 @@ public class DatabaseStorageManagementService {
     public DatabaseStorageDetailResponse update(Long storageId, DatabaseStorageRegistrationRequest request) {
         Map<String, Object> detailMap = requireDetail(storageId);
         DatabaseStorageRegistrationRequest mergedRequest = mergeWithStoredCredentials(detailMap, request);
+        normalizeRoutingSchemaName(mergedRequest);
         DatabaseStorageRegistrationDraft draft = registrationSupport.buildDraft(mergedRequest);
 
         externalStorageRepository.updateEditableFields(
@@ -218,6 +220,46 @@ public class DatabaseStorageManagementService {
 
     private String normalizeBlankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private void normalizeRoutingSchemaName(DatabaseStorageRegistrationRequest request) {
+        if (request == null || request.getVendor() == null) {
+            return;
+        }
+        if (request.getVendor() == DatabaseVendor.ORACLE) {
+            request.setSchemaName(com.etlplatform.common.storage.database.OracleStorageSupport.normalizeSchemaName(
+                    request.getSchemaName(),
+                    request.getUsername(),
+                    request.getSchemaName(),
+                    null
+            ));
+            return;
+        }
+        if (!(request.getVendor() == DatabaseVendor.MARIADB
+                || request.getVendor() == DatabaseVendor.MYSQL
+                || request.getVendor() == DatabaseVendor.POSTGRESQL)) {
+            return;
+        }
+        if (request.getVendor() == DatabaseVendor.POSTGRESQL) {
+            request.setDatabaseName("etl_sfdc");
+        } else {
+            request.setDatabaseName(null);
+        }
+        String schemaName = request.getSchemaName();
+        if (schemaName == null || schemaName.isBlank()) {
+            return;
+        }
+        String normalized = schemaName.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s-]+", "_")
+                .replaceAll("[^a-z0-9_]", "");
+        if (!normalized.startsWith("org_")) {
+            normalized = "org_" + normalized;
+        }
+        normalized = normalized.replaceAll("_+", "_");
+        if (normalized.endsWith("_")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        request.setSchemaName(normalized);
     }
 
     private String asString(Object value) {

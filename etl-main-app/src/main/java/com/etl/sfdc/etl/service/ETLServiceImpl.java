@@ -465,13 +465,25 @@ public class ETLServiceImpl implements ETLService {
         }
 
         if (targetSchema == null || targetSchema.isBlank()) {
+            String fallbackSchema = salesforceOrgService.resolveSchemaName(resolvedOrgKey);
+            if (fallbackSchema != null && !fallbackSchema.isBlank()) {
+                targetSchema = fallbackSchema;
+                log.info("라우팅 대상 DB 저장소 schemaName이 비어 있어 org schema로 대체합니다. targetStorageId={}, vendor={}, orgKey={}, fallbackSchema={}",
+                        targetStorageId, targetStorage.getVendor(), resolvedOrgKey, fallbackSchema);
+            }
+        }
+
+        if (targetSchema == null || targetSchema.isBlank()) {
             throw new AppException("선택한 라우팅 대상 DB 저장소에 schemaName이 없어요.");
         }
         String targetStorageName = targetStorage.getName();
         com.etl.sfdc.config.model.dto.SalesforceOrgCredential orgCredential = salesforceOrgService.getOrg(resolvedOrgKey);
         String clientId = orgCredential != null ? orgCredential.getClientId() : null;
         String clientSecret = orgCredential != null ? orgCredential.getClientSecret() : null;
-        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema, targetStorageId, targetStorageName));
+        String targetTable = targetStorage.getVendor() == com.etlplatform.common.storage.database.DatabaseVendor.ORACLE
+                ? com.etlplatform.common.storage.database.OracleRoutingNaming.buildTableName(resolvedOrgName, sanitizedObject)
+                : sanitizedObject;
+        String json = objectMapper.writeValueAsString(getPropertyMap(sanitizedObject, accessToken, clientId, clientSecret, actor, resolvedMyDomain, resolvedOrgName, resolvedOrgKey, targetSchema, targetTable, targetStorageId, targetStorageName));
         String endpoint = "CDC".equals(sanitizedMode) ? "/pubsub" : "/streaming";
         String modeLabel = "CDC".equals(sanitizedMode) ? "CDC" : "Streaming";
         String routingBase = resolveRoutingBaseUrl();
@@ -514,6 +526,7 @@ public class ETLServiceImpl implements ETLService {
             result.put("targetStorageId", targetStorageId);
             result.put("targetStorageName", targetStorageName);
             result.put("targetSchema", targetSchema);
+            result.put("targetTable", targetTable);
             return result;
         } catch (AppException e) {
             throw e;
@@ -526,15 +539,6 @@ public class ETLServiceImpl implements ETLService {
     public void refreshRoutingModuleCredentials(String accessToken, String myDomain, String orgKey) throws Exception {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
         String resolvedOrgKey = resolveOrgKey(orgKey, resolvedMyDomain);
-        com.etl.sfdc.config.model.dto.SalesforceOrgCredential orgCredential = salesforceOrgService.getOrg(resolvedOrgKey);
-        String clientId = orgCredential != null ? orgCredential.getClientId() : null;
-        String clientSecret = orgCredential != null ? orgCredential.getClientSecret() : null;
-
-        if ((accessToken == null || accessToken.isBlank()) && (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank())) {
-            log.info("[토큰 만료] 라우팅 자격 증명 갱신 생략: 접근 토큰/클라이언트 자격이 비어 있음. orgKey={}", orgKey);
-            return;
-        }
-
         List<Map<String, Object>> activeRoutes = routingDashboardRepository.findActiveRoutesByOrg(resolvedOrgKey);
         if (activeRoutes == null || activeRoutes.isEmpty()) {
             log.info("No active routes found for routing credential refresh. orgKey={}", resolvedOrgKey);
@@ -549,74 +553,26 @@ public class ETLServiceImpl implements ETLService {
         ObjectMapper objectMapper = new ObjectMapper();
         String routingBase = resolveRoutingBaseUrl();
 
-        int successCount = 0;
-        int skippedCount = 0;
-        int failedCount = 0;
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orgKey", resolvedOrgKey);
+        payload.put("credentialVersion", System.currentTimeMillis());
+        payload.put("reason", "MAIN_LOGIN_REFRESH");
 
-        for (Map<String, Object> route : activeRoutes) {
-            String selectedObject = String.valueOf(route.getOrDefault("objectName", route.getOrDefault("selectedObject", "")));
-            String protocol = String.valueOf(route.getOrDefault("protocol", route.getOrDefault("routingProtocol", ""))).toUpperCase(Locale.ROOT);
-            if (selectedObject.isBlank() || protocol.isBlank()) {
-                skippedCount++;
-                continue;
-            }
+        RequestBody body = RequestBody.create(objectMapper.writeValueAsString(payload), MediaType.get("application/json; charset=utf-8"));
+        Request request = new Request.Builder()
+                .url(routingBase + "/internal/routing/credential-updated")
+                .post(body)
+                .addHeader("Content-Type", "application/json")
+                .build();
 
-            Map<String, String> payload = new HashMap<>();
-            payload.put("selectedObject", selectedObject);
-            payload.put("accessToken", accessToken);
-            if (clientId != null && !clientId.isBlank()) {
-                payload.put("clientId", clientId);
+        try (Response response = client.newCall(request).execute()) {
+            String responseBody = response.body() != null ? response.body().string() : "";
+            if (!response.isSuccessful()) {
+                log.warn("라우팅 모듈 credential-updated 호출 실패. orgKey={}, status={}, body={}", resolvedOrgKey, response.code(), responseBody);
+                throw new AppException("라우팅 모듈 자격 증명 갱신 이벤트 호출 실패: " + response.code());
             }
-            if (clientSecret != null && !clientSecret.isBlank()) {
-                payload.put("clientSecret", clientSecret);
-            }
-            String routeOrgKey = resolveOrgKey(String.valueOf(route.getOrDefault("orgKey", resolvedOrgKey)), resolvedMyDomain);
-            String routeInstanceUrl = resolveSalesforceDomain(String.valueOf(route.getOrDefault("myDomain", resolvedMyDomain)));
-            String routeOrgName = String.valueOf(route.getOrDefault("orgName", extractHost(routeInstanceUrl)));
-            String routeTargetSchema = String.valueOf(route.getOrDefault("targetSchema", salesforceOrgService.resolveSchemaName(routeOrgKey)));
-            String routeTargetStorageId = String.valueOf(route.getOrDefault("targetStorageId", ""));
-            String routeTargetStorageName = String.valueOf(route.getOrDefault("targetStorageName", ""));
-            String routeObjectLabel = String.valueOf(route.getOrDefault("objectLabel", selectedObject));
-            payload.put("instanceUrl", routeInstanceUrl);
-            payload.put("orgKey", routeOrgKey);
-            payload.put("orgName", routeOrgName);
-            payload.put("targetSchema", routeTargetSchema);
-            payload.put("targetTable", String.valueOf(route.getOrDefault("targetTable", selectedObject)));
-            if (routeTargetStorageId != null && !routeTargetStorageId.isBlank()) { payload.put("targetStorageId", routeTargetStorageId); }
-            if (routeTargetStorageName != null && !routeTargetStorageName.isBlank()) { payload.put("targetStorageName", routeTargetStorageName); }
-            payload.put("instanceName", String.valueOf(route.getOrDefault("instanceName", extractHost(routeInstanceUrl))));
-            payload.put("orgType", String.valueOf(route.getOrDefault("orgType", "-")));
-            payload.put("isSandbox", String.valueOf(route.getOrDefault("sandbox", route.getOrDefault("isSandbox", String.valueOf(isSandboxDomain(routeInstanceUrl))))));
-            payload.put("objectLabel", routeObjectLabel == null || routeObjectLabel.isBlank() ? selectedObject : routeObjectLabel);
-            String endpoint = "CDC".equals(protocol) ? "/pubsub/credentials/refresh" : "/streaming/credentials/refresh";
-
-            RequestBody body = RequestBody.create(objectMapper.writeValueAsString(payload), MediaType.get("application/json; charset=utf-8"));
-            Request request = new Request.Builder()
-                    .url(routingBase + endpoint)
-                    .post(body)
-                    .addHeader("Content-Type", "application/json")
-                    .build();
-
-            try (Response response = client.newCall(request).execute()) {
-                String responseBody = response.body() != null ? response.body().string() : "";
-                if (!response.isSuccessful()) {
-                    failedCount++;
-                    log.warn("라우팅 모듈 자격 증명 갱신 실패. orgKey={}, selectedObject={}, protocol={}, status={}",
-                            resolvedOrgKey, selectedObject, protocol, response.code());
-                } else {
-                    successCount++;
-                    log.info("라우팅 모듈 자격 증명 갱신 완료. orgKey={}, selectedObject={}, protocol={}",
-                            resolvedOrgKey, selectedObject, protocol);
-                }
-            } catch (Exception e) {
-                failedCount++;
-                log.warn("라우팅 모듈 자격 증명 갱신 중 오류. orgKey={}, selectedObject={}, protocol={}",
-                        resolvedOrgKey, selectedObject, protocol);
-            }
+            log.info("라우팅 모듈 credential-updated 호출 완료. orgKey={}, body={}", resolvedOrgKey, responseBody);
         }
-
-        log.info("[토큰 만료] 라우팅 모듈 자격 증명 갱신 요약. orgKey={}, targetRoutes={}, refreshed={}, skipped={}, failed={}",
-                resolvedOrgKey, activeRoutes.size(), successCount, skippedCount, failedCount);
     }
 
     @Override
@@ -649,16 +605,23 @@ public class ETLServiceImpl implements ETLService {
                 ? String.valueOf(matchedRoute.getOrDefault("targetSchema", salesforceOrgService.resolveSchemaName(resolvedOrgKey)))
                 : salesforceOrgService.resolveSchemaName(resolvedOrgKey);
         Long targetStorageId = asLongOrNull(matchedRoute == null ? null : matchedRoute.get("targetStorageId"));
-        boolean tableDropped = dropRoutingTableFromEngine(sanitizedMode, targetSchema, sanitizedObject, targetStorageId);
+        String targetOrgName = matchedRoute != null
+                ? String.valueOf(matchedRoute.getOrDefault("orgName", ""))
+                : resolvedOrgKey;
+        boolean runtimeStopped = stopRoutingRuntimeOnEngine(sanitizedMode, resolvedOrgKey, sanitizedObject);
+        boolean tableDropped = runtimeStopped && dropRoutingTableFromEngine(sanitizedMode, targetSchema, sanitizedObject, targetStorageId, targetOrgName);
 
         Map<String, Object> result = new HashMap<>();
         result.put("selectedObject", sanitizedObject);
         result.put("ingestionMode", sanitizedMode);
         result.put("endpoint", "CDC".equals(sanitizedMode) ? "/pubsub/release" : "/streaming/release");
         result.put("status", "SUCCESS");
-        result.put("message", sanitizedMode + " 해지가 완료되었어요." + (tableDropped ? " (로컬 테이블 drop 완료)" : ""));
-        result.put("engineMessage", sanitizedMode + " 해지가 완료되었어요." + (tableDropped ? " (로컬 테이블 drop 완료)" : ""));
-        result.put("responseBody", "releasedCount=" + releasedCount + ", tableDropped=" + tableDropped);
+        String releaseMessage = sanitizedMode + " 해지가 완료되었어요."
+                + (runtimeStopped ? " (런타임 중지 완료)" : " (런타임 중지 실패로 로컬 테이블 drop 생략)")
+                + (tableDropped ? " (로컬 테이블 drop 완료)" : "");
+        result.put("message", releaseMessage);
+        result.put("engineMessage", releaseMessage);
+        result.put("responseBody", "releasedCount=" + releasedCount + ", runtimeStopped=" + runtimeStopped + ", tableDropped=" + tableDropped);
         result.put("initialLoadCount", 0);
         result.put("subscribeStatus", "RELEASED");
         result.put("pushTopicStatus", "STREAMING".equals(sanitizedMode) ? "RELEASED" : "-");
@@ -682,8 +645,8 @@ public class ETLServiceImpl implements ETLService {
         history.put("eventStatus", "SUCCESS");
         history.put("eventStage", "COMPLETE");
         history.put("endpoint", "CDC".equals(sanitizedMode) ? "/pubsub/release" : "/streaming/release");
-        history.put("message", sanitizedMode + " 해지가 완료되었어요.");
-        history.put("detailText", "releasedCount=" + releasedCount);
+        history.put("message", releaseMessage);
+        history.put("detailText", "releasedCount=" + releasedCount + ", runtimeStopped=" + runtimeStopped + ", tableDropped=" + tableDropped);
         history.put("initialLoadCount", 0);
         history.put("actor", actor);
         routingDashboardRepository.insertRoutingHistory(history);
@@ -736,6 +699,7 @@ public class ETLServiceImpl implements ETLService {
                                             String orgName,
                                             String orgKey,
                                             String targetSchema,
+                                            String targetTable,
                                             Long targetStorageId,
                                             String targetStorageName) {
         String resolvedMyDomain = resolveSalesforceDomain(myDomain);
@@ -752,7 +716,7 @@ public class ETLServiceImpl implements ETLService {
         mapProperty.put("orgKey", resolveOrgKey(orgKey, resolvedMyDomain));
         mapProperty.put("orgName", orgName == null || orgName.isBlank() ? extractHost(resolvedMyDomain) : orgName);
         mapProperty.put("targetSchema", targetSchema);
-        mapProperty.put("targetTable", selectedObject);
+        mapProperty.put("targetTable", targetTable == null || targetTable.isBlank() ? selectedObject : targetTable);
         if (targetStorageId != null) {
             mapProperty.put("targetStorageId", String.valueOf(targetStorageId));
         }
@@ -1058,7 +1022,41 @@ public class ETLServiceImpl implements ETLService {
         }
     }
 
-    private boolean dropRoutingTableFromEngine(String ingestionMode, String targetSchema, String selectedObject, Long targetStorageId) {
+    private boolean stopRoutingRuntimeOnEngine(String ingestionMode, String orgKey, String selectedObject) {
+        String endpoint = "CDC".equalsIgnoreCase(ingestionMode) ? "/pubsub/runtime/stop" : "/streaming/runtime/stop";
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .writeTimeout(5, TimeUnit.SECONDS)
+                .build();
+
+        FormBody formBody = new FormBody.Builder()
+                .add("orgKey", orgKey)
+                .add("selectedObject", selectedObject)
+                .add("reason", "released from dashboard")
+                .build();
+
+        Request request = new Request.Builder()
+                .url(resolveRoutingBaseUrl() + endpoint)
+                .post(formBody)
+                .build();
+
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            try (Response response = client.newCall(request).execute()) {
+                if (response.isSuccessful()) {
+                    return true;
+                }
+                log.warn("Failed to stop routing runtime on engine. mode={}, orgKey={}, object={}, attempt={}, status={}, message={}",
+                        ingestionMode, orgKey, selectedObject, attempt, response.code(), response.message());
+            } catch (Exception e) {
+                log.warn("Error while stopping routing runtime on engine. mode={}, orgKey={}, object={}, attempt={}",
+                        ingestionMode, orgKey, selectedObject, attempt, e);
+            }
+        }
+        return false;
+    }
+
+    private boolean dropRoutingTableFromEngine(String ingestionMode, String targetSchema, String selectedObject, Long targetStorageId, String orgName) {
         String endpoint = "CDC".equalsIgnoreCase(ingestionMode) ? "/pubsub/drop" : "/streaming/drop";
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
@@ -1068,7 +1066,8 @@ public class ETLServiceImpl implements ETLService {
 
         FormBody.Builder formBuilder = new FormBody.Builder()
                 .add("selectedObject", selectedObject)
-                .add("targetSchema", targetSchema == null ? "" : targetSchema);
+                .add("targetSchema", targetSchema == null ? "" : targetSchema)
+                .add("orgName", orgName == null ? "" : orgName);
         if (targetStorageId != null) {
             formBuilder.add("targetStorageId", String.valueOf(targetStorageId));
         }

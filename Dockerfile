@@ -1,5 +1,17 @@
 # syntax=docker/dockerfile:1.7
 
+FROM node:20-alpine AS tailwind
+WORKDIR /app
+
+COPY etl-main-app/package.json etl-main-app/package-lock.json ./etl-main-app/
+COPY etl-main-app/src/main/resources/static/css/tailwind-input.css /app/etl-main-app/src/main/resources/static/css/tailwind-input.css
+COPY etl-main-app/tailwind.config.js /app/etl-main-app/tailwind.config.js
+COPY etl-main-app/src/main/resources/static /app/etl-main-app/src/main/resources/static
+COPY etl-main-app/src/main/resources/templates /app/etl-main-app/src/main/resources/templates
+COPY etl-file-engine/src/main/resources/static /app/etl-file-engine/src/main/resources/static
+
+RUN cd /app/etl-main-app && npm ci --no-audit --no-fund --silent && npm run build:css
+
 FROM eclipse-temurin:21-jdk AS builder
 WORKDIR /app
 
@@ -12,6 +24,10 @@ COPY etl-infra ./etl-infra
 COPY etl-main-app ./etl-main-app
 COPY etl-routing-engine ./etl-routing-engine
 COPY etl-file-engine ./etl-file-engine
+
+# Inject freshly built CSS before Java compile so resources are always deterministic in CI
+COPY --from=tailwind /app/etl-main-app/src/main/resources/static/css/tailwind.css /app/etl-main-app/src/main/resources/static/css/tailwind.css
+COPY --from=tailwind /app/etl-main-app/src/main/resources/static/css/tailwind.css /app/etl-file-engine/src/main/resources/static/css/tailwind.css
 
 RUN chmod +x ./gradlew \
     && ./gradlew --no-daemon clean :etl-main-app:bootJar :etl-routing-engine:bootJar :etl-file-engine:bootJar

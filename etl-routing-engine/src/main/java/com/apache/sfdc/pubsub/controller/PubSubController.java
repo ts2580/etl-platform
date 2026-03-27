@@ -33,6 +33,7 @@ public class PubSubController {
     @PostMapping("/pubsub/drop")
     public ResponseEntity<Map<String, Object>> dropTable(@RequestParam("selectedObject") String selectedObject,
                                                        @RequestParam("targetSchema") String targetSchema,
+                                                       @RequestParam(value = "orgName", required = false) String orgName,
                                                        @RequestParam(value = "targetStorageId", required = false) Long targetStorageId) {
         String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
         String resolvedSchema = RequestValidationUtils.requireText(targetSchema, "targetSchema").trim();
@@ -41,6 +42,9 @@ public class PubSubController {
             Map<String, String> mapProperty = new java.util.HashMap<>();
             mapProperty.put("selectedObject", sanitizedObject);
             mapProperty.put("targetSchema", resolvedSchema);
+            if (orgName != null && !orgName.isBlank()) {
+                mapProperty.put("orgName", orgName.trim());
+            }
             if (targetStorageId != null) {
                 mapProperty.put("targetStorageId", String.valueOf(targetStorageId));
             }
@@ -57,6 +61,20 @@ public class PubSubController {
             result.put("message", "CDC 테이블 삭제 실패: " + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
+    }
+
+    @PostMapping("/pubsub/runtime/stop")
+    public Map<String, Object> stopPubSubRuntime(@RequestParam("orgKey") String orgKey,
+                                                 @RequestParam("selectedObject") String selectedObject,
+                                                 @RequestParam(value = "reason", required = false) String reason) {
+        String sanitizedObject = RequestValidationUtils.requireIdentifier(selectedObject, "selectedObject");
+        String sanitizedOrgKey = RequestValidationUtils.requireText(orgKey, "orgKey").trim();
+        pubSubService.stopRoute(sanitizedOrgKey, sanitizedObject, reason == null ? "manual stop" : reason);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "SUCCESS");
+        result.put("selectedObject", sanitizedObject);
+        result.put("message", "CDC 런타임 중지 완료");
+        return result;
     }
 
     @PostMapping("/pubsub/slots/deactivate")

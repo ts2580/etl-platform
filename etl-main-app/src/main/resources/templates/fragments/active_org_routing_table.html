@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<th:block th:fragment="table">
+    <section class="rounded-[32px] border border-white/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(129,140,248,0.18)]" th:if="${activeOrg != null}">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-500">Routing</p>
+                <h3 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">선택된 Org 라우팅 정보</h3>
+            </div>
+            <a class="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-300/30 transition hover:from-indigo-700 hover:to-violet-600"
+               th:href="@{/etl/dashboard(orgKey=${activeOrg.orgKey})}">라우팅 대시보드로 이동</a>
+        </div>
+
+        <div class="mt-5 overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="min-w-full divide-y divide-slate-100 text-sm">
+                <thead class="bg-slate-50 text-slate-700">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">오브젝트</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">프로토콜</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">라우팅 상태</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">소스 상태</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">대상 저장소</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">대상 테이블</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                <tr th:each="route : ${activeOrgRoutes}">
+                    <td class="px-4 py-3 font-medium text-slate-800" th:text="${route.objectName}">Account</td>
+                    <td class="px-4 py-3 text-slate-600" th:text="${route.protocol}">CDC</td>
+                    <td class="px-4 py-3 text-slate-600" th:text="${route.routingStatus}">ACTIVE</td>
+                    <td class="px-4 py-3 text-slate-600" th:text="${route.sourceStatus}">ACTIVE</td>
+                    <td class="px-4 py-3 text-slate-600" th:text="${route.targetStorageName}">storage</td>
+                    <td class="px-4 py-3 text-slate-600" th:text="${route.targetTable}">ACCOUNT</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(activeOrgRoutes)}">
+                    <td colspan="6" class="px-4 py-8 text-center text-slate-500">현재 선택된 Org에 등록된 활성 라우팅이 없어요.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</th:block>
+</body>
+</html>

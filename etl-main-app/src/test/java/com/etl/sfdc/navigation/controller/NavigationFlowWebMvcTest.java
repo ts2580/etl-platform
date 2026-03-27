@@ -3,6 +3,7 @@ package com.etl.sfdc.navigation.controller;
 import com.etl.sfdc.common.SalesforceTokenManager;
 import com.etl.sfdc.common.SecurityConfig;
 import com.etl.sfdc.common.UserSession;
+import com.etl.sfdc.config.controller.SalesforceOrgViewHelper;
 import com.etl.sfdc.config.model.service.SalesforceOrgService;
 import com.etl.sfdc.etl.controller.ETLController;
 import com.etl.sfdc.etl.service.ETLService;
@@ -10,6 +11,8 @@ import com.etl.sfdc.home.controller.HomeController;
 import com.etl.sfdc.storage.service.DatabaseStorageQueryService;
 import com.etl.sfdc.user.controller.UserController;
 import com.etl.sfdc.user.model.service.UserService;
+import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -17,8 +20,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.ui.Model;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -30,7 +36,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 UserController.class,
                 ETLController.class
         },
-        properties = "app.db.enabled=true"
+        properties = {
+                "app.db.enabled=true",
+                "file.engine.base-url=http://localhost:9443"
+        }
 )
 @Import(SecurityConfig.class)
 class NavigationFlowWebMvcTest {
@@ -48,6 +57,9 @@ class NavigationFlowWebMvcTest {
     private SalesforceTokenManager salesforceTokenManager;
 
     @MockBean
+    private SalesforceOrgViewHelper salesforceOrgViewHelper;
+
+    @MockBean
     private UserService userService;
 
     @MockBean
@@ -56,13 +68,23 @@ class NavigationFlowWebMvcTest {
     @MockBean
     private DatabaseStorageQueryService databaseStorageQueryService;
 
+    @BeforeEach
+    void setUp() {
+        doAnswer(invocation -> {
+            Model model = invocation.getArgument(0);
+            model.addAttribute("dbEnabled", true);
+            model.addAttribute("fileEngineBaseUrl", "http://localhost:9443");
+            return null;
+        }).when(salesforceOrgViewHelper).populateHomeModel(any(Model.class), any(HttpSession.class));
+    }
+
     @Test
     void homePageRendersLoginFormForAnonymousUsers() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("id=\"login-form\"")))
                 .andExpect(content().string(containsString("action=\"/user/login\"")))
-                .andExpect(content().string(containsString("메인 페이지에서 바로 로그인")));
+                .andExpect(content().string(containsString("로그인")));
     }
 
     @Test

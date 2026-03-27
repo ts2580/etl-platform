@@ -4,16 +4,19 @@ import com.etl.sfdc.storage.dto.DatabaseStorageRegistrationRequest;
 import com.etl.sfdc.storage.dto.DatabaseStorageRegistrationResponse;
 import com.etl.sfdc.storage.model.dto.ExternalDatabaseStorage;
 import com.etl.sfdc.storage.model.dto.ExternalStorage;
-import com.etlplatform.common.storage.database.StorageType;
 import com.etl.sfdc.storage.model.repository.ExternalDatabaseStorageRepository;
 import com.etl.sfdc.storage.model.repository.ExternalStorageConnectionHistoryRepository;
 import com.etl.sfdc.storage.model.repository.ExternalStorageRepository;
 import com.etlplatform.common.storage.database.DatabaseStorageRegistrationDraft;
 import com.etlplatform.common.storage.database.DatabaseStorageRegistrationSupport;
+import com.etlplatform.common.storage.database.DatabaseVendor;
+import com.etlplatform.common.storage.database.StorageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +36,7 @@ public class DatabaseStorageRegistrationService {
         log.info(start);
         System.out.println(start);
         try {
+            normalizeRoutingSchemaName(request);
             connectionTestService.validate(request);
             DatabaseStorageRegistrationDraft draft = registrationSupport.buildDraft(request);
 
@@ -85,5 +89,45 @@ public class DatabaseStorageRegistrationService {
             e.printStackTrace(System.err);
             throw e;
         }
+    }
+
+    private void normalizeRoutingSchemaName(DatabaseStorageRegistrationRequest request) {
+        if (request == null || request.getVendor() == null) {
+            return;
+        }
+        if (request.getVendor() == DatabaseVendor.ORACLE) {
+            request.setSchemaName(com.etlplatform.common.storage.database.OracleStorageSupport.normalizeSchemaName(
+                    request.getSchemaName(),
+                    request.getUsername(),
+                    request.getSchemaName(),
+                    null
+            ));
+            return;
+        }
+        if (!(request.getVendor() == DatabaseVendor.MARIADB
+                || request.getVendor() == DatabaseVendor.MYSQL
+                || request.getVendor() == DatabaseVendor.POSTGRESQL)) {
+            return;
+        }
+        if (request.getVendor() == DatabaseVendor.POSTGRESQL) {
+            request.setDatabaseName("etl_sfdc");
+        } else {
+            request.setDatabaseName(null);
+        }
+        String schemaName = request.getSchemaName();
+        if (schemaName == null || schemaName.isBlank()) {
+            return;
+        }
+        String normalized = schemaName.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s-]+", "_")
+                .replaceAll("[^a-z0-9_]", "");
+        if (!normalized.startsWith("org_")) {
+            normalized = "org_" + normalized;
+        }
+        normalized = normalized.replaceAll("_+", "_");
+        if (normalized.endsWith("_")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        request.setSchemaName(normalized);
     }
 }

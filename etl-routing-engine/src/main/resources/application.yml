@@ -37,6 +37,10 @@ spring:
             port: ${REDIS_PORT:6379}
             password: ${REDIS_PASSWORD:}
 
+logging:
+    level:
+        com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutor: DEBUG
+
 mybatis:
     mapper-locations: classpath:mapper/**/*.xml
     configuration:

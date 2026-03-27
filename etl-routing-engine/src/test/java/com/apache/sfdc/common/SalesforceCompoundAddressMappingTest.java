@@ -11,6 +11,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class SalesforceCompoundAddressMappingTest {
 
@@ -123,6 +124,155 @@ class SalesforceCompoundAddressMappingTest {
         assertTrue(sql.contains("`MailingState` = '남한'"), sql);
         assertTrue(sql.contains("`MailingPostalCode` = '02252'"), sql);
         assertTrue(sql.contains("`MailingCountry` = '한국'"), sql);
+    }
+
+
+    @Test
+    void contactNamePartialUpdateDoesNotClearUnrelatedNameParts() throws Exception {
+        String payload = """
+                {
+                  "ChangeEventHeader": {
+                    "entityName": "Contact",
+                    "recordIds": ["003WU00001MN6sfYAD"],
+                    "changeType": "UPDATE",
+                    "commitTimestamp": 1773849000000,
+                    "changedFields": ["FirstName"],
+                    "nulledFields": []
+                  },
+                  "Name": {
+                    "FirstName": "성진!"
+                  },
+                  "LastModifiedDate": 1773849000000
+                }
+                """;
+
+        Map<String, Object> mapType = new java.util.LinkedHashMap<>();
+        mapType.put("Name", "string");
+        mapType.put("FirstName", "string");
+        mapType.put("LastName", "string");
+        mapType.put("LastModifiedDate", "datetime");
+
+        Optional<SalesforceRecordMutation> optionalMutation = mapper.map(objectMapper.readTree(payload), mapType);
+        assertTrue(optionalMutation.isPresent());
+
+        SalesforceRecordMutation mutation = optionalMutation.get();
+        assertTrue(mutation.targetFields().contains("FirstName"));
+        assertTrue(mutation.targetFields().contains("Name"));
+        assertFalse(mutation.targetFields().contains("LastName"));
+
+        CapturingRepository repository = new CapturingRepository();
+        SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
+                "org_studyorg",
+                "Contact",
+                mapType,
+                mutation,
+                repository,
+                "test"
+        );
+
+        assertEquals(1, result.updated());
+        String sql = repository.lastUpdateSql;
+        assertNotNull(sql);
+        assertTrue(sql.contains("`FirstName` = '성진!'"), sql);
+        assertFalse(sql.contains("`LastName` ="), sql);
+    }
+
+    @Test
+    void contactCompoundChangeFieldNameOnlyWithFirstNameDoesNotClearLastName() throws Exception {
+        String payload = """
+                {
+                  "ChangeEventHeader": {
+                    "entityName": "Contact",
+                    "recordIds": ["003WU00001MN6sfYAD"],
+                    "changeType": "UPDATE",
+                    "commitTimestamp": 1773849100000,
+                    "changedFields": ["Name"],
+                    "nulledFields": []
+                  },
+                  "Name": {
+                    "FirstName": "성진!"
+                  },
+                  "LastModifiedDate": 1773849100000
+                }
+                """;
+
+        Map<String, Object> mapType = new java.util.LinkedHashMap<>();
+        mapType.put("Name", "string");
+        mapType.put("FirstName", "string");
+        mapType.put("LastName", "string");
+        mapType.put("LastModifiedDate", "datetime");
+
+        Optional<SalesforceRecordMutation> optionalMutation = mapper.map(objectMapper.readTree(payload), mapType);
+        assertTrue(optionalMutation.isPresent());
+
+        SalesforceRecordMutation mutation = optionalMutation.get();
+        assertTrue(mutation.targetFields().contains("FirstName"));
+        assertFalse(mutation.targetFields().contains("LastName"));
+
+        CapturingRepository repository = new CapturingRepository();
+        SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
+                "org_studyorg",
+                "Contact",
+                mapType,
+                mutation,
+                repository,
+                "test"
+        );
+
+        assertEquals(1, result.updated());
+        String sql = repository.lastUpdateSql;
+        assertNotNull(sql);
+        assertTrue(sql.contains("`FirstName` = '성진!'") );
+        assertFalse(sql.contains("`LastName` ="));
+    }
+
+    @Test
+    void contactCompoundChangeFieldNameOnlyWithLastNameDoesNotClearFirstName() throws Exception {
+        String payload = """
+                {
+                  "ChangeEventHeader": {
+                    "entityName": "Contact",
+                    "recordIds": ["003WU00001MN6sfYAD"],
+                    "changeType": "UPDATE",
+                    "commitTimestamp": 1773849101000,
+                    "changedFields": ["Name"],
+                    "nulledFields": []
+                  },
+                  "Name": {
+                    "LastName": "성"
+                  },
+                  "LastModifiedDate": 1773849101000
+                }
+                """;
+
+        Map<String, Object> mapType = new java.util.LinkedHashMap<>();
+        mapType.put("Name", "string");
+        mapType.put("FirstName", "string");
+        mapType.put("LastName", "string");
+        mapType.put("LastModifiedDate", "datetime");
+
+        Optional<SalesforceRecordMutation> optionalMutation = mapper.map(objectMapper.readTree(payload), mapType);
+        assertTrue(optionalMutation.isPresent());
+
+        SalesforceRecordMutation mutation = optionalMutation.get();
+        assertTrue(mutation.targetFields().contains("LastName"));
+        assertFalse(mutation.targetFields().contains("FirstName"));
+
+        CapturingRepository repository = new CapturingRepository();
+        SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
+                "org_studyorg",
+                "Contact",
+                mapType,
+                mutation,
+                repository,
+                "test"
+        );
+
+        assertEquals(1, result.updated());
+        String sql = repository.lastUpdateSql;
+        assertNotNull(sql);
+        assertTrue(sql.contains("`LastName` = '성'"));
+        assertFalse(sql.contains("`FirstName` ="));
     }
 
     @Test

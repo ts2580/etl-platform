@@ -74,32 +74,83 @@ function renderInlineResult(tone, title, message) {
     `;
 }
 
+function syncOracleSchemaWithUsername() {
+    const vendor = document.getElementById('vendor')?.value;
+    const username = document.getElementById('username');
+    const schemaInput = document.getElementById('schemaName');
+    if (vendor !== 'ORACLE' || !username || !schemaInput) {
+        return;
+    }
+    schemaInput.value = (username.value || '').trim().toUpperCase();
+}
+
 function updateDbFieldLabels() {
     const vendor = document.getElementById('vendor')?.value;
     const schemaLabel = document.getElementById('schemaLabel');
     const schemaInput = document.getElementById('schemaName');
-    const databaseLabel = document.getElementById('databaseLabel');
+    const databaseInput = document.getElementById('databaseName');
+    const serviceNameField = document.getElementById('serviceNameField');
+    const databaseNameField = document.getElementById('databaseNameField');
+    const postgresSchemaHint = document.getElementById('postgresSchemaHint');
+    const oracleSchemaHelp = document.getElementById('oracleSchemaHelp');
 
-    if (!schemaLabel || !schemaInput || !databaseLabel) {
+    if (!schemaLabel || !schemaInput) {
         return;
     }
 
-    if (vendor === 'ORACLE') {
-        schemaLabel.textContent = '서비스명 / SID';
-        schemaInput.placeholder = '예: FREEPDB1 또는 SID';
-        databaseLabel.textContent = '스키마명(선택)';
-    } else if (vendor === 'POSTGRESQL') {
-        schemaLabel.textContent = '스키마명(선택)';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명(필수)';
-    } else if (vendor === 'MYSQL' || vendor === 'MARIADB') {
-        schemaLabel.textContent = '스키마명(선택)';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명';
+    const isOracle = vendor === 'ORACLE';
+    const isPostgresql = vendor === 'POSTGRESQL';
+    const isMySqlFamily = vendor === 'MYSQL' || vendor === 'MARIADB';
+    const isRoutingDb = isPostgresql;
+
+    if (serviceNameField) {
+        serviceNameField.classList.toggle('hidden', !isOracle && !isPostgresql);
+    }
+    if (databaseNameField) {
+        databaseNameField.classList.toggle('hidden', !isRoutingDb);
+    }
+    if (postgresSchemaHint) {
+        postgresSchemaHint.classList.toggle('hidden', vendor !== 'POSTGRESQL');
+    }
+
+    if (databaseInput) {
+        databaseInput.value = isPostgresql ? 'etl_sfdc' : '';
+        databaseInput.disabled = isPostgresql;
+        databaseInput.classList.toggle('bg-slate-50', isPostgresql);
+        databaseInput.classList.toggle('text-slate-500', isPostgresql);
+        databaseInput.classList.toggle('cursor-not-allowed', isPostgresql);
+    }
+
+    if (isOracle) {
+        schemaLabel.textContent = 'Oracle 스키마(사용자명 연동)';
+        schemaInput.placeholder = '사용자명을 입력하면 자동으로 맞춰져요';
+        schemaInput.readOnly = false;
+        schemaInput.disabled = true;
+        schemaInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        oracleSchemaHelp?.classList.remove('hidden');
+        syncOracleSchemaWithUsername();
+    } else if (isPostgresql) {
+        schemaLabel.textContent = '라우팅 스키마명';
+        schemaInput.placeholder = 'PostgreSQL은 고정 스키마 규칙을 사용해요';
+        schemaInput.readOnly = false;
+        schemaInput.disabled = true;
+        schemaInput.classList.add('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        oracleSchemaHelp?.classList.add('hidden');
+        schemaInput.value = 'org_<org명>';
+    } else if (isMySqlFamily) {
+        schemaLabel.textContent = '스키마 정보';
+        schemaInput.placeholder = 'MySQL/MariaDB는 스키마 입력 없이 연결만 확인해요';
+        schemaInput.readOnly = false;
+        schemaInput.disabled = false;
+        schemaInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        oracleSchemaHelp?.classList.add('hidden');
+        schemaInput.value = '';
     } else {
-        schemaLabel.textContent = '스키마명';
-        schemaInput.placeholder = '예: public';
-        databaseLabel.textContent = '데이터베이스명';
+        schemaInput.readOnly = false;
+        schemaInput.disabled = false;
+        schemaInput.classList.remove('bg-slate-50', 'text-slate-500', 'cursor-not-allowed');
+        oracleSchemaHelp?.classList.add('hidden');
+        schemaInput.value = '';
     }
 }
 
@@ -398,6 +449,9 @@ document.getElementById('vendor')?.addEventListener('change', (event) => {
 document.getElementById('authMethod')?.addEventListener('change', (event) => {
     logFormDebug('authMethod changed', { value: event.target.value });
     toggleAuthFields();
+});
+document.getElementById('username')?.addEventListener('input', () => {
+    syncOracleSchemaWithUsername();
 });
 
 document.getElementById('databaseName')?.addEventListener('input', (event) => {

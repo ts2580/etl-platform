@@ -22,9 +22,6 @@ public class SalesforceTokenManager {
 
     private final SalesforceClientCredentialsClient oauthClient;
 
-    @Value("${salesforce.access-token-ttl-minutes:55}")
-    private long accessTokenTtlMinutes;
-
     @Value("${salesforce.tokenUrl:/services/oauth2/token}")
     private String defaultTokenUrl;
 
@@ -34,16 +31,6 @@ public class SalesforceTokenManager {
     }
 
     public String getAccessToken(HttpSession session) {
-        Long issuedAt = (Long) session.getAttribute(TOKEN_ISSUED_AT);
-        if (issuedAt == null) {
-            return (String) session.getAttribute(ACCESS_TOKEN);
-        }
-
-        if (isExpired(issuedAt)) {
-            clearAccessToken(session);
-            return null;
-        }
-
         return (String) session.getAttribute(ACCESS_TOKEN);
     }
 
@@ -106,11 +93,6 @@ public class SalesforceTokenManager {
         }
     }
 
-    private boolean isExpired(Long issuedAt) {
-        long ttlMillis = accessTokenTtlMinutes * 60_000L;
-        return System.currentTimeMillis() - issuedAt > ttlMillis;
-    }
-
     public void clearAccessToken(HttpSession session) {
         session.removeAttribute(ACCESS_TOKEN);
         session.removeAttribute(TOKEN_ISSUED_AT);
@@ -149,12 +131,12 @@ public class SalesforceTokenManager {
 
     private String resolveTokenUrl(String myDomain) {
         String tokenPath = resolveSalesforcePath(defaultTokenUrl);
-        String loginBaseUrl = resolveSalesforceBaseUrl(myDomain);
+        String myDomainBaseUrl = resolveSalesforceBaseUrl(myDomain);
 
         if (tokenPath.startsWith("http://") || tokenPath.startsWith("https://")) {
             return tokenPath;
         }
-        return loginBaseUrl + tokenPath;
+        return myDomainBaseUrl + tokenPath;
     }
 
     private String resolveSalesforcePath(String value) {

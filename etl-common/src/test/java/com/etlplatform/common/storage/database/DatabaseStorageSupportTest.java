@@ -8,6 +8,8 @@ import java.sql.Types;
 import java.util.List;
 import java.util.Properties;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -149,5 +151,21 @@ class DatabaseStorageSupportTest {
         assertTrue(sql.contains("SELECT ? AS \"sfid\""));
         assertTrue(sql.contains("? AS \"Description\""));
         assertEquals(Types.CLOB, strategy.bindValue("long text", "textarea").sqlType());
+    }
+
+    @Test
+    void oracleRoutingNamingBuildsStablePrefixedTableName() {
+        String tableName = OracleRoutingNaming.buildTableName("Yuri Company", "Account");
+
+        assertEquals("YURI_COMPANY_ACCOUNT", tableName);
+        assertDoesNotThrow(() -> OracleRoutingNaming.buildTableName("123 team", "Contact"));
+    }
+
+    @Test
+    void oracleRoutingNamingKeepsIdentifierWithinLimit() {
+        String tableName = OracleRoutingNaming.buildTableName("Very Long Organization Name For Oracle", "ExtremelyLongSalesforceObjectName");
+
+        assertTrue(tableName.length() <= 30);
+        assertTrue(tableName.matches("[A-Z_][A-Z0-9_]*"));
     }
 }

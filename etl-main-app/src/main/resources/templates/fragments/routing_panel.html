@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<th:block th:fragment="panel">
+    <section class="rounded-[32px] border border-white/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(129,140,248,0.18)]">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-indigo-500">Routing</p>
+        <h3 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">라우팅</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-500">라우팅 관련 화면으로 바로 이동해 필요한 작업을 시작하세요.</p>
+    </section>
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <a class="group rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(148,163,184,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(99,102,241,0.18)]"
+           th:href="@{/etl/objects}">
+            <p class="text-3xl">🧩</p>
+            <h4 class="mt-4 text-xl font-bold text-slate-900">오브젝트 선택</h4>
+            <p class="mt-2 text-sm leading-6 text-slate-500">ETL 대상 오브젝트를 고르고 다음 흐름으로 연결해요.</p>
+        </a>
+
+        <a class="group rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(148,163,184,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(99,102,241,0.18)]"
+           th:href="@{/etl/dashboard}">
+            <p class="text-3xl">📈</p>
+            <h4 class="mt-4 text-xl font-bold text-slate-900">라우팅 대시보드</h4>
+            <p class="mt-2 text-sm leading-6 text-slate-500">활성 라우팅과 프로토콜 상태를 바로 확인해요.</p>
+        </a>
+
+        <a class="group rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_12px_40px_rgba(148,163,184,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(99,102,241,0.18)]"
+           th:href="@{/storages/databases}">
+            <p class="text-3xl">🗄️</p>
+            <h4 class="mt-4 text-xl font-bold text-slate-900">외부 DB 저장소 관리</h4>
+            <p class="mt-2 text-sm leading-6 text-slate-500">적재 대상 저장소를 등록하고 연결 상태를 관리해요.</p>
+        </a>
+    </div>
+</th:block>
+</body>
+</html>

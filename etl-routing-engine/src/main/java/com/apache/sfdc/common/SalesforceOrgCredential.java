@@ -13,6 +13,7 @@ public class SalesforceOrgCredential {
     private String clientSecret;
     private String accessToken;
     private String accessTokenIssuedAt;
+    private Long credentialVersion;
     private Boolean isActive;
     private Boolean isDefault;
     private String createdAt;

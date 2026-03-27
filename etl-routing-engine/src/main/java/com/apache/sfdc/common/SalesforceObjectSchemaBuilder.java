@@ -1,6 +1,8 @@
 package com.apache.sfdc.common;
 
 import com.apache.sfdc.streaming.dto.FieldDefinition;
+import com.etlplatform.common.storage.database.DatabaseVendor;
+import com.etlplatform.common.storage.database.OracleRoutingNaming;
 import com.etlplatform.common.storage.database.sql.BoundBatchSql;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategies;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy;
@@ -25,15 +27,24 @@ public final class SalesforceObjectSchemaBuilder {
     }
 
     public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode) throws IOException {
-        return buildSchema(targetSchema, selectedObject, fieldsNode, new ObjectMapper(), DatabaseVendorStrategies.defaultStrategy());
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, new ObjectMapper(), DatabaseVendorStrategies.defaultStrategy());
     }
 
     public static SchemaResult buildSchema(String targetSchema, String selectedObject, JsonNode fieldsNode, ObjectMapper objectMapper) throws IOException {
-        return buildSchema(targetSchema, selectedObject, fieldsNode, objectMapper, DatabaseVendorStrategies.defaultStrategy());
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, objectMapper, DatabaseVendorStrategies.defaultStrategy());
     }
 
     public static SchemaResult buildSchema(String targetSchema,
                                            String selectedObject,
+                                           JsonNode fieldsNode,
+                                           ObjectMapper objectMapper,
+                                           DatabaseVendorStrategy strategy) throws IOException {
+        return buildSchema(targetSchema, selectedObject, null, fieldsNode, objectMapper, strategy);
+    }
+
+    public static SchemaResult buildSchema(String targetSchema,
+                                           String selectedObject,
+                                           String orgName,
                                            JsonNode fieldsNode,
                                            ObjectMapper objectMapper,
                                            DatabaseVendorStrategy strategy) throws IOException {
@@ -52,14 +63,20 @@ public final class SalesforceObjectSchemaBuilder {
         Map<String, String> mapType = new HashMap<>();
         List<DatabaseVendorStrategy.ColumnDefinition> columnDefinitions = new ArrayList<>();
 
-        ddl.append("CREATE TABLE IF NOT EXISTS ").append(qualifiedName(targetSchema, selectedObject, strategy)).append("(");
+        String physicalTableName = resolvePhysicalTableName(targetSchema, selectedObject, orgName, strategy);
+
+        ddl.append("CREATE TABLE ");
+        if (strategy.vendor() != DatabaseVendor.ORACLE) {
+            ddl.append("IF NOT EXISTS ");
+        }
+        ddl.append(qualifiedName(targetSchema, physicalTableName, strategy)).append("(");
 
         for (FieldDefinition obj : listDef) {
             mapType.put(obj.name, obj.type);
             String label = (obj.label == null ? "" : obj.label).replace("'", "`");
 
             if ("id".equals(obj.type)) {
-                appendColumn(ddl, columnDefinitions, strategy, "sfid", "VARCHAR(18) PRIMARY KEY NOT NULL", false, label);
+                appendColumn(ddl, columnDefinitions, strategy, "sfid", strategy.salesforceColumnType("id", 18) + " PRIMARY KEY NOT NULL", false, label);
                 continue;
             }
 
@@ -98,8 +115,12 @@ public final class SalesforceObjectSchemaBuilder {
         soqlForPushTopic.deleteCharAt(soqlForPushTopic.length() - 1);
 
         List<String> ddlStatements = new ArrayList<>();
-        ddlStatements.add(ddl.toString());
-        ddlStatements.addAll(strategy.afterCreateTableStatements(targetSchema, selectedObject, columnDefinitions));
+        if (strategy.vendor() == DatabaseVendor.ORACLE) {
+            ddlStatements.add(wrapOracleCreateTableIfAbsent(ddl.toString()));
+        } else {
+            ddlStatements.add(ddl.toString());
+        }
+        ddlStatements.addAll(strategy.afterCreateTableStatements(targetSchema, physicalTableName, columnDefinitions));
 
         return new SchemaResult(String.join(";\n", ddlStatements) + ";", mapType, listFields, soql.toString(), soqlForPushTopic.toString());
     }
@@ -124,7 +145,7 @@ public final class SalesforceObjectSchemaBuilder {
                                                          DatabaseVendorStrategy strategy) {
         List<String> columns = buildInsertColumns(schemaResult.fields());
         String sql = strategy.buildUpsertSql(
-                qualifiedName(targetSchema, selectedObject, strategy),
+                qualifiedName(targetSchema, selectedObject, null, strategy),
                 columns,
                 schemaResult.fields(),
                 "sfid",
@@ -249,13 +270,43 @@ public final class SalesforceObjectSchemaBuilder {
         return strategy.qualifyTableName(targetSchema, tableName);
     }
 
+    public static String resolvePhysicalTableName(String targetSchema,
+                                                  String tableName,
+                                                  String orgName,
+                                                  DatabaseVendorStrategy strategy) {
+        SqlSanitizer.validateSchemaName(targetSchema);
+        SqlSanitizer.validateTableName(tableName);
+        if (strategy.vendor() == DatabaseVendor.ORACLE) {
+            return OracleRoutingNaming.buildTableName(orgName, tableName);
+        }
+        return tableName;
+    }
+
+    public static String qualifiedName(String targetSchema,
+                                       String logicalTableName,
+                                       String orgName,
+                                       DatabaseVendorStrategy strategy) {
+        String physicalTableName = resolvePhysicalTableName(targetSchema, logicalTableName, orgName, strategy);
+        return qualifiedName(targetSchema, physicalTableName, strategy);
+    }
+
     public static String buildDropTableSql(String targetSchema, String tableName, DatabaseVendorStrategy strategy) {
-        String qualifiedName = qualifiedName(targetSchema, tableName, strategy);
+        return buildDropTableSql(targetSchema, tableName, null, strategy);
+    }
+
+    public static String buildDropTableSql(String targetSchema, String tableName, String orgName, DatabaseVendorStrategy strategy) {
+        String qualifiedName = qualifiedName(targetSchema, tableName, orgName, strategy);
         return switch (strategy.vendor()) {
             case ORACLE -> "BEGIN EXECUTE IMMEDIATE 'DROP TABLE " + qualifiedName.replace("'", "''")
-                    + "'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END";
+                    + " CASCADE CONSTRAINTS PURGE'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -942 THEN RAISE; END IF; END";
             default -> "DROP TABLE IF EXISTS " + qualifiedName;
         };
+    }
+
+    private static String wrapOracleCreateTableIfAbsent(String createTableSql) {
+        String escaped = createTableSql.replace("'", "''");
+        return "BEGIN EXECUTE IMMEDIATE '" + escaped
+                + "'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END";
     }
 
     private static List<String> buildInsertColumns(List<String> fields) {
@@ -265,6 +316,90 @@ public final class SalesforceObjectSchemaBuilder {
         columns.add(INTERNAL_LAST_MODIFIED_COLUMN);
         columns.add(INTERNAL_LAST_EVENT_AT_COLUMN);
         return columns;
+    }
+
+    private static String buildOracleUpsertSql(String qualifiedTableName,
+                                               List<String> insertColumns,
+                                               List<String> mutableColumns,
+                                               Map<String, String> mapType,
+                                               DatabaseVendorStrategy strategy,
+                                               String keyColumn,
+                                               String freshnessColumn,
+                                               String eventColumn) {
+        String sourceAlias = "src";
+        String targetAlias = "target";
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("MERGE INTO ").append(qualifiedTableName).append(" ").append(targetAlias)
+                .append(" USING (SELECT ");
+        for (int i = 0; i < insertColumns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            String column = insertColumns.get(i);
+            sql.append(oracleCastExpression(column, mapType)).append(" AS ").append(strategy.quoteIdentifier(column));
+        }
+        sql.append(" FROM dual) ").append(sourceAlias)
+                .append(" ON (").append(targetAlias).append(".").append(strategy.quoteIdentifier(keyColumn))
+                .append(" = ").append(sourceAlias).append(".").append(strategy.quoteIdentifier(keyColumn)).append(") ")
+                .append("WHEN MATCHED THEN UPDATE SET ");
+
+        for (String column : mutableColumns) {
+            sql.append(targetAlias).append(".").append(strategy.quoteIdentifier(column)).append(" = ")
+                    .append(sourceAlias).append(".").append(strategy.quoteIdentifier(column)).append(", ");
+        }
+
+        sql.append(targetAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(" = NVL(")
+                .append(sourceAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(", ")
+                .append(targetAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append("), ")
+                .append(targetAlias).append(".").append(strategy.quoteIdentifier(eventColumn)).append(" = NVL(")
+                .append(sourceAlias).append(".").append(strategy.quoteIdentifier(eventColumn)).append(", ")
+                .append(targetAlias).append(".").append(strategy.quoteIdentifier(eventColumn)).append(") ")
+                .append("WHERE ")
+                .append(sourceAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(" IS NULL OR ")
+                .append(targetAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(" IS NULL OR ")
+                .append(sourceAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(" >= ")
+                .append(targetAlias).append(".").append(strategy.quoteIdentifier(freshnessColumn)).append(" ")
+                .append("WHEN NOT MATCHED THEN INSERT (");
+        appendQuotedColumns(sql, insertColumns, strategy);
+        sql.append(") VALUES (");
+        for (int i = 0; i < insertColumns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append(sourceAlias).append(".").append(strategy.quoteIdentifier(insertColumns.get(i)));
+        }
+        sql.append(")");
+        return sql.toString();
+    }
+
+    private static String oracleCastExpression(String column, Map<String, String> mapType) {
+        String sfType = switch (column) {
+            case "sfid" -> "id";
+            case INTERNAL_LAST_MODIFIED_COLUMN, INTERNAL_LAST_EVENT_AT_COLUMN -> "datetime";
+            default -> mapType.getOrDefault(column, "string");
+        };
+
+        return switch (sfType) {
+            case "boolean" -> "CAST(? AS NUMBER(1))";
+            case "double", "percent", "currency" -> "CAST(? AS BINARY_DOUBLE)";
+            case "int" -> "CAST(? AS NUMBER(10))";
+            case "datetime" -> "CAST(? AS TIMESTAMP(6))";
+            case "date" -> "CAST(? AS DATE)";
+            case "textarea" -> "TO_CLOB(?)";
+            case "id", "reference" -> "CAST(? AS VARCHAR2(18))";
+            case "time" -> "CAST(? AS VARCHAR2(18))";
+            default -> "CAST(? AS VARCHAR2(4000))";
+        };
+    }
+
+    private static void appendQuotedColumns(StringBuilder sql, List<String> columns, DatabaseVendorStrategy strategy) {
+        for (int i = 0; i < columns.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append(strategy.quoteIdentifier(columns.get(i)));
+        }
     }
 
     private static void appendColumn(StringBuilder ddl,

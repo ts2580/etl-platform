@@ -41,7 +41,7 @@ public final class OracleDatabaseVendorStrategy extends BaseDatabaseVendorStrate
         return switch (sfType) {
             case "id", "reference" -> "VARCHAR2(18)";
             case "textarea" -> "CLOB";
-            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR2(" + Math.max(length, 1) + ")";
+            case "string", "picklist", "multipicklist", "phone", "url" -> "VARCHAR2(" + Math.max(length, 255) + ")";
             case "boolean" -> "NUMBER(1)";
             case "datetime" -> "TIMESTAMP(6)";
             case "date" -> "DATE";
@@ -160,6 +160,19 @@ public final class OracleDatabaseVendorStrategy extends BaseDatabaseVendorStrate
                     + " IS '" + normalizeComment(column.comment()) + "'");
         }
         return statements;
+    }
+
+    private String oracleCastExpression(String column) {
+        return switch (column) {
+            case "sfid", "MasterRecordId", "ParentId", "OwnerId", "CreatedById", "LastModifiedById", "JigsawCompanyId", "DandbCompanyId", "OperatingHoursId" -> "CAST(? AS VARCHAR2(18))";
+            case "IsDeleted", "Active__c" -> "CAST(? AS NUMBER(1))";
+            case "BillingLatitude", "BillingLongitude", "ShippingLatitude", "ShippingLongitude", "AnnualRevenue", "NumberofLocations__c" -> "CAST(? AS BINARY_DOUBLE)";
+            case "NumberOfEmployees", "YearStarted" -> "CAST(? AS NUMBER(10))";
+            case "CreatedDate", "LastModifiedDate", "SystemModstamp", "LastViewedDate", "LastReferencedDate", "_oc_last_modified_at", "_oc_last_event_at" -> "CAST(? AS TIMESTAMP(6))";
+            case "LastActivityDate", "SLAExpirationDate__c" -> "CAST(? AS DATE)";
+            case "BillingStreet", "BillingAddress", "ShippingStreet", "ShippingAddress", "Description" -> "TO_CLOB(?)";
+            default -> "CAST(? AS VARCHAR2(4000))";
+        };
     }
 
     private void appendQuotedColumns(StringBuilder sql, List<String> columns) {

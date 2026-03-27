@@ -1,0 +1,6 @@
+@source "../templates/**/*.html";
+@source "../static/**/*.html";
+@source "../static/**/*.js";
+@source "../../../../etl-file-engine/src/main/resources/static/**/*.html";
+
+@import "tailwindcss";

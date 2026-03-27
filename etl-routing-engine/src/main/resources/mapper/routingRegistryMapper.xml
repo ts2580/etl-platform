@@ -136,7 +136,8 @@
             instance_name AS instanceName,
             org_type AS orgType
         FROM routing.routing_registry
-        WHERE routing_status = 'ACTIVE'
+        WHERE COALESCE(routing_status, '') != 'RELEASED'
+          AND COALESCE(source_status, '') != 'INACTIVE'
         ORDER BY org_name, selected_object ASC, routing_protocol DESC
     </select>
 
@@ -165,6 +166,7 @@
             org_type AS orgType
         FROM routing.routing_registry
         WHERE routing_status = 'ACTIVE'
+          AND source_status = 'ACTIVE'
           AND org_key = #{orgKey}
         ORDER BY selected_object ASC, routing_protocol DESC
     </select>
@@ -216,6 +218,20 @@
         SET routing_status = 'FAILED',
             source_status = 'ERROR',
             last_error_message = #{message},
+            last_synced_at = NOW(),
+            updated_by = #{updatedBy},
+            updated_at = NOW()
+        WHERE org_key = #{orgKey}
+          AND selected_object = #{selectedObject}
+          AND routing_protocol = #{routingProtocol}
+    </update>
+
+    <update id="markRoutingRecovered">
+        UPDATE routing.routing_registry
+        SET routing_status = 'ACTIVE',
+            source_status = 'ACTIVE',
+            last_error_message = NULL,
+            released_at = NULL,
             last_synced_at = NOW(),
             updated_by = #{updatedBy},
             updated_at = NOW()
