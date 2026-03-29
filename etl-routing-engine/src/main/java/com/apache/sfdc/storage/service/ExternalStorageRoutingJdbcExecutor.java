@@ -23,19 +23,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -119,7 +110,7 @@ public class ExternalStorageRoutingJdbcExecutor {
         }
         DatabaseVendor vendor = resolveStrategy(targetStorageId).vendor();
         return withPreparedStatement(targetStorageId, boundSql.sql(), boundSql.parameters(), statement -> {
-            bind(statement, boundSql.parameters(), vendor);
+            RoutingPreparedStatementBinder.bind(statement, boundSql.parameters(), vendor);
             return statement.executeUpdate();
         });
     }
@@ -137,7 +128,7 @@ public class ExternalStorageRoutingJdbcExecutor {
         }
         DatabaseVendor vendor = resolveStrategy(targetStorageId).vendor();
         return withPreparedStatement(targetStorageId, boundSql.sql(), boundSql.parameters(), statement -> {
-            bind(statement, boundSql.parameters(), vendor);
+            RoutingPreparedStatementBinder.bind(statement, boundSql.parameters(), vendor);
             return statement.executeUpdate();
         });
     }
@@ -193,7 +184,7 @@ public class ExternalStorageRoutingJdbcExecutor {
     private int executeBatch(PreparedStatement statement, List<List<SqlParameter>> parameterGroups, DatabaseVendor vendor) throws Exception {
         int total = 0;
         for (List<SqlParameter> parameterGroup : parameterGroups) {
-            bind(statement, parameterGroup, vendor);
+            RoutingPreparedStatementBinder.bind(statement, parameterGroup, vendor);
             statement.addBatch();
         }
         for (int affected : statement.executeBatch()) {
@@ -202,108 +193,6 @@ public class ExternalStorageRoutingJdbcExecutor {
         return total;
     }
 
-    private void bind(PreparedStatement statement, List<SqlParameter> parameters, DatabaseVendor vendor) throws Exception {
-        for (int i = 0; i < parameters.size(); i++) {
-            SqlParameter parameter = parameters.get(i);
-            int index = i + 1;
-            bindParameter(statement, index, parameter, vendor);
-        }
-    }
-
-    private void bindParameter(PreparedStatement statement, int index, SqlParameter parameter, DatabaseVendor vendor) throws Exception {
-        Object value = parameter.value();
-        int sqlType = parameter.sqlType();
-
-        if (value == null) {
-            bindNull(statement, index, sqlType, vendor);
-            return;
-        }
-
-        if (vendor == DatabaseVendor.ORACLE) {
-            bindOracleParameter(statement, index, value, sqlType);
-            return;
-        }
-
-        statement.setObject(index, value, sqlType);
-    }
-
-    private void bindNull(PreparedStatement statement, int index, int sqlType, DatabaseVendor vendor) throws Exception {
-        if (vendor == DatabaseVendor.ORACLE) {
-            switch (sqlType) {
-                case Types.CLOB -> statement.setNull(index, Types.VARCHAR);
-                case Types.TIMESTAMP -> statement.setNull(index, Types.TIMESTAMP);
-                case Types.DATE -> statement.setNull(index, Types.DATE);
-                case Types.TIME -> statement.setNull(index, Types.VARCHAR);
-                case Types.DOUBLE, Types.FLOAT, Types.REAL -> statement.setNull(index, Types.DOUBLE);
-                case Types.NUMERIC, Types.DECIMAL, Types.INTEGER, Types.SMALLINT, Types.TINYINT -> statement.setNull(index, Types.NUMERIC);
-                default -> statement.setNull(index, Types.VARCHAR);
-            }
-            return;
-        }
-        statement.setNull(index, sqlType);
-    }
-
-    private void bindOracleParameter(PreparedStatement statement, int index, Object value, int sqlType) throws Exception {
-        switch (sqlType) {
-            case Types.TIMESTAMP -> {
-                if (value instanceof LocalDateTime localDateTime) {
-                    statement.setTimestamp(index, Timestamp.valueOf(localDateTime));
-                } else if (value instanceof Timestamp timestamp) {
-                    statement.setTimestamp(index, timestamp);
-                } else {
-                    statement.setTimestamp(index, Timestamp.valueOf(LocalDateTime.parse(String.valueOf(value).replace(' ', 'T'))));
-                }
-            }
-            case Types.DATE -> {
-                if (value instanceof LocalDate localDate) {
-                    statement.setDate(index, Date.valueOf(localDate));
-                } else if (value instanceof Date date) {
-                    statement.setDate(index, date);
-                } else {
-                    statement.setDate(index, Date.valueOf(String.valueOf(value)));
-                }
-            }
-            case Types.TIME -> {
-                if (value instanceof LocalTime localTime) {
-                    statement.setString(index, localTime.toString());
-                } else {
-                    statement.setString(index, String.valueOf(value));
-                }
-            }
-            case Types.CLOB -> statement.setString(index, String.valueOf(value));
-            case Types.DOUBLE, Types.FLOAT, Types.REAL -> {
-                if (value instanceof BigDecimal bigDecimal) {
-                    statement.setDouble(index, bigDecimal.doubleValue());
-                } else if (value instanceof Number number) {
-                    statement.setDouble(index, number.doubleValue());
-                } else {
-                    statement.setDouble(index, Double.parseDouble(String.valueOf(value)));
-                }
-            }
-            case Types.NUMERIC, Types.DECIMAL -> {
-                if (value instanceof BigDecimal bigDecimal) {
-                    statement.setBigDecimal(index, bigDecimal);
-                } else if (value instanceof Integer integer) {
-                    statement.setInt(index, integer);
-                } else if (value instanceof Long longValue) {
-                    statement.setLong(index, longValue);
-                } else if (value instanceof Number number) {
-                    statement.setBigDecimal(index, new BigDecimal(number.toString()));
-                } else {
-                    statement.setBigDecimal(index, new BigDecimal(String.valueOf(value)));
-                }
-            }
-            case Types.INTEGER, Types.SMALLINT, Types.TINYINT -> {
-                if (value instanceof Number number) {
-                    statement.setInt(index, number.intValue());
-                } else {
-                    statement.setInt(index, Integer.parseInt(String.valueOf(value)));
-                }
-            }
-            case Types.VARCHAR, Types.CHAR, Types.LONGVARCHAR -> statement.setString(index, String.valueOf(value));
-            default -> statement.setObject(index, value, sqlType);
-        }
-    }
 
     private void logBindFailureIfNeeded(RoutedStorageContext context, String sql, Object bindDebugPayload, Exception e) {
         if (!log.isDebugEnabled() || context == null || context.strategy().vendor() != DatabaseVendor.ORACLE) {
@@ -509,97 +398,7 @@ public class ExternalStorageRoutingJdbcExecutor {
     }
 
     private List<String> splitDdlStatements(String ddl, DatabaseVendor vendor) {
-        if (ddl == null || ddl.isBlank()) {
-            return List.of();
-        }
-
-        String trimmed = ddl.trim();
-        if (vendor == DatabaseVendor.ORACLE) {
-            return splitOracleDdlStatements(trimmed);
-        }
-
-        return splitBySemicolonRespectingStrings(trimmed);
-    }
-
-    private List<String> splitOracleDdlStatements(String ddl) {
-        if (!isOracleAnonymousBlock(ddl)) {
-            return splitBySemicolonRespectingStrings(ddl);
-        }
-
-        int blockEnd = findOracleAnonymousBlockEnd(ddl);
-        if (blockEnd < 0) {
-            return List.of(trimOracleTerminator(ddl));
-        }
-
-        List<String> statements = new java.util.ArrayList<>();
-        String block = trimOracleTerminator(ddl.substring(0, blockEnd));
-        if (!block.isBlank()) {
-            statements.add(block);
-        }
-
-        String tail = ddl.substring(blockEnd).trim();
-        if (!tail.isBlank()) {
-            statements.addAll(splitBySemicolonRespectingStrings(tail));
-        }
-        return statements;
-    }
-
-    private List<String> splitBySemicolonRespectingStrings(String ddl) {
-        List<String> statements = new java.util.ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inString = false;
-        for (int i = 0; i < ddl.length(); i++) {
-            char ch = ddl.charAt(i);
-            if (ch == '\'') {
-                inString = !inString;
-            }
-            if (ch == ';' && !inString) {
-                String statement = current.toString().trim();
-                if (!statement.isBlank()) {
-                    statements.add(statement);
-                }
-                current.setLength(0);
-                continue;
-            }
-            current.append(ch);
-        }
-        String tail = current.toString().trim();
-        if (!tail.isBlank()) {
-            statements.add(tail);
-        }
-        return statements;
-    }
-
-    private boolean isOracleAnonymousBlock(String ddl) {
-        String upper = ddl.stripLeading().toUpperCase(Locale.ROOT);
-        return upper.startsWith("BEGIN") || upper.startsWith("DECLARE");
-    }
-
-    private int findOracleAnonymousBlockEnd(String ddl) {
-        boolean inString = false;
-        for (int i = 0; i < ddl.length(); i++) {
-            char ch = ddl.charAt(i);
-            if (ch == '\'') {
-                if (inString && i + 1 < ddl.length() && ddl.charAt(i + 1) == '\'') {
-                    i++;
-                    continue;
-                }
-                inString = !inString;
-                continue;
-            }
-            if (!inString && i + 4 <= ddl.length() && ddl.regionMatches(true, i, "END;", 0, 4)) {
-                return i + 4;
-            }
-        }
-        return -1;
-    }
-
-    private String trimOracleTerminator(String ddl) {
-        String trimmed = ddl.trim();
-        if (trimmed.endsWith("/")) {
-            return trimmed.substring(0, trimmed.length() - 1).trim();
-        }
-        return trimmed;
+        return RoutingDdlSplitter.split(ddl, vendor);
     }
 
     @FunctionalInterface

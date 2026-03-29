@@ -29,6 +29,7 @@ junitJupiter = "5.12.2"
 httpClient = "4.5.14"
 httpMime = "4.5.14"
 jsonSimple = "1.1.1"
+commonsCsv = "1.14.1"
 thymeleafExtrasSpringsecurity6 = "3.1.3.RELEASE"
 
 [plugins]
@@ -67,6 +68,7 @@ googleAuthLibraryOauth2Http = { module = "com.google.auth:google-auth-library-oa
 apacheHttpClient = { module = "org.apache.httpcomponents:httpclient", version.ref = "httpClient" }
 apacheHttpMime = { module = "org.apache.httpcomponents:httpmime", version.ref = "httpMime" }
 jsonSimple = { module = "com.googlecode.json-simple:json-simple", version.ref = "jsonSimple" }
+commonsCsv = { module = "org.apache.commons:commons-csv", version.ref = "commonsCsv" }
 thymeleafExtrasSpringsecurity6 = { module = "org.thymeleaf.extras:thymeleaf-extras-springsecurity6", version.ref = "thymeleafExtrasSpringsecurity6" }
 
 # Databases

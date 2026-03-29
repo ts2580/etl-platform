@@ -1,0 +1,538 @@
+==================================================
+[1] RUN com.apache.sfdc.SfdcApplicationTests
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+
+> Task :etl-routing-engine:test FAILED
+
+SfdcApplicationTests > contextLoads() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.springframework.beans.factory.UnsatisfiedDependencyException at ConstructorResolver.java:804
+            Caused by: org.springframework.beans.factory.NoSuchBeanDefinitionException at DefaultListableBeanFactory.java:2303
+
+1 test completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':etl-routing-engine:test'.
+> There were failing tests. See the report at: file:///home/trstyq/code/etl-platform/etl-routing-engine/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 4s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: FAIL
+==================================================
+[2] RUN com.apache.sfdc.common.SalesforceBulkCsvCursorTest
+--------------------------------------------------
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[3] RUN com.apache.sfdc.common.SalesforceBulkQueryClientImplTest
+--------------------------------------------------
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[4] RUN com.apache.sfdc.common.SalesforceBulkResultMapperTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[5] RUN com.apache.sfdc.common.SalesforceCompoundAddressMappingTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[6] RUN com.apache.sfdc.common.SalesforceHttpErrorHelperTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[7] RUN com.apache.sfdc.common.SalesforceInitialLoadServiceImplTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[8] RUN com.apache.sfdc.common.SalesforceObjectSchemaBuilderTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[9] RUN com.apache.sfdc.common.SalesforceObjectSchemaBuilderTypeMappingRegressionTest
+--------------------------------------------------
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[10] RUN com.apache.sfdc.common.SalesforceRecordMutationProcessorBoundTypeMappingTest
+--------------------------------------------------
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[11] RUN com.apache.sfdc.common.SalesforceRecordMutationProcessorTableResolutionTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 1s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[12] RUN com.apache.sfdc.common.SalesforceTargetTableResolverTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 1s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[13] RUN com.apache.sfdc.common.StudyAccountBulkApiIntegrationTest
+--------------------------------------------------
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+
+> Task :etl-routing-engine:test FAILED
+
+StudyAccountBulkApiIntegrationTest > studyAccountBulkQueryCsvCanBeParsedInsertedAndCleanedUp() FAILED
+    java.lang.IllegalStateException at DefaultCacheAwareContextLoaderDelegate.java:180
+        Caused by: org.mybatis.spring.MyBatisSystemException at MyBatisExceptionTranslator.java:101
+            Caused by: org.apache.ibatis.exceptions.PersistenceException at ExceptionFactory.java:30
+                Caused by: org.springframework.jdbc.CannotGetJdbcConnectionException at DataSourceUtils.java:84
+                    Caused by: java.sql.SQLNonTransientConnectionException at ConnectionHelper.java:131
+                        Caused by: java.net.ConnectException at Net.java:-2
+
+1 test completed, 1 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':etl-routing-engine:test'.
+> There were failing tests. See the report at: file:///home/trstyq/code/etl-platform/etl-routing-engine/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 5s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: FAIL
+==================================================
+[14] RUN com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutorBindingTest
+--------------------------------------------------
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 3s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[15] RUN com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutorDdlSplitTest
+--------------------------------------------------
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 2s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+==================================================
+[16] RUN com.apache.sfdc.storage.smoke.RoutingVendorContainerSmokeTest
+--------------------------------------------------
+> Task :etl-domain:processResources NO-SOURCE
+> Task :etl-api-contract:processResources NO-SOURCE
+> Task :etl-infra:processResources NO-SOURCE
+> Task :etl-routing-engine:processResources UP-TO-DATE
+> Task :etl-routing-engine:processTestResources NO-SOURCE
+> Task :etl-common:compileJava UP-TO-DATE
+> Task :etl-common:processResources NO-SOURCE
+> Task :etl-api-contract:compileJava NO-SOURCE
+> Task :etl-common:classes UP-TO-DATE
+> Task :etl-api-contract:classes UP-TO-DATE
+> Task :etl-domain:compileJava NO-SOURCE
+> Task :etl-domain:classes UP-TO-DATE
+> Task :etl-infra:compileJava NO-SOURCE
+> Task :etl-infra:classes UP-TO-DATE
+> Task :etl-api-contract:jar UP-TO-DATE
+> Task :etl-common:jar UP-TO-DATE
+> Task :etl-domain:jar UP-TO-DATE
+> Task :etl-infra:jar UP-TO-DATE
+> Task :etl-routing-engine:compileJava UP-TO-DATE
+> Task :etl-routing-engine:classes UP-TO-DATE
+> Task :etl-routing-engine:compileTestJava UP-TO-DATE
+> Task :etl-routing-engine:testClasses UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :etl-routing-engine:test
+
+BUILD SUCCESSFUL in 49s
+9 actionable tasks: 1 executed, 8 up-to-date
+
+RESULT: PASS
+SUMMARY: total=16 pass=14 fail=2

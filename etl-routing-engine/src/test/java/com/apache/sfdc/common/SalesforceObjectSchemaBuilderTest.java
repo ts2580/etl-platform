@@ -1,6 +1,7 @@
 package com.apache.sfdc.common;
 
 import com.etlplatform.common.storage.database.DatabaseVendor;
+import com.etlplatform.common.storage.database.OracleRoutingNaming;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategies;
 import com.etlplatform.common.storage.database.sql.DatabaseVendorStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +31,26 @@ class SalesforceObjectSchemaBuilderTest {
                 DatabaseVendorStrategies.require(com.etlplatform.common.storage.database.DatabaseVendor.ORACLE)
         );
 
-        assertTrue(schema.ddl().contains("\"YURI_COMPANY_ACCOUNT\""));
+        assertTrue(schema.ddl().contains("\"" + OracleRoutingNaming.buildTableName("Yuri Company", "Account") + "\""));
+    }
+
+    @Test
+    void oracleBuildSchemaKeepsExplicitCustomTargetTable() throws Exception {
+        ArrayNode fields = objectMapper.createArrayNode();
+        fields.add(field("Id", "id", 18, "ID"));
+        fields.add(field("Name", "string", 255, "Name"));
+
+        SalesforceObjectSchemaBuilder.SchemaResult schema = SalesforceObjectSchemaBuilder.buildSchema(
+                "ETL_USER",
+                "Account",
+                "CUSTOM_ACCOUNT_TABLE",
+                "Yuri Company",
+                fields,
+                objectMapper,
+                DatabaseVendorStrategies.require(com.etlplatform.common.storage.database.DatabaseVendor.ORACLE)
+        );
+
+        assertTrue(schema.ddl().contains("\"CUSTOM_ACCOUNT_TABLE\""));
     }
 
     @Test
@@ -55,7 +75,7 @@ class SalesforceObjectSchemaBuilderTest {
         fields.add(field("CreatedDate", "datetime", 0, "Created Date"));
 
         assertVendorSchema(DatabaseVendor.ORACLE,
-                "\"ETL_USER\".\"YURI_COMPANY_ACCOUNT\"",
+                "\"ETL_USER\".\"" + OracleRoutingNaming.buildTableName("Yuri Company", "Account") + "\"",
                 "VARCHAR2(18)",
                 "CLOB",
                 "TIMESTAMP(6)",
@@ -126,7 +146,7 @@ class SalesforceObjectSchemaBuilderTest {
         }
 
         String dropSql = SalesforceObjectSchemaBuilder.buildDropTableSql("etl_user", "Account", "Yuri Company", strategy);
-        assertTrue(dropSql.contains(expectedDropSqlFragment));
+        assertTrue(dropSql.contains(expectedDropSqlFragment), dropSql);
     }
 
     private ObjectNode field(String name, String type, int length, String label) {

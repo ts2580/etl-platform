@@ -49,6 +49,7 @@ CREATE TABLE config.salesforce_org_credentials (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uk_sf_org_credentials_key (org_key),
+    UNIQUE KEY uk_sf_org_credentials_name (org_name),
     KEY idx_sf_org_credentials_active (is_active),
     KEY idx_sf_org_credentials_default (is_default)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

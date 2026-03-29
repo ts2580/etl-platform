@@ -25,6 +25,7 @@ dependencies {
     implementation libs.jsonSimple
     implementation libs.googleAuthLibraryOauth2Http
     implementation libs.okhttp
+    implementation libs.commonsCsv
 
     implementation libs.apacheHttpClient
     implementation libs.apacheHttpMime
@@ -36,4 +37,62 @@ dependencies {
 
     compileOnly libs.lombok
     annotationProcessor libs.lombok
+
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.6'
+    testImplementation 'org.testcontainers:postgresql:1.20.6'
+    testImplementation 'org.testcontainers:mysql:1.20.6'
+    testImplementation 'org.testcontainers:mariadb:1.20.6'
+    testImplementation 'org.testcontainers:oracle-free:1.20.6'
+    testImplementation 'org.springframework:spring-jdbc'
+}
+
+def vendorSmokeClasses = [
+        'com.etlplatform.common.storage.database.DatabaseStorageSupportTest',
+        'com.apache.sfdc.common.SalesforceTargetTableResolverTest',
+        'com.apache.sfdc.common.SalesforceRecordMutationProcessorTableResolutionTest',
+        'com.apache.sfdc.common.SalesforceObjectSchemaBuilderTypeMappingRegressionTest',
+        'com.apache.sfdc.common.SalesforceRecordMutationProcessorBoundTypeMappingTest',
+        'com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutorBindingTest',
+        'com.apache.sfdc.storage.service.ExternalStorageRoutingJdbcExecutorDdlSplitTest'
+]
+
+tasks.register('vendorSmokeTest', Test) {
+    group = 'verification'
+    description = 'Runs the always-runnable vendor smoke baseline (no Docker required).'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        vendorSmokeClasses.each { includeTestsMatching(it) }
+    }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'short'
+    }
+}
+
+tasks.register('vendorContainerSmokeTest', Test) {
+    group = 'verification'
+    description = 'Runs Docker/Testcontainers-backed routing/storage vendor smoke scenarios.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'vendor-container-smoke'
+    }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat 'short'
+    }
+}
+
+tasks.register('smokeTest') {
+    group = 'verification'
+    description = 'CI-safe smoke baseline alias. Runs :etl-routing-engine:vendorSmokeTest.'
+    dependsOn tasks.named('vendorSmokeTest')
+}
+
+tasks.register('dockerSmokeTest') {
+    group = 'verification'
+    description = 'Docker-enabled smoke alias. Runs :etl-routing-engine:vendorContainerSmokeTest.'
+    dependsOn tasks.named('vendorContainerSmokeTest')
 }

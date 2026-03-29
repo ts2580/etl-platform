@@ -39,11 +39,21 @@ public final class SalesforceObjectSchemaBuilder {
                                            JsonNode fieldsNode,
                                            ObjectMapper objectMapper,
                                            DatabaseVendorStrategy strategy) throws IOException {
-        return buildSchema(targetSchema, selectedObject, null, fieldsNode, objectMapper, strategy);
+        return buildSchema(targetSchema, selectedObject, null, null, fieldsNode, objectMapper, strategy);
     }
 
     public static SchemaResult buildSchema(String targetSchema,
                                            String selectedObject,
+                                           String orgName,
+                                           JsonNode fieldsNode,
+                                           ObjectMapper objectMapper,
+                                           DatabaseVendorStrategy strategy) throws IOException {
+        return buildSchema(targetSchema, selectedObject, null, orgName, fieldsNode, objectMapper, strategy);
+    }
+
+    public static SchemaResult buildSchema(String targetSchema,
+                                           String selectedObject,
+                                           String targetTable,
                                            String orgName,
                                            JsonNode fieldsNode,
                                            ObjectMapper objectMapper,
@@ -63,7 +73,9 @@ public final class SalesforceObjectSchemaBuilder {
         Map<String, String> mapType = new HashMap<>();
         List<DatabaseVendorStrategy.ColumnDefinition> columnDefinitions = new ArrayList<>();
 
-        String physicalTableName = resolvePhysicalTableName(targetSchema, selectedObject, orgName, strategy);
+        SalesforceTargetTableResolver.ResolvedTargetTable resolvedTargetTable =
+                SalesforceTargetTableResolver.resolveTargetTable(targetSchema, selectedObject, targetTable, orgName, strategy);
+        String physicalTableName = resolvedTargetTable.physicalTableName();
 
         ddl.append("CREATE TABLE ");
         if (strategy.vendor() != DatabaseVendor.ORACLE) {
@@ -138,6 +150,22 @@ public final class SalesforceObjectSchemaBuilder {
         return underQuery.toString();
     }
 
+    public static String buildInsertValues(Map<String, String> record,
+                                           List<String> fields,
+                                           Map<String, String> mapType,
+                                           DatabaseVendorStrategy strategy) {
+        StringBuilder underQuery = new StringBuilder();
+        underQuery.append("(").append(strategy.renderLiteral(record.get("Id"), "id")).append(",");
+
+        for (String field : fields) {
+            underQuery.append(strategy.renderLiteral(record.get(field), mapType.get(field))).append(",");
+        }
+
+        String lastModifiedLiteral = strategy.renderLiteral(record.get(LAST_MODIFIED_FIELD), "datetime");
+        underQuery.append(lastModifiedLiteral).append(",").append(lastModifiedLiteral).append(")");
+        return underQuery.toString();
+    }
+
     public static BoundBatchSql buildPreparedInsertBatch(String targetSchema,
                                                          String selectedObject,
                                                          SchemaResult schemaResult,
@@ -155,18 +183,38 @@ public final class SalesforceObjectSchemaBuilder {
 
         List<List<SqlParameter>> parameterGroups = new ArrayList<>();
         for (JsonNode record : records) {
-            List<SqlParameter> params = new ArrayList<>();
-            params.add(strategy.bindValue(record.path("Id").asText(), "id"));
-            for (String field : schemaResult.fields()) {
-                params.add(strategy.bindValue(SqlSanitizer.toRawValue(record.get(field)), schemaResult.mapType().get(field)));
-            }
-            Object lastModifiedValue = lastModifiedValue(record);
-            params.add(strategy.bindValue(lastModifiedValue, "datetime"));
-            params.add(strategy.bindValue(lastModifiedValue, "datetime"));
-            parameterGroups.add(params);
+            parameterGroups.add(buildPreparedInsertParameters(record, schemaResult, strategy));
         }
 
         return new BoundBatchSql(sql, parameterGroups);
+    }
+
+    public static List<SqlParameter> buildPreparedInsertParameters(JsonNode record,
+                                                                   SchemaResult schemaResult,
+                                                                   DatabaseVendorStrategy strategy) {
+        List<SqlParameter> params = new ArrayList<>();
+        params.add(strategy.bindValue(record.path("Id").asText(), "id"));
+        for (String field : schemaResult.fields()) {
+            params.add(strategy.bindValue(SqlSanitizer.toRawValue(record.get(field)), schemaResult.mapType().get(field)));
+        }
+        Object lastModifiedValue = lastModifiedValue(record);
+        params.add(strategy.bindValue(lastModifiedValue, "datetime"));
+        params.add(strategy.bindValue(lastModifiedValue, "datetime"));
+        return params;
+    }
+
+    public static List<SqlParameter> buildPreparedInsertParameters(Map<String, String> record,
+                                                                   SchemaResult schemaResult,
+                                                                   DatabaseVendorStrategy strategy) {
+        List<SqlParameter> params = new ArrayList<>();
+        params.add(strategy.bindValue(record.get("Id"), "id"));
+        for (String field : schemaResult.fields()) {
+            params.add(strategy.bindValue(record.get(field), schemaResult.mapType().get(field)));
+        }
+        Object lastModifiedValue = record.get(LAST_MODIFIED_FIELD);
+        params.add(strategy.bindValue(lastModifiedValue, "datetime"));
+        params.add(strategy.bindValue(lastModifiedValue, "datetime"));
+        return params;
     }
 
     public static String buildInsertSql(String targetSchema, String selectedObject, String soql) {
@@ -309,7 +357,7 @@ public final class SalesforceObjectSchemaBuilder {
                 + "'; EXCEPTION WHEN OTHERS THEN IF SQLCODE != -955 THEN RAISE; END IF; END";
     }
 
-    private static List<String> buildInsertColumns(List<String> fields) {
+    public static List<String> buildInsertColumns(List<String> fields) {
         List<String> columns = new ArrayList<>();
         columns.add("sfid");
         columns.addAll(fields);

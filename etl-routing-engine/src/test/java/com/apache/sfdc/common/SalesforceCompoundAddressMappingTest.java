@@ -100,6 +100,8 @@ class SalesforceCompoundAddressMappingTest {
         SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
                 "org_studyorg",
                 "Contact",
+                null,
+                null,
                 mapType,
                 mutation,
                 repository,
@@ -164,6 +166,8 @@ class SalesforceCompoundAddressMappingTest {
         SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
                 "org_studyorg",
                 "Contact",
+                null,
+                null,
                 mapType,
                 mutation,
                 repository,
@@ -213,6 +217,8 @@ class SalesforceCompoundAddressMappingTest {
         SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
                 "org_studyorg",
                 "Contact",
+                null,
+                null,
                 mapType,
                 mutation,
                 repository,
@@ -262,6 +268,8 @@ class SalesforceCompoundAddressMappingTest {
         SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
                 "org_studyorg",
                 "Contact",
+                null,
+                null,
                 mapType,
                 mutation,
                 repository,
@@ -345,6 +353,8 @@ class SalesforceCompoundAddressMappingTest {
         SalesforceRecordMutationProcessor.MutationResult result = processor.apply(
                 "org_studyorg",
                 "Account",
+                null,
+                null,
                 mapType,
                 mutation,
                 repository,

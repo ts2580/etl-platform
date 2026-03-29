@@ -6,6 +6,11 @@ app:
   # 없을 때만 레거시 app.routing.external-storage.user-key 로 fallback 해요.
   db:
     enabled: ${APP_DB_ENABLED:false}
+  salesforce:
+    bulk-initial-load:
+      chunk-size: ${SALESFORCE_BULK_INITIAL_LOAD_CHUNK_SIZE:2000}
+      poll-interval-millis: ${SALESFORCE_BULK_INITIAL_LOAD_POLL_INTERVAL_MILLIS:2000}
+      timeout-millis: ${SALESFORCE_BULK_INITIAL_LOAD_TIMEOUT_MILLIS:300000}
 
 server:
   port: ${ROUTING_APP_PORT:3931}
